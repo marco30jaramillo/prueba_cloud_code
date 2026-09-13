@@ -6,6 +6,8 @@ const Mailer = require('../utils/mailer');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { tokenUtils, authMiddleware, tokenManager } = require('../middleware/auth');
 const roleMiddleware = require('../middleware/roleMiddleware');
+const PasswordValidator = require('../utils/passwordValidator');
+const DataNormalizer = require('../utils/dataNormalizer');
 
 const router = express.Router();
 
@@ -23,15 +25,18 @@ router.post('/register', (req, res) => {
     });
   }
 
-  if (password.length < 8) {
-    return ResponseFormatter.badRequest(res, 'La contraseña debe tener al menos 8 caracteres', {
-      password: `${password.length}/8 caracteres`
+  const passwordValidation = PasswordValidator.validatePassword(password);
+  if (!passwordValidation.valid) {
+    return ResponseFormatter.badRequest(res, 'La contraseña no cumple con los requisitos de seguridad', {
+      requirements: PasswordValidator.getPasswordRequirements().requirements,
+      errors: passwordValidation.errors
     });
   }
 
-  const existingUser = User.findByEmail(email);
+  const normalizedEmail = DataNormalizer.normalizeEmail(email);
+  const existingUser = User.findByEmail(normalizedEmail);
   if (existingUser) {
-    return ResponseFormatter.conflict(res, `El email ${email} ya está registrado`);
+    return ResponseFormatter.conflict(res, `El email ${normalizedEmail} ya está registrado`);
   }
 
   const user = User.create(email, password, name, 'cliente', photo);

@@ -1,13 +1,15 @@
 const crypto = require('crypto');
 const PasswordUtils = require('../utils/passwordUtils');
 const CSVDatabase = require('../utils/csvDatabase');
+const DataNormalizer = require('../utils/dataNormalizer');
+const PasswordValidator = require('../utils/passwordValidator');
 
 class User {
   constructor(email, password, name, role = 'cliente', photo = null) {
     this.id = crypto.randomUUID();
-    this.email = email;
+    this.email = DataNormalizer.normalizeEmail(email);
     this.password = PasswordUtils.hashPassword(password);
-    this.name = name;
+    this.name = DataNormalizer.normalizeName(name);
     this.role = role;
     this.photo = photo || '/datos/default/default-avatar.svg';
     this.isActive = true;
@@ -34,7 +36,8 @@ class User {
   }
 
   static authenticate(email, password) {
-    const user = User.findByEmail(email);
+    const normalizedEmail = DataNormalizer.normalizeEmail(email);
+    const user = User.findByEmail(normalizedEmail);
     if (!user) return null;
 
     const isValid = PasswordUtils.verifyPassword(password, user.password);
