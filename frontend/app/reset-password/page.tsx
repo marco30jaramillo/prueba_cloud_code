@@ -28,7 +28,7 @@ export default function ResetPasswordPage() {
 
   const onSubmit = async (data: Record<string, string | boolean>) => {
     try {
-      const result = await authAPI.resetPassword(token, data.newPassword);
+      const result = await authAPI.resetPassword(token, data.newPassword as string);
       if (result.status === 'success') {
         router.push('/login?message=Contraseña restablecida');
       }

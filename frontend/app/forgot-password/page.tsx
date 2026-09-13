@@ -10,7 +10,7 @@ import styles from './page.module.scss';
 export default function ForgotPasswordPage() {
   const onSubmit = async (data: Record<string, string | boolean>) => {
     try {
-      const result = await authAPI.forgotPassword(data.email);
+      const result = await authAPI.forgotPassword(data.email as string);
       return { success: true, data: result };
     } catch (error: any) {
       const err = error.response?.data;
