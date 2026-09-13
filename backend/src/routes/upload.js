@@ -8,8 +8,8 @@ const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Usar process.cwd() para apuntar a la raíz del proyecto
-const uploadDir = path.join(process.cwd(), 'datos/uploads/users');
+// process.cwd() es backend/, entonces ../ sube a la raíz
+const uploadDir = path.join(process.cwd(), '../datos/uploads/users');
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });

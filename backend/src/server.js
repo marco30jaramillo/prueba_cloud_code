@@ -13,7 +13,8 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(express.json());
-app.use(express.static(path.join(process.cwd(), 'datos')));
+// process.cwd() es backend/, entonces ../ sube a la raíz donde está /datos
+app.use(express.static(path.join(process.cwd(), '../datos')));
 
 const corsOptions = {
   origin: (origin, callback) => {
