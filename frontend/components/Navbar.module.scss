@@ -39,10 +39,22 @@
   margin-left: 1.5rem;
   color: #6b7280 !important;
   font-weight: 500;
-  transition: all 0.3s ease;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+  border-radius: 8px;
+  padding: 0.35rem 0.65rem !important;
+  transition: color 0.22s ease, background 0.22s ease, transform 0.18s ease;
 
   &:hover {
     color: #10b981 !important;
+    background: #f0fdf4;
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 }
 
@@ -265,14 +277,34 @@
   text-decoration: none;
   white-space: nowrap;
   overflow: hidden;
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  transition: background 0.22s ease, color 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
   border-left: 3px solid transparent;
   min-height: 48px;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #10b981;
+    opacity: 0;
+    transition: opacity 0.22s ease;
+    pointer-events: none;
+  }
 
   &:hover {
     background: #f0fdf4;
     color: #10b981;
     text-decoration: none;
+    border-left-color: #6ee7b7;
+
+    .sidebarIcon {
+      transform: scale(1.15);
+    }
+  }
+
+  &:active {
+    background: #d1fae5;
   }
 }
 
@@ -295,6 +327,7 @@
   justify-content: center;
   font-size: 1.25rem;
   flex-shrink: 0;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 // Label — hidden by overflow in collapsed mode, revealed when sidebar expands
@@ -385,11 +418,21 @@
   cursor: pointer;
   min-height: 48px;
   overflow: hidden;
-  transition: background 0.2s;
+  transition: background 0.22s ease, color 0.22s ease;
   white-space: nowrap;
+  border-left: 3px solid transparent;
 
   &:hover:not(:disabled) {
     background: #fee2e2;
+    border-left-color: #dc2626;
+
+    .sidebarIcon {
+      transform: scale(1.15) rotate(-5deg);
+    }
+  }
+
+  &:active:not(:disabled) {
+    background: #fecaca;
   }
 
   &:disabled {
