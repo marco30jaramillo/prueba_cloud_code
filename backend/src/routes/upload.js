@@ -55,14 +55,13 @@ async function processImage(file, userId) {
 const upload = multer({
   storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
-    // Aceptar cualquier imagen
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
       cb(new Error('Solo se permiten imágenes'), false);
     }
-  },
-  limits: { fileSize: 10 * 1024 * 1024 } // 10 MB antes de comprimir
+  }
+  // Sin límite de tamaño — validamos después de comprimir
 });
 
 // ── Routes ────────────────────────────────────────────────────────────────────
@@ -97,6 +96,12 @@ router.post('/photo', authMiddleware, (req, res, next) => {
   }
 
   const { buffer, filename, mimetype } = processed;
+
+  // Validar peso después de comprimir
+  const MAX_COMPRESSED_SIZE = 5 * 1024 * 1024; // 5 MB
+  if (buffer.length > MAX_COMPRESSED_SIZE) {
+    return ResponseFormatter.badRequest(res, `La imagen sigue siendo muy grande después de comprimirla (${(buffer.length / 1024 / 1024).toFixed(1)} MB). Intenta con una foto diferente.`);
+  }
 
   // Guardar (blob o disco)
   try {
