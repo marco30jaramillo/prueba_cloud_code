@@ -39,7 +39,8 @@ class User {
     const isValid = PasswordUtils.verifyPassword(password, user.password);
     if (!isValid) return null;
 
-    if (!user.isActive) return null;
+    const isActive = user.isActive === 'true' || user.isActive === true;
+    if (!isActive) return null;
 
     return user;
   }
