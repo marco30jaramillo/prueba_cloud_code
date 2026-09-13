@@ -98,7 +98,14 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
       )}
 
       <div className={styles.previewContainer}>
-        <img src={preview} alt="Vista previa de foto" className={styles.preview} />
+        <img
+          src={preview}
+          alt="Vista previa de foto"
+          className={styles.preview}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = `${process.env.NEXT_PUBLIC_API_URL}/datos/default/default-avatar.svg`;
+          }}
+        />
         {isLoading && (
           <div className={styles.loadingOverlay}>
             <Spinner animation="border" size="sm" />

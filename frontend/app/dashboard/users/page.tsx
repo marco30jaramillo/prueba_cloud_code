@@ -169,7 +169,14 @@ export default function UsersPage() {
                     {users.map((u) => (
                       <tr key={u.id} className={!u.isActive ? styles.inactiveRow : ''}>
                         <td>
-                          <img src={u.photo} alt={u.name} className={styles.userPhoto} />
+                          <img
+                            src={u.photo?.startsWith('http') ? u.photo : `${process.env.NEXT_PUBLIC_API_URL}${u.photo}`}
+                            alt={u.name}
+                            className={styles.userPhoto}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = `${process.env.NEXT_PUBLIC_API_URL}/datos/default/default-avatar.svg`;
+                            }}
+                          />
                         </td>
                         <td>{u.name}</td>
                         <td>{u.email}</td>

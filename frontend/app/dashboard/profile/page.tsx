@@ -171,6 +171,9 @@ export default function ProfilePage() {
                     src={getPhotoUrl(formData.photo)}
                     alt="Foto de perfil"
                     className={styles.profilePhoto}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = `${process.env.NEXT_PUBLIC_API_URL}/datos/default/default-avatar.svg`;
+                    }}
                   />
                 )}
               </div>

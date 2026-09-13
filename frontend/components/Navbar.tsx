@@ -95,6 +95,9 @@ export const Navbar: React.FC = () => {
                     src={getPhotoUrl(user?.photo)}
                     alt={user?.name}
                     className={styles.userPhoto}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = `${process.env.NEXT_PUBLIC_API_URL}/datos/default/default-avatar.svg`;
+                    }}
                   />
                   <span>
                     {user?.name} ({user?.role})
