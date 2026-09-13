@@ -103,7 +103,11 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
           alt="Vista previa de foto"
           className={styles.preview}
           onError={(e) => {
-            (e.target as HTMLImageElement).src = `${process.env.NEXT_PUBLIC_API_URL}/datos/default/default-avatar.svg`;
+            const img = e.target as HTMLImageElement;
+            if (!img.dataset.fallbackAttempted) {
+              img.dataset.fallbackAttempted = 'true';
+              img.src = `${process.env.NEXT_PUBLIC_API_URL}/datos/default/default-avatar.svg`;
+            }
           }}
         />
         {isLoading && (

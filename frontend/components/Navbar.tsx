@@ -96,7 +96,11 @@ export const Navbar: React.FC = () => {
                     alt={user?.name}
                     className={styles.userPhoto}
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = `${process.env.NEXT_PUBLIC_API_URL}/datos/default/default-avatar.svg`;
+                      const img = e.target as HTMLImageElement;
+                      if (!img.dataset.fallbackAttempted) {
+                        img.dataset.fallbackAttempted = 'true';
+                        img.src = `${process.env.NEXT_PUBLIC_API_URL}/datos/default/default-avatar.svg`;
+                      }
                     }}
                   />
                   <span>
