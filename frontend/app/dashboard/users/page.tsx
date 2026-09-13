@@ -6,6 +6,7 @@ import { PhotoUpload } from '@/components/PhotoUpload';
 import { useAuthStore } from '@/lib/auth-store';
 import { usersAPI, authAPI } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 import styles from './page.module.scss';
 
 interface User {
@@ -18,8 +19,8 @@ interface User {
   createdAt: string;
 }
 
-export default function UsersPage() {
-  const { user, isAuthenticated } = useAuthStore();
+function UsersPageContent() {
+  const { user } = useAuthStore();
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,12 +38,8 @@ export default function UsersPage() {
   const [generatedPassword, setGeneratedPassword] = useState('');
 
   useEffect(() => {
-    if (!isAuthenticated || (user?.role !== 'superuser' && user?.role !== 'administrador')) {
-      router.push('/dashboard');
-      return;
-    }
     loadUsers();
-  }, [isAuthenticated, user?.role, router]);
+  }, []);
 
   const loadUsers = async () => {
     setIsLoading(true);
@@ -357,5 +354,13 @@ export default function UsersPage() {
         </Modal.Footer>
       </Modal>
     </Container>
+  );
+}
+
+export default function UsersPage() {
+  return (
+    <ProtectedRoute requiredRole={['superuser', 'administrador']}>
+      <UsersPageContent />
+    </ProtectedRoute>
   );
 }

@@ -5,9 +5,10 @@ import { Container, Row, Col, Card, Form, Button, Alert, Modal, Spinner } from '
 import { PhotoUpload } from '@/components/PhotoUpload';
 import { useAuthStore, saveAuthToStorage } from '@/lib/auth-store';
 import { authAPI } from '@/lib/api';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 import styles from './page.module.scss';
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const { user, token, setAuth } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -368,5 +369,13 @@ export default function ProfilePage() {
         </Modal.Footer>
       </Modal>
     </Container>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <ProtectedRoute>
+      <ProfilePageContent />
+    </ProtectedRoute>
   );
 }

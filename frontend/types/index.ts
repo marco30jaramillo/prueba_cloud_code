@@ -27,9 +27,11 @@ export interface AuthState {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isInitialized: boolean;
   setAuth: (user: User, token: string) => void;
   logout: () => void;
   setLoading: (loading: boolean) => void;
+  setInitialized: (initialized: boolean) => void;
 }
 
 export interface RoleSchema {

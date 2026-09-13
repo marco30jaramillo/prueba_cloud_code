@@ -13,12 +13,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   isLoading: false,
   isAuthenticated: false,
+  isInitialized: false,
 
   setAuth: (user: User, token: string) =>
     set({
       user,
       token,
-      isAuthenticated: true
+      isAuthenticated: true,
+      isInitialized: true
     }),
 
   logout: () =>
@@ -29,7 +31,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     }),
 
   setLoading: (isLoading: boolean) =>
-    set({ isLoading })
+    set({ isLoading }),
+
+  setInitialized: (isInitialized: boolean) =>
+    set({ isInitialized })
 }));
 
 export const saveAuthToStorage = (user: User, token: string) => {

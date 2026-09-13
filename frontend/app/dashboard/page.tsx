@@ -1,29 +1,24 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Container, Row, Col, Card, Button, Form, Alert, Modal, Spinner } from 'react-bootstrap';
 import { useAuthStore } from '@/lib/auth-store';
 import { authAPI } from '@/lib/api';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 import styles from './page.module.scss';
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user } = useAuthStore();
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [roles, setRoles] = useState<string[]>(['cliente', 'vendedor', 'administrador', 'superuser']);
   const [formData, setFormData] = useState({ email: '', password: '', name: '', role: 'cliente' });
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  useEffect(() => {
-    if (!isAuthenticated) router.push('/login');
-  }, [isAuthenticated, router]);
-
-  if (!user) return <Spinner />;
-
-  const canCreateUsers = ['superuser', 'administrador'].includes(user.role);
-  const canResetPasswords = ['superuser', 'administrador'].includes(user.role);
+  const canCreateUsers = ['superuser', 'administrador'].includes(user?.role || '');
+  const canResetPasswords = ['superuser', 'administrador'].includes(user?.role || '');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -56,6 +51,8 @@ export default function DashboardPage() {
     };
     return colors[role] || '#6b7280';
   };
+
+  if (!user) return <Spinner />;
 
   return (
     <Container className={styles.dashboard}>
@@ -227,5 +224,13 @@ export default function DashboardPage() {
         </Modal.Body>
       </Modal>
     </Container>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <ProtectedRoute>
+      <DashboardPageContent />
+    </ProtectedRoute>
   );
 }
