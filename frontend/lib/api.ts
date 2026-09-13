@@ -2,7 +2,21 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import { AuthResponse } from '@/types';
 import { getTokenFromStorage, clearAuthStorage } from './auth-store';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const getAPIUrl = () => {
+  if (typeof window === 'undefined') {
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+  }
+
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (apiUrl && !apiUrl.includes('localhost')) {
+    return apiUrl;
+  }
+
+  const backendPort = '3001';
+  return `http://${window.location.hostname}:${backendPort}`;
+};
+
+const API_URL = getAPIUrl();
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_URL,
