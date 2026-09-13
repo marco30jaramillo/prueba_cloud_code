@@ -24,10 +24,17 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      console.warn('[API] Token inválido o expirado (401)');
-      clearAuthStorage();
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+      const isLoginPage = typeof window !== 'undefined' && window.location.pathname === '/login';
+      const isForgotPasswordPage = typeof window !== 'undefined' && window.location.pathname === '/forgot-password';
+      const isResetPasswordPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/reset-password');
+      const isRegisterPage = typeof window !== 'undefined' && window.location.pathname === '/register';
+
+      if (!isLoginPage && !isForgotPasswordPage && !isResetPasswordPage && !isRegisterPage) {
+        console.warn('[API] Token inválido o expirado (401)');
+        clearAuthStorage();
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);
