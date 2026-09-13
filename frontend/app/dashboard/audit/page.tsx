@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
+import apiClient from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import styles from './page.module.scss';
 
@@ -49,11 +49,7 @@ export default function AuditPage() {
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/audit/logs', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await apiClient.get('/audit/logs');
 
       setLogs(response.data.logs || []);
       setError('');
