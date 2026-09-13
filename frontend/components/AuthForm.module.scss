@@ -119,6 +119,25 @@
   }
 }
 
+.required {
+  color: #ef4444;
+}
+
+.rememberRow {
+  margin-bottom: 0.5rem !important;
+}
+
+.rememberCheck {
+  font-size: 0.9rem;
+  color: #6b7280;
+  user-select: none;
+
+  :global(.form-check-input:checked) {
+    background-color: #10b981;
+    border-color: #10b981;
+  }
+}
+
 @media (max-width: 768px) {
   .formContainer {
     padding: 1.5rem;

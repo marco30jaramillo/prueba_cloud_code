@@ -6,24 +6,33 @@ import { ApiError } from '@/types';
 export const useAuth = () => {
   const { user, token, isLoading, isAuthenticated, setAuth, logout: storeLogout, setLoading } = useAuthStore();
 
-  const handleLogin = useCallback(async (email: string, password: string) => {
+  const handleLogin = useCallback(async (email: string, password: string, rememberMe = false) => {
     setLoading(true);
     try {
-      const response = await authAPI.login(email, password);
+      const response = await authAPI.login(email, password, rememberMe);
       if (response.user && response.token) {
         setAuth(response.user, response.token);
         saveAuthToStorage(response.user, response.token);
         return { success: true, data: response };
       }
+      return { success: false, error: 'Respuesta inesperada del servidor' };
     } catch (error: any) {
-      const err = error.response?.data as ApiError;
-      const errorMsg = err?.message || error.message || 'No se pudo iniciar sesión. Intenta nuevamente.';
-      console.error('[Login Error]', {
-        message: errorMsg,
-        status: error.response?.status,
-        data: error.response?.data,
-        error: error.message
-      });
+      const status = error.response?.status;
+      const data = error.response?.data;
+
+      // Cuenta deshabilitada — error específico del backend
+      if (status === 403 && data?.code === 'ACCOUNT_DISABLED') {
+        return { success: false, error: '🔒 Tu cuenta está deshabilitada. Contacta al administrador.' };
+      }
+
+      // Rate limit
+      if (status === 429) {
+        const secs = data?.retryAfterSec || 900;
+        const mins = Math.ceil(secs / 60);
+        return { success: false, error: `⏱️ Demasiados intentos fallidos. Intenta nuevamente en ${mins} minutos.` };
+      }
+
+      const errorMsg = data?.message || error.message || 'No se pudo iniciar sesión. Intenta nuevamente.';
       return { success: false, error: errorMsg };
     } finally {
       setLoading(false);

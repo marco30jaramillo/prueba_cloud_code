@@ -1,158 +1,212 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import axios from 'axios';
+import { getBaseUrl } from '@/lib/image-url';
 import styles from './page.module.scss';
 
-interface AuditLog {
+interface AuditEntry {
   id: string;
   action: string;
-  userId: string;
-  targetUserId: string | null;
+  actionLabel: string;
+  actorId: string;
+  actorEmail: string;
+  actorName: string;
+  targetId: string;
+  targetEmail: string;
   ipAddress: string;
+  userAgent: string;
   timestamp: string;
   success: string | boolean;
-  failureReason: string | null;
+  failureReason: string;
   details: string;
   method: string;
+}
+
+type Filter = 'all' | 'failed' | 'successful';
+
+function isSuccess(log: AuditEntry) {
+  return log.success === 'true' || log.success === true;
+}
+
+function formatDate(ts: string): string {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return ts;
+  return d.toLocaleString('es-PE', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
+}
+
+function actionBadge(log: AuditEntry) {
+  const label = log.actionLabel || log.action || '—';
+  const ok = isSuccess(log);
+  const color =
+    log.action === 'failed_login_attempt' ? '#ef4444' :
+    log.action === 'user_disable'          ? '#f97316' :
+    log.action === 'user_enable'           ? '#10b981' :
+    log.action === 'login'                 ? '#3b82f6' :
+    log.action === 'logout'                ? '#6b7280' :
+    log.action === 'password_change'       ? '#8b5cf6' :
+    log.action === 'password_generated'    ? '#ec4899' :
+    ok                                     ? '#10b981' : '#ef4444';
+
+  return <span style={{ backgroundColor: color, color: '#fff', borderRadius: 4, padding: '2px 8px', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>{label}</span>;
 }
 
 export default function AuditPage() {
   const router = useRouter();
   const { user, token, isInitialized } = useAuthStore();
-  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [logs, setLogs] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState<'all' | 'failed' | 'successful'>('all');
+  const [filter, setFilter] = useState<Filter>('all');
+  const [search, setSearch] = useState('');
+
+  const fetchLogs = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const base = typeof window !== 'undefined' ? getBaseUrl() : 'http://localhost:3001';
+      const res = await axios.get(`${base}/audit/logs`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setLogs(res.data.logs || []);
+      setError('');
+    } catch (e: any) {
+      setError('Error al cargar los registros de auditoría: ' + (e.response?.data?.message || e.message));
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
   useEffect(() => {
     if (!isInitialized) return;
-    if (!user) {
-      router.push('/login');
-      return;
-    }
+    if (!user) { router.push('/login'); return; }
     if (user.role !== 'superuser') {
-      setError('❌ Solo los superuser pueden acceder a este módulo');
+      setError('Solo los superusuarios pueden acceder a este módulo');
       setLoading(false);
       return;
     }
+    fetchLogs();
+  }, [user, isInitialized, router, fetchLogs]);
 
-    const fetchData = async () => {
-      try {
-        const res = await axios.get('http://localhost:3001/audit/logs', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setLogs(res.data.logs || []);
-        setError('');
-      } catch (e: any) {
-        setError('Error al cargar los logs');
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [user, token, isInitialized, router]);
-
-  if (user?.role !== 'superuser') {
-    return (
-      <div className={styles.container}>
-        <div className={styles.errorAlert}>{error}</div>
-      </div>
-    );
+  if (!isInitialized || (loading && logs.length === 0)) {
+    return <div className={styles.container}><div className={styles.loading}>Cargando registros de auditoría...</div></div>;
   }
 
-  const filteredLogs = logs.filter(log => {
-    if (filter === 'failed') return log.success === 'false' || log.success === false;
-    if (filter === 'successful') return log.success === 'true' || log.success === true;
-    return true;
+  if (user?.role !== 'superuser') {
+    return <div className={styles.container}><div className={styles.errorAlert}>⛔ Acceso denegado. Solo superusuarios.</div></div>;
+  }
+
+  const filtered = logs.filter(log => {
+    const matchFilter =
+      filter === 'all' ? true :
+      filter === 'failed' ? !isSuccess(log) :
+      isSuccess(log);
+
+    if (!matchFilter) return false;
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      (log.actionLabel || '').toLowerCase().includes(q) ||
+      (log.actorEmail || '').toLowerCase().includes(q) ||
+      (log.actorName || '').toLowerCase().includes(q) ||
+      (log.targetEmail || '').toLowerCase().includes(q) ||
+      (log.ipAddress || '').includes(q)
+    );
   });
+
+  const total = logs.length;
+  const totalOk = logs.filter(isSuccess).length;
+  const totalFail = total - totalOk;
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1>📋 Auditoría del Sistema</h1>
-        <p>Seguimiento completo de todas las acciones del sistema</p>
+        <div>
+          <h1>📋 Auditoría del Sistema</h1>
+          <p>Registro completo de todas las acciones y eventos del sistema</p>
+        </div>
+        <button className={styles.refreshBtn} onClick={fetchLogs} disabled={loading}>
+          {loading ? '⏳' : '🔄'} Actualizar
+        </button>
       </div>
 
       {error && <div className={styles.alert}>{error}</div>}
 
+      <div className={styles.stats}>
+        <div className={styles.stat}><span>📊 Total</span><strong>{total}</strong></div>
+        <div className={styles.stat}><span>✅ Exitosos</span><strong>{totalOk}</strong></div>
+        <div className={styles.stat}><span>❌ Fallidos</span><strong>{totalFail}</strong></div>
+        <div className={styles.stat}><span>📄 Mostrando</span><strong>{filtered.length}</strong></div>
+      </div>
+
       <div className={styles.controls}>
         <div className={styles.filterGroup}>
-          <label>Filtrar por:</label>
-          <div className={styles.buttonGroup}>
-            <button
-              className={filter === 'all' ? styles.active : ''}
-              onClick={() => setFilter('all')}
-            >
-              Todos ({logs.length})
-            </button>
-            <button
-              className={filter === 'successful' ? styles.active : ''}
-              onClick={() => setFilter('successful')}
-            >
-              Exitosos ({logs.filter(l => l.success === 'true' || l.success === true).length})
-            </button>
-            <button
-              className={filter === 'failed' ? styles.active : ''}
-              onClick={() => setFilter('failed')}
-            >
-              Fallidos ({logs.filter(l => l.success === 'false' || l.success === false).length})
-            </button>
-          </div>
+          <button className={filter === 'all'        ? styles.active : ''} onClick={() => setFilter('all')}>Todos</button>
+          <button className={filter === 'successful' ? styles.active : ''} onClick={() => setFilter('successful')}>Exitosos</button>
+          <button className={filter === 'failed'     ? styles.active : ''} onClick={() => setFilter('failed')}>Fallidos</button>
         </div>
-        <button className={styles.refreshBtn} onClick={() => window.location.reload()} disabled={loading}>
-          {loading ? '⏳ Cargando...' : '🔄 Actualizar'}
-        </button>
+        <input
+          className={styles.searchInput}
+          placeholder="Buscar por acción, email, IP..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
       </div>
 
       <div className={styles.tableWrapper}>
-        {loading ? (
-          <div className={styles.loading}>Cargando registros de auditoría...</div>
-        ) : filteredLogs.length === 0 ? (
-          <div className={styles.empty}>No hay registros de auditoría</div>
+        {filtered.length === 0 ? (
+          <div className={styles.empty}>No hay registros que coincidan con los filtros</div>
         ) : (
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Acción</th>
-                <th>Usuario</th>
+                <th>Fecha y Hora</th>
+                <th>Evento</th>
+                <th>Actor (quien actuó)</th>
+                <th>Afectado</th>
                 <th>IP</th>
-                <th>Timestamp</th>
                 <th>Resultado</th>
+                <th>Detalle</th>
               </tr>
             </thead>
             <tbody>
-              {filteredLogs.map(log => (
-                <tr key={log.id} className={log.success === 'false' || log.success === false ? styles.failed : ''}>
-                  <td>{log.action}</td>
-                  <td>{log.userId}</td>
-                  <td>{log.ipAddress}</td>
-                  <td>{new Date(log.timestamp).toLocaleString()}</td>
-                  <td>{log.success === 'true' || log.success === true ? '✅' : '❌'}</td>
+              {filtered.map(log => (
+                <tr key={log.id} className={!isSuccess(log) ? styles.rowFailed : ''}>
+                  <td className={styles.dateCell}>{formatDate(log.timestamp)}</td>
+                  <td>{actionBadge(log)}</td>
+                  <td>
+                    <div className={styles.userCell}>
+                      {log.actorName && <strong>{log.actorName}</strong>}
+                      <small>{log.actorEmail || log.actorId || '—'}</small>
+                    </div>
+                  </td>
+                  <td>
+                    {log.targetEmail && log.targetEmail !== log.actorEmail
+                      ? <small>{log.targetEmail}</small>
+                      : <span className={styles.na}>—</span>
+                    }
+                  </td>
+                  <td><code className={styles.ip}>{log.ipAddress || '—'}</code></td>
+                  <td>{isSuccess(log) ? '✅' : '❌'}</td>
+                  <td>
+                    {log.failureReason
+                      ? <span className={styles.reason}>{log.failureReason}</span>
+                      : log.details && log.details !== '{}'
+                        ? <span className={styles.details} title={log.details}>ℹ️</span>
+                        : <span className={styles.na}>—</span>
+                    }
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
-      </div>
-
-      <div className={styles.stats}>
-        <div className={styles.stat}>
-          <span>📊 Total de eventos:</span>
-          <strong>{logs.length}</strong>
-        </div>
-        <div className={styles.stat}>
-          <span>✅ Exitosos:</span>
-          <strong>{logs.filter(l => l.success === 'true' || l.success === true).length}</strong>
-        </div>
-        <div className={styles.stat}>
-          <span>❌ Fallidos:</span>
-          <strong>{logs.filter(l => l.success === 'false' || l.success === false).length}</strong>
-        </div>
       </div>
     </div>
   );

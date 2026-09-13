@@ -38,15 +38,15 @@ class User {
   static authenticate(email, password) {
     const normalizedEmail = DataNormalizer.normalizeEmail(email);
     const user = User.findByEmail(normalizedEmail);
-    if (!user) return null;
+    if (!user) return { user: null, reason: 'invalid_credentials' };
 
     const isValid = PasswordUtils.verifyPassword(password, user.password);
-    if (!isValid) return null;
+    if (!isValid) return { user: null, reason: 'invalid_credentials' };
 
     const isActive = user.isActive === 'true' || user.isActive === true;
-    if (!isActive) return null;
+    if (!isActive) return { user: null, reason: 'account_disabled' };
 
-    return user;
+    return { user, reason: null };
   }
 
   static generatePasswordResetToken() {

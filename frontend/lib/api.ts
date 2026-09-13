@@ -74,10 +74,11 @@ export const authAPI = {
     return data;
   },
 
-  login: async (email: string, password: string) => {
+  login: async (email: string, password: string, rememberMe = false) => {
     const { data } = await apiClient.post<AuthResponse>('/auth/login', {
       email,
-      password
+      password,
+      rememberMe
     });
     return data;
   },

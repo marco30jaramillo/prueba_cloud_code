@@ -6,81 +6,83 @@ import styles from './AuthForm.module.scss';
 
 interface AuthFormProps {
   type: 'login' | 'register' | 'forgot-password' | 'reset-password';
-  onSubmit: (data: Record<string, string>) => Promise<{ success: boolean; error?: string }>;
+  onSubmit: (data: Record<string, string | boolean>) => Promise<{ success: boolean; error?: string }>;
   isLoading?: boolean;
 }
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+const FIELD_CONFIG: Record<string, string[]> = {
+  login:            ['email', 'password'],
+  register:         ['email', 'password', 'confirmPassword', 'name', 'photo'],
+  'forgot-password':['email'],
+  'reset-password': ['token', 'newPassword', 'confirmPassword']
+};
+
+const LABELS: Record<string, string> = {
+  email:           'Correo Electrónico',
+  password:        'Contraseña',
+  confirmPassword: 'Confirmar Contraseña',
+  name:            'Nombre Completo',
+  photo:           'Foto de Perfil (URL)',
+  token:           'Token de Recuperación',
+  newPassword:     'Nueva Contraseña'
+};
+
+const SUBMIT_LABEL: Record<string, string> = {
+  login:             'Iniciar Sesión',
+  register:          'Crear Cuenta',
+  'forgot-password': 'Enviar Enlace',
+  'reset-password':  'Restablecer Contraseña'
+};
+
+const REQUIRED: Record<string, string[]> = {
+  login:             ['email', 'password'],
+  register:          ['email', 'password', 'confirmPassword', 'name'],
+  'forgot-password': ['email'],
+  'reset-password':  ['token', 'newPassword', 'confirmPassword']
+};
+
 export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = false }) => {
   const [formData, setFormData] = useState<Record<string, string>>({});
+  const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const fields = {
-    login: ['email', 'password'],
-    register: ['email', 'password', 'confirmPassword', 'name', 'photo'],
-    'forgot-password': ['email'],
-    'reset-password': ['token', 'newPassword', 'confirmPassword']
-  };
-
-  const labels = {
-    email: 'Correo Electrónico',
-    password: 'Contraseña',
-    confirmPassword: 'Confirmar Contraseña',
-    name: 'Nombre Completo',
-    photo: 'Foto de Perfil (URL)',
-    token: 'Token de Recuperación',
-    newPassword: 'Nueva Contraseña'
-  };
-
-  const requiredFields = {
-    login: ['email', 'password'],
-    register: ['email', 'password', 'confirmPassword', 'name'],
-    'forgot-password': ['email'],
-    'reset-password': ['token', 'newPassword', 'confirmPassword']
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
-  const validateForm = (): boolean => {
+  const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-    const currentFields = fields[type];
+    const fields = FIELD_CONFIG[type];
 
-    // Validar campos requeridos
-    currentFields.forEach(field => {
-      if (!formData[field] || formData[field].trim() === '') {
-        newErrors[field] = `${labels[field as keyof typeof labels]} es requerido`;
+    REQUIRED[type].forEach(field => {
+      if (!formData[field]?.trim()) {
+        newErrors[field] = `${LABELS[field] || field} es requerido`;
       }
     });
 
-    // Email validation
-    if (formData.email && !formData.email.includes('@')) {
-      newErrors.email = 'Email inválido. Debe contener @';
+    if (formData.email && !EMAIL_REGEX.test(formData.email)) {
+      newErrors.email = 'El formato del email no es válido (ej: usuario@dominio.com)';
     }
 
-    // Password validation
     if (formData.password && formData.password.length < 8) {
       newErrors.password = 'Mínimo 8 caracteres';
     }
-
     if (formData.newPassword && formData.newPassword.length < 8) {
       newErrors.newPassword = 'Mínimo 8 caracteres';
     }
 
-    // Confirm password validation
-    if (formData.confirmPassword && formData.password && formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Las contraseñas no coinciden';
-    }
-
-    if (formData.confirmPassword && formData.newPassword && formData.newPassword !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Las contraseñas no coinciden';
+    if (formData.confirmPassword) {
+      const base = formData.password || formData.newPassword;
+      if (base && base !== formData.confirmPassword) {
+        newErrors.confirmPassword = 'Las contraseñas no coinciden';
+      }
     }
 
     setErrors(newErrors);
@@ -89,96 +91,109 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
-
+    if (!validate()) return;
     setMessage(null);
-    const response = await onSubmit(formData);
-    if (response.success) {
-      setMessage({ type: 'success', text: 'Operación completada con éxito' });
-      setFormData({});
-      setShowPassword(false);
-      setShowConfirmPassword(false);
-    } else {
+
+    const payload: Record<string, string | boolean> = { ...formData };
+    if (type === 'login') payload.rememberMe = rememberMe;
+
+    const response = await onSubmit(payload);
+    if (!response.success) {
       setMessage({ type: 'error', text: response.error || 'Error desconocido. Intenta nuevamente.' });
     }
+    // On success the parent handles navigation; no "success" message needed here
   };
 
-  const isPasswordField = (field: string) => field === 'password' || field === 'newPassword';
-  const isConfirmPasswordField = (field: string) => field === 'confirmPassword';
+  const isPasswordField    = (f: string) => f === 'password' || f === 'newPassword';
+  const isConfirmPassField = (f: string) => f === 'confirmPassword';
 
   return (
     <div className={styles.formContainer}>
       {message && (
         <Alert
           variant={message.type === 'success' ? 'success' : 'danger'}
-          onClose={message.type === 'success' ? () => setMessage(null) : undefined}
-          dismissible={message.type === 'success'}
-          className={`mb-4 ${message.type === 'error' ? 'fade-in' : ''}`}
+          onClose={() => setMessage(null)}
+          dismissible
+          className="mb-4"
         >
           <strong>{message.type === 'success' ? '✓ Éxito' : '❌ Error'}:</strong> {message.text}
         </Alert>
       )}
 
       <Form onSubmit={handleSubmit} className={styles.form}>
-        {fields[type].map(field => {
-          const isPassword = isPasswordField(field);
-          const isConfirmPass = isConfirmPasswordField(field);
-          const inputType = isPassword ? (showPassword ? 'text' : 'password') :
-                           isConfirmPass ? (showConfirmPassword ? 'text' : 'password') :
-                           field === 'email' ? 'email' : 'text';
+        {FIELD_CONFIG[type].map(field => {
+          const isPwd    = isPasswordField(field);
+          const isConf   = isConfirmPassField(field);
+          const inputType =
+            isPwd  ? (showPassword        ? 'text' : 'password') :
+            isConf ? (showConfirmPassword ? 'text' : 'password') :
+            field === 'email' ? 'email' : 'text';
 
           return (
             <Form.Group key={field} className={`mb-3 ${styles.formGroup}`}>
               <Form.Label className={styles.label}>
-                {labels[field as keyof typeof labels] || field}
+                {LABELS[field] || field}
+                {REQUIRED[type].includes(field) && <span className={styles.required}> *</span>}
               </Form.Label>
 
-              {isPassword || isConfirmPass ? (
+              {isPwd || isConf ? (
                 <InputGroup>
                   <Form.Control
                     type={inputType}
                     name={field}
                     value={formData[field] || ''}
                     onChange={handleChange}
-                    placeholder={`Ingresa tu ${labels[field as keyof typeof labels] || field}`}
+                    placeholder={`Ingresa tu ${LABELS[field] || field}`}
                     className={`${styles.input} ${errors[field] ? styles.error : ''}`}
                     disabled={isLoading}
                     isInvalid={!!errors[field]}
+                    autoComplete={isPwd ? (type === 'login' ? 'current-password' : 'new-password') : 'new-password'}
                   />
                   <Button
                     variant="outline-secondary"
-                    onClick={() => {
-                      if (isPassword) setShowPassword(!showPassword);
-                      if (isConfirmPass) setShowConfirmPassword(!showConfirmPassword);
-                    }}
+                    type="button"
+                    onClick={() => isPwd ? setShowPassword(v => !v) : setShowConfirmPassword(v => !v)}
                     className={styles.toggleBtn}
                     disabled={isLoading}
+                    tabIndex={-1}
                   >
-                    {isPassword && (showPassword ? '👁️' : '👁️‍🗨️')}
-                    {isConfirmPass && (showConfirmPassword ? '👁️' : '👁️‍🗨️')}
+                    {(isPwd ? showPassword : showConfirmPassword) ? '👁️' : '👁️‍🗨️'}
                   </Button>
+                  <Form.Control.Feedback type="invalid">{errors[field]}</Form.Control.Feedback>
                 </InputGroup>
               ) : (
-                <Form.Control
-                  type={inputType}
-                  name={field}
-                  value={formData[field] || ''}
-                  onChange={handleChange}
-                  placeholder={`Ingresa tu ${labels[field as keyof typeof labels] || field}`}
-                  className={`${styles.input} ${errors[field] ? styles.error : ''}`}
-                  disabled={isLoading}
-                  isInvalid={!!errors[field]}
-                />
-              )}
-
-              {errors[field] && (
-                <Form.Control.Feedback type="invalid" className={styles.feedback}>
-                  {errors[field]}
-                </Form.Control.Feedback>
+                <>
+                  <Form.Control
+                    type={inputType}
+                    name={field}
+                    value={formData[field] || ''}
+                    onChange={handleChange}
+                    placeholder={field === 'photo' ? 'https://... (opcional)' : `Ingresa tu ${LABELS[field] || field}`}
+                    className={`${styles.input} ${errors[field] ? styles.error : ''}`}
+                    disabled={isLoading}
+                    isInvalid={!!errors[field]}
+                    autoComplete={field === 'email' ? 'email' : 'off'}
+                  />
+                  <Form.Control.Feedback type="invalid">{errors[field]}</Form.Control.Feedback>
+                </>
               )}
             </Form.Group>
           );
         })}
+
+        {type === 'login' && (
+          <Form.Group className={`mb-3 ${styles.rememberRow}`}>
+            <Form.Check
+              type="checkbox"
+              id="rememberMe"
+              label="Recordarme por 7 días"
+              checked={rememberMe}
+              onChange={e => setRememberMe(e.target.checked)}
+              disabled={isLoading}
+              className={styles.rememberCheck}
+            />
+          </Form.Group>
+        )}
 
         <Button
           variant="success"
@@ -187,12 +202,9 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = 
           disabled={isLoading}
         >
           {isLoading ? (
-            <>
-              <Spinner animation="border" size="sm" className="me-2" />
-              Procesando...
-            </>
+            <><Spinner animation="border" size="sm" className="me-2" />Procesando...</>
           ) : (
-            'Continuar'
+            SUBMIT_LABEL[type]
           )}
         </Button>
       </Form>

@@ -2,32 +2,40 @@
 
 import React, { useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Container, Row, Col, Form, Button, Card } from 'react-bootstrap';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Container, Row, Col } from 'react-bootstrap';
 import { AuthForm } from '@/components/AuthForm';
 import { useAuth } from '@/hooks/useAuth';
-import { authAPI } from '@/lib/api';
 import styles from './page.module.scss';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { handleLogin, isLoading, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    if (isAuthenticated) router.push('/dashboard');
-  }, [isAuthenticated, router]);
-
-  const onSubmit = async (data: Record<string, string>) => {
-    const result = await handleLogin(data.email, data.password);
-    if (result.success) {
-      router.push('/dashboard');
+    if (isAuthenticated) {
+      const returnUrl = searchParams.get('returnUrl') || '/dashboard';
+      router.push(returnUrl);
     }
-    return result;
+  }, [isAuthenticated, router, searchParams]);
+
+  const onSubmit = async (data: Record<string, string | boolean>) => {
+    const result = await handleLogin(
+      data.email as string,
+      data.password as string,
+      data.rememberMe as boolean
+    );
+    if (result?.success) {
+      const returnUrl = searchParams.get('returnUrl') || '/dashboard';
+      router.push(returnUrl);
+    }
+    return result || { success: false, error: 'Error inesperado' };
   };
 
   return (
     <Container className={styles.container}>
-      <Row className="justify-content-center min-vh-50">
+      <Row className="justify-content-center">
         <Col lg={5} md={8}>
           <div className={styles.header}>
             <h1 className={styles.title}>Iniciar Sesión</h1>
@@ -39,15 +47,11 @@ export default function LoginPage() {
           <div className={styles.footer}>
             <p>
               ¿Olvidaste tu contraseña?{' '}
-              <Link href="/forgot-password" className={styles.link}>
-                Recupérala aquí
-              </Link>
+              <Link href="/forgot-password" className={styles.link}>Recupérala aquí</Link>
             </p>
             <p>
               ¿No tienes cuenta?{' '}
-              <Link href="/register" className={styles.link}>
-                Regístrate
-              </Link>
+              <Link href="/register" className={styles.link}>Regístrate</Link>
             </p>
           </div>
         </Col>

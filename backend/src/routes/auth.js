@@ -10,6 +10,9 @@ const auditMiddleware = require('../middleware/auditMiddleware');
 const AuditLog = require('../models/AuditLog');
 const PasswordValidator = require('../utils/passwordValidator');
 const DataNormalizer = require('../utils/dataNormalizer');
+const rateLimiter = require('../utils/rateLimiter');
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 const router = express.Router();
 
@@ -67,30 +70,46 @@ router.post('/register', (req, res) => {
   }, 201);
 });
 
-router.post('/login', (req, res) => {
-  const { email, password } = req.body;
+router.post('/login', rateLimiter.middleware, (req, res) => {
+  const { email, password, rememberMe } = req.body;
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
 
   if (!email || !password) {
-    return ResponseFormatter.badRequest(res, 'Email y contraseña son requeridos', {
-      email: email ? '✅' : '❌ requerido',
-      password: password ? '✅' : '❌ requerido'
-    });
+    return ResponseFormatter.badRequest(res, 'Email y contraseña son requeridos');
   }
 
-  const user = User.authenticate(email, password);
+  if (!EMAIL_REGEX.test(email)) {
+    return ResponseFormatter.badRequest(res, 'El formato del email es inválido');
+  }
+
+  const { user, reason } = User.authenticate(email, password);
+
   if (!user) {
-    auditMiddleware.logFailedLoginAttempt(email, ipAddress, userAgent, 'Email o contraseña incorrectos');
+    auditMiddleware.logFailedLoginAttempt(email, ipAddress, userAgent,
+      reason === 'account_disabled' ? 'Cuenta deshabilitada' : 'Credenciales incorrectas'
+    );
+    rateLimiter.recordFailure(ipAddress);
+
+    if (reason === 'account_disabled') {
+      return res.status(403).json({
+        success: false,
+        message: 'Tu cuenta está deshabilitada. Contacta al administrador.',
+        code: 'ACCOUNT_DISABLED'
+      });
+    }
     return ResponseFormatter.unauthorized(res, 'Email o contraseña incorrectos. Verifica tus datos e intenta nuevamente');
   }
 
-  const { token, tokenId, expiresAt } = tokenUtils.generateTokenWithId({
-    userId: user.id,
-    email: user.email,
-    role: user.role
-  });
-  tokenManager.addGrantedToken(tokenId, user.id, email, token, expiresAt);
+  // Login correcto: resetear contador de intentos fallidos
+  rateLimiter.reset(ipAddress);
+
+  const tokenDuration = rememberMe ? 7 * 24 * 3600 : 24 * 3600;
+  const { token, tokenId, expiresAt } = tokenUtils.generateTokenWithId(
+    { userId: user.id, email: user.email, role: user.role },
+    tokenDuration
+  );
+  tokenManager.addGrantedToken(tokenId, user.id, user.email, token, expiresAt);
 
   auditMiddleware.logLogin(user.id, ipAddress, userAgent, true);
 
@@ -109,40 +128,31 @@ router.post('/login', (req, res) => {
 
 router.post('/forgot-password', (req, res) => {
   const { email } = req.body;
+  // Respuesta genérica siempre para evitar user enumeration
+  const GENERIC_RESPONSE = {
+    message: 'Si ese email está registrado, recibirás un enlace de recuperación.',
+    hint: 'Revisa tu bandeja de entrada y carpeta de spam'
+  };
 
-  if (!email) {
-    return ResponseFormatter.badRequest(res, 'Email requerido');
+  if (!email || !EMAIL_REGEX.test(email)) {
+    return ResponseFormatter.badRequest(res, 'Email inválido');
   }
 
-  const user = User.findByEmail(email);
+  const ipAddress = auditMiddleware.getIpAddress(req);
+  const userAgent = auditMiddleware.getUserAgent(req);
+
+  const user = User.findByEmail(DataNormalizer.normalizeEmail(email));
   if (!user) {
-    return ResponseFormatter.notFound(res, `Usuario con email ${email}`);
+    // No revelar que el email no existe — respuesta idéntica al éxito
+    return ResponseFormatter.success(res, GENERIC_RESPONSE);
   }
 
   const resetToken = User.generatePasswordResetToken();
   User.setResetToken(user.id, resetToken);
   Mailer.sendPasswordResetEmail(email, resetToken);
+  auditMiddleware.logPasswordResetRequest(email, ipAddress, userAgent);
 
-  const ipAddress = auditMiddleware.getIpAddress(req);
-  const userAgent = auditMiddleware.getUserAgent(req);
-  const auditLog = new AuditLog(
-    'password_reset_requested',
-    'unknown',
-    null,
-    ipAddress,
-    true,
-    null,
-    { email },
-    'web'
-  );
-  auditLog.userAgent = userAgent;
-  AuditLog.create(auditLog);
-
-  return ResponseFormatter.success(res, {
-    message: 'Se envió un enlace de recuperación a tu email',
-    email,
-    hint: 'Revisa tu bandeja de entrada'
-  });
+  return ResponseFormatter.success(res, GENERIC_RESPONSE);
 });
 
 router.post('/reset-password', (req, res) => {
@@ -221,18 +231,7 @@ router.post('/bootstrap-superuser', (req, res) => {
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
-  const auditLog = new AuditLog(
-    'superuser_created',
-    user.id,
-    user.id,
-    ipAddress,
-    true,
-    null,
-    { bootstrap: true },
-    'web'
-  );
-  auditLog.userAgent = userAgent;
-  AuditLog.create(auditLog);
+  auditMiddleware.logUserCreation(user.id, user.id, user.email, 'superuser', ipAddress, userAgent);
 
   return ResponseFormatter.success(res, {
     message: 'Super usuario creado exitosamente',

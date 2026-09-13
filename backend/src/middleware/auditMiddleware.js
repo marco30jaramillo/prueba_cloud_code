@@ -1,127 +1,171 @@
 const AuditLog = require('../models/AuditLog');
 
+function lookupUser(userId) {
+  if (!userId || userId === 'desconocido') return { email: '', name: '' };
+  try {
+    const User = require('../models/User');
+    const u = User.findById(userId);
+    return u ? { email: u.email || '', name: u.name || '' } : { email: '', name: '' };
+  } catch { return { email: '', name: '' }; }
+}
+
 const auditMiddleware = {
-  logLogin: (userId, ipAddress, userAgent, success, failureReason = null) => {
-    const log = new AuditLog(
-      'login',
-      userId,
-      userId, // El usuario es tanto quien ejecuta como quien es afectado
+  logLogin(userId, ipAddress, userAgent, success, actorEmail = '') {
+    const actor = lookupUser(userId);
+    const log = new AuditLog({
+      action: 'login',
+      actorId: userId,
+      actorEmail: actor.email || actorEmail,
+      actorName: actor.name,
+      targetId: userId,
+      targetEmail: actor.email || actorEmail,
       ipAddress,
+      userAgent,
       success,
-      failureReason,
-      null,
-      'web'
-    );
-    log.userAgent = userAgent;
+      method: 'web'
+    });
     AuditLog.create(log);
   },
 
-  logLogout: (userId, ipAddress, userAgent) => {
-    const log = new AuditLog(
-      'logout',
-      userId,
-      null,
+  logLogout(userId, ipAddress, userAgent) {
+    const actor = lookupUser(userId);
+    const log = new AuditLog({
+      action: 'logout',
+      actorId: userId,
+      actorEmail: actor.email,
+      actorName: actor.name,
       ipAddress,
-      true,
-      null,
-      null,
-      'web'
-    );
-    log.userAgent = userAgent;
+      userAgent,
+      success: true,
+      method: 'web'
+    });
     AuditLog.create(log);
   },
 
-  logPasswordChange: (adminId, targetUserId, ipAddress, userAgent, changedByAdmin = false) => {
-    const log = new AuditLog(
-      'password_change',
-      adminId || targetUserId,
-      targetUserId,
+  logPasswordChange(adminId, targetUserId, ipAddress, userAgent, changedByAdmin = false) {
+    const actor = lookupUser(adminId || targetUserId);
+    const target = changedByAdmin ? lookupUser(targetUserId) : actor;
+    const log = new AuditLog({
+      action: 'password_change',
+      actorId: adminId || targetUserId,
+      actorEmail: actor.email,
+      actorName: actor.name,
+      targetId: targetUserId,
+      targetEmail: target.email,
       ipAddress,
-      true,
-      null,
-      { changedByAdmin },
-      'web'
-    );
-    log.userAgent = userAgent;
+      userAgent,
+      success: true,
+      details: { changedByAdmin },
+      method: changedByAdmin ? 'admin' : 'web'
+    });
     AuditLog.create(log);
   },
 
-  logProfileUpdate: (userId, ipAddress, userAgent, changes) => {
-    const log = new AuditLog(
-      'profile_update',
-      userId,
-      userId,
+  logProfileUpdate(userId, ipAddress, userAgent, changes) {
+    const actor = lookupUser(userId);
+    const log = new AuditLog({
+      action: 'profile_update',
+      actorId: userId,
+      actorEmail: actor.email,
+      actorName: actor.name,
+      targetId: userId,
+      targetEmail: actor.email,
       ipAddress,
-      true,
-      null,
-      { changes },
-      'web'
-    );
-    log.userAgent = userAgent;
+      userAgent,
+      success: true,
+      details: { changes },
+      method: 'web'
+    });
     AuditLog.create(log);
   },
 
-  logUserStatusChange: (adminId, targetUserId, newStatus, ipAddress, userAgent) => {
-    const log = new AuditLog(
-      newStatus ? 'user_enable' : 'user_disable',
-      adminId,
-      targetUserId,
+  logUserStatusChange(adminId, targetUserId, newStatus, ipAddress, userAgent) {
+    const actor = lookupUser(adminId);
+    const target = lookupUser(targetUserId);
+    const log = new AuditLog({
+      action: newStatus ? 'user_enable' : 'user_disable',
+      actorId: adminId,
+      actorEmail: actor.email,
+      actorName: actor.name,
+      targetId: targetUserId,
+      targetEmail: target.email,
       ipAddress,
-      true,
-      null,
-      { previousStatus: !newStatus, newStatus },
-      'admin'
-    );
-    log.userAgent = userAgent;
+      userAgent,
+      success: true,
+      details: { newStatus },
+      method: 'admin'
+    });
     AuditLog.create(log);
   },
 
-  logUserCreation: (adminId, newUserId, userEmail, userRole, ipAddress, userAgent) => {
-    const log = new AuditLog(
-      'user_created',
-      adminId,
-      newUserId,
+  logUserCreation(adminId, newUserId, userEmail, userRole, ipAddress, userAgent) {
+    const actor = lookupUser(adminId);
+    const log = new AuditLog({
+      action: 'user_created',
+      actorId: adminId,
+      actorEmail: actor.email,
+      actorName: actor.name,
+      targetId: newUserId,
+      targetEmail: userEmail,
       ipAddress,
-      true,
-      null,
-      { email: userEmail, role: userRole },
-      'admin'
-    );
-    log.userAgent = userAgent;
+      userAgent,
+      success: true,
+      details: { email: userEmail, role: userRole },
+      method: 'admin'
+    });
     AuditLog.create(log);
   },
 
-  logPasswordGeneration: (adminId, targetUserId, ipAddress, userAgent) => {
-    const log = new AuditLog(
-      'password_generated',
-      adminId,
-      targetUserId,
+  logPasswordGeneration(adminId, targetUserId, ipAddress, userAgent) {
+    const actor = lookupUser(adminId);
+    const target = lookupUser(targetUserId);
+    const log = new AuditLog({
+      action: 'password_generated',
+      actorId: adminId,
+      actorEmail: actor.email,
+      actorName: actor.name,
+      targetId: targetUserId,
+      targetEmail: target.email,
       ipAddress,
-      true,
-      null,
-      { action: 'admin_generated_password' },
-      'admin'
-    );
-    log.userAgent = userAgent;
+      userAgent,
+      success: true,
+      method: 'admin'
+    });
     AuditLog.create(log);
   },
 
-  logFailedLoginAttempt: (email, ipAddress, userAgent, reason) => {
-    const log = new AuditLog(
-      'login',
-      'unknown',
-      null,
+  logFailedLoginAttempt(email, ipAddress, userAgent, reason) {
+    const log = new AuditLog({
+      action: 'failed_login_attempt',
+      actorId: 'desconocido',
+      actorEmail: email,
+      actorName: '',
       ipAddress,
-      false,
-      reason,
-      { email },
-      'web'
-    );
-    log.userAgent = userAgent;
+      userAgent,
+      success: false,
+      failureReason: reason,
+      details: { email },
+      method: 'web'
+    });
     AuditLog.create(log);
   },
 
-  getIpAddress: (req) => {
+  logPasswordResetRequest(email, ipAddress, userAgent) {
+    const log = new AuditLog({
+      action: 'password_reset_requested',
+      actorId: 'desconocido',
+      actorEmail: email,
+      actorName: '',
+      ipAddress,
+      userAgent,
+      success: true,
+      details: { email },
+      method: 'web'
+    });
+    AuditLog.create(log);
+  },
+
+  getIpAddress(req) {
     return (
       req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
       req.socket.remoteAddress ||
@@ -129,7 +173,7 @@ const auditMiddleware = {
     );
   },
 
-  getUserAgent: (req) => {
+  getUserAgent(req) {
     return req.headers['user-agent'] || 'unknown';
   }
 };
