@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
+  const { method, pathname } = request;
+  const origin = request.headers.get('origin') || request.headers.get('x-forwarded-for') || 'unknown';
+
+  console.log(`[FRONTEND] ${method} ${pathname} - Origin: ${origin}`);
+
   const response = NextResponse.next();
 
   response.headers.set('Access-Control-Allow-Origin', '*');
