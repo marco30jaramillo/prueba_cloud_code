@@ -7,6 +7,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { usersAPI, authAPI } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { getImageUrl } from '@/lib/image-url';
 import styles from './page.module.scss';
 
 interface User {
@@ -214,14 +215,14 @@ function UsersPageContent() {
                       <tr key={u.id} className={!u.isActive ? styles.inactiveRow : ''}>
                         <td>
                           <img
-                            src={u.photo?.startsWith('http') ? u.photo : `${process.env.NEXT_PUBLIC_API_URL}${u.photo}`}
+                            src={getImageUrl(u.photo)}
                             alt={u.name}
                             className={styles.userPhoto}
                             onError={(e) => {
                               const img = e.target as HTMLImageElement;
                               if (!img.dataset.fallbackAttempted) {
                                 img.dataset.fallbackAttempted = 'true';
-                                img.src = `${process.env.NEXT_PUBLIC_API_URL}/datos/default/default-avatar.svg`;
+                                img.src = getImageUrl(undefined);
                               }
                             }}
                           />

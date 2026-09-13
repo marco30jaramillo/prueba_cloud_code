@@ -6,6 +6,7 @@ import { PhotoUpload } from '@/components/PhotoUpload';
 import { useAuthStore, saveAuthToStorage } from '@/lib/auth-store';
 import { authAPI } from '@/lib/api';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { getImageUrl } from '@/lib/image-url';
 import styles from './page.module.scss';
 
 function ProfilePageContent() {
@@ -14,19 +15,6 @@ function ProfilePageContent() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  const getPhotoUrl = (photo: string | undefined) => {
-    if (!photo) return `${process.env.NEXT_PUBLIC_API_URL}/datos/default/default-avatar.svg`;
-    if (photo.startsWith('http')) return photo;
-
-    // Manejar rutas con /datos (viejas) y sin /datos (nuevas)
-    let photoPath = photo;
-    if (!photo.startsWith('/datos') && !photo.startsWith('/uploads')) {
-      photoPath = `/datos/${photo}`;
-    }
-
-    return `${process.env.NEXT_PUBLIC_API_URL}${photoPath}`;
-  };
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -161,7 +149,7 @@ function ProfilePageContent() {
               <div className={styles.photoSection}>
                 {isEditing ? (
                   <PhotoUpload
-                    currentPhoto={getPhotoUrl(formData.photo)}
+                    currentPhoto={getImageUrl(formData.photo)}
                     onPhotoChange={(photoUrl) =>
                       setFormData(prev => ({ ...prev, photo: photoUrl }))
                     }
@@ -169,14 +157,14 @@ function ProfilePageContent() {
                   />
                 ) : (
                   <img
-                    src={getPhotoUrl(formData.photo)}
+                    src={getImageUrl(formData.photo)}
                     alt="Foto de perfil"
                     className={styles.profilePhoto}
                     onError={(e) => {
                       const img = e.target as HTMLImageElement;
                       if (!img.dataset.fallbackAttempted) {
                         img.dataset.fallbackAttempted = 'true';
-                        img.src = `${process.env.NEXT_PUBLIC_API_URL}/datos/default/default-avatar.svg`;
+                        img.src = getImageUrl(undefined);
                       }
                     }}
                   />

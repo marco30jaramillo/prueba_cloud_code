@@ -6,6 +6,7 @@ import { Navbar as BSNavbar, Nav, Container, Button, Dropdown } from 'react-boot
 import { useAuthStore } from '@/lib/auth-store';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import { getImageUrl } from '@/lib/image-url';
 import styles from './Navbar.module.scss';
 
 export const Navbar: React.FC = () => {
@@ -13,18 +14,6 @@ export const Navbar: React.FC = () => {
   const { handleLogout, handleLogoutAll } = useAuth();
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-  const getPhotoUrl = (photo: string | undefined) => {
-    if (!photo) return `${process.env.NEXT_PUBLIC_API_URL}/datos/default/default-avatar.svg`;
-    if (photo.startsWith('http')) return photo;
-
-    let photoPath = photo;
-    if (!photo.startsWith('/datos') && !photo.startsWith('/uploads')) {
-      photoPath = `/datos/${photo}`;
-    }
-
-    return `${process.env.NEXT_PUBLIC_API_URL}${photoPath}`;
-  };
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -92,14 +81,14 @@ export const Navbar: React.FC = () => {
                 )}
                 <div className={styles.userInfo}>
                   <img
-                    src={getPhotoUrl(user?.photo)}
+                    src={getImageUrl(user?.photo)}
                     alt={user?.name}
                     className={styles.userPhoto}
                     onError={(e) => {
                       const img = e.target as HTMLImageElement;
                       if (!img.dataset.fallbackAttempted) {
                         img.dataset.fallbackAttempted = 'true';
-                        img.src = `${process.env.NEXT_PUBLIC_API_URL}/datos/default/default-avatar.svg`;
+                        img.src = getImageUrl(undefined);
                       }
                     }}
                   />

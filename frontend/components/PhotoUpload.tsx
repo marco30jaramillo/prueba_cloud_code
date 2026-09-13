@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Form, Button, Alert, Spinner } from 'react-bootstrap';
+import { getImageUrl, getBaseUrl } from '@/lib/image-url';
 import styles from './PhotoUpload.module.scss';
 
 interface PhotoUploadProps {
@@ -51,7 +52,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
       formData.append('photo', file);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/upload/photo`,
+        `${getBaseUrl()}/upload/photo`,
         {
           method: 'POST',
           headers: {
@@ -106,7 +107,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
             const img = e.target as HTMLImageElement;
             if (!img.dataset.fallbackAttempted) {
               img.dataset.fallbackAttempted = 'true';
-              img.src = `${process.env.NEXT_PUBLIC_API_URL}/datos/default/default-avatar.svg`;
+              img.src = `${getImageUrl(undefined)}`;
             }
           }}
         />
