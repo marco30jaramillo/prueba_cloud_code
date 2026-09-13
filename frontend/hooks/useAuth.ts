@@ -57,8 +57,7 @@ export const useAuth = () => {
 
   const handleLogoutAll = useCallback(async () => {
     try {
-      const response = await authAPI.logoutAll();
-      console.log(`[Logout All] ${response.sessionsRevoked} sesiones cerradas`);
+      await authAPI.logoutAll();
     } catch (error) {
       console.error('Logout all error:', error);
     } finally {
