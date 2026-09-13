@@ -3,12 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Modal, Spinner } from 'react-bootstrap';
 import { PhotoUpload } from '@/components/PhotoUpload';
-import { useAuthStore } from '@/lib/auth-store';
+import { useAuthStore, saveAuthToStorage } from '@/lib/auth-store';
 import { authAPI } from '@/lib/api';
 import styles from './page.module.scss';
 
 export default function ProfilePage() {
-  const { user, token } = useAuthStore();
+  const { user, token, setAuth } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -61,7 +61,14 @@ export default function ProfilePage() {
 
     setIsLoading(true);
     try {
-      await authAPI.updateProfile(formData.name, formData.photo);
+      const response = await authAPI.updateProfile(formData.name, formData.photo);
+
+      // Actualizar el store y localStorage con los datos retornados
+      if (response.user && token) {
+        setAuth(response.user, token);
+        saveAuthToStorage(response.user, token);
+      }
+
       setMessage({ type: 'success', text: '✅ Perfil actualizado exitosamente' });
       setIsEditing(false);
     } catch (error: any) {
