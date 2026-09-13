@@ -37,6 +37,10 @@ function UsersPageContent() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState('');
 
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [createFormData, setCreateFormData] = useState({ email: '', password: '', name: '', role: 'cliente' });
+  const [isCreating, setIsCreating] = useState(false);
+
   useEffect(() => {
     loadUsers();
   }, []);
@@ -111,6 +115,37 @@ function UsersPageContent() {
     setMessage({ type: 'success', text: '✅ Contraseña copiada al portapapeles' });
   };
 
+  const handleCreateUser = async () => {
+    if (!createFormData.email || !createFormData.password || !createFormData.name) {
+      setMessage({ type: 'error', text: '⚠️ Completa todos los campos' });
+      return;
+    }
+
+    if (createFormData.password.length < 8) {
+      setMessage({ type: 'error', text: '⚠️ La contraseña debe tener al menos 8 caracteres' });
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      await authAPI.createUser(
+        createFormData.email,
+        createFormData.password,
+        createFormData.name,
+        createFormData.role
+      );
+      setMessage({ type: 'success', text: `✅ Usuario ${createFormData.email} creado exitosamente` });
+      setShowCreateUser(false);
+      setCreateFormData({ email: '', password: '', name: '', role: 'cliente' });
+      loadUsers();
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Error al crear usuario';
+      setMessage({ type: 'error', text: `⚠️ ${errorMsg}` });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Container className={styles.container}>
@@ -126,8 +161,19 @@ function UsersPageContent() {
       <Row className="mb-4">
         <Col>
           <div className={styles.header}>
-            <h1 className={styles.title}>👥 Gestión de Usuarios</h1>
-            <p className={styles.subtitle}>Administra todos los usuarios del sistema</p>
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                <h1 className={styles.title}>👥 Gestión de Usuarios</h1>
+                <p className={styles.subtitle}>Administra todos los usuarios del sistema</p>
+              </div>
+              <Button
+                variant="success"
+                onClick={() => setShowCreateUser(true)}
+                className="me-2"
+              >
+                ➕ Crear Usuario
+              </Button>
+            </div>
           </div>
         </Col>
       </Row>
@@ -350,6 +396,74 @@ function UsersPageContent() {
             onClick={() => { setShowPasswordModal(false); setGeneratedPassword(''); }}
           >
             Cerrar
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal show={showCreateUser} onHide={() => setShowCreateUser(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>➕ Crear Nuevo Usuario</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Form.Group className="mb-3">
+              <Form.Label>Nombre</Form.Label>
+              <Form.Control
+                type="text"
+                value={createFormData.name}
+                onChange={(e) => setCreateFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Nombre completo"
+                disabled={isCreating}
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Email</Form.Label>
+              <Form.Control
+                type="email"
+                value={createFormData.email}
+                onChange={(e) => setCreateFormData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="usuario@ejemplo.com"
+                disabled={isCreating}
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Contraseña</Form.Label>
+              <Form.Control
+                type="password"
+                value={createFormData.password}
+                onChange={(e) => setCreateFormData(prev => ({ ...prev, password: e.target.value }))}
+                placeholder="Mínimo 8 caracteres"
+                disabled={isCreating}
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Rol</Form.Label>
+              <Form.Select
+                value={createFormData.role}
+                onChange={(e) => setCreateFormData(prev => ({ ...prev, role: e.target.value }))}
+                disabled={isCreating}
+              >
+                <option value="cliente">Cliente</option>
+                <option value="vendedor">Vendedor</option>
+                <option value="administrador">Administrador</option>
+              </Form.Select>
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => setShowCreateUser(false)}
+            disabled={isCreating}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="success"
+            onClick={handleCreateUser}
+            disabled={isCreating}
+          >
+            {isCreating ? '✓ Creando...' : '✓ Crear Usuario'}
           </Button>
         </Modal.Footer>
       </Modal>
