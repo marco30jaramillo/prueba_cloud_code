@@ -4,9 +4,20 @@ import React, { useState } from 'react';
 import { Form, Button, Alert, Spinner, InputGroup } from 'react-bootstrap';
 import styles from './AuthForm.module.scss';
 
+export interface AuthFormData {
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+  name?: string;
+  photo?: string;
+  token?: string;
+  newPassword?: string;
+  rememberMe?: boolean;
+}
+
 interface AuthFormProps {
   type: 'login' | 'register' | 'forgot-password' | 'reset-password';
-  onSubmit: (data: Record<string, string | boolean>) => Promise<{ success: boolean; error?: string }>;
+  onSubmit: (data: AuthFormData) => Promise<{ success: boolean; error?: string }>;
   isLoading?: boolean;
 }
 
@@ -94,7 +105,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = 
     if (!validate()) return;
     setMessage(null);
 
-    const payload: Record<string, string | boolean> = { ...formData };
+    const payload: AuthFormData = { ...formData };
     if (type === 'login') payload.rememberMe = rememberMe;
 
     const response = await onSubmit(payload);

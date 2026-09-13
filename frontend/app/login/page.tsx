@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Container, Row, Col } from 'react-bootstrap';
-import { AuthForm } from '@/components/AuthForm';
+import { AuthForm, AuthFormData } from '@/components/AuthForm';
 import { useAuth } from '@/hooks/useAuth';
 import styles from './page.module.scss';
 
@@ -20,11 +20,11 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, router, searchParams]);
 
-  const onSubmit = async (data: Record<string, string | boolean>) => {
+  const onSubmit = async (data: AuthFormData) => {
     const result = await handleLogin(
-      data.email as string,
-      data.password as string,
-      data.rememberMe as boolean
+      data.email!,
+      data.password!,
+      data.rememberMe ?? false
     );
     if (result?.success) {
       const returnUrl = searchParams.get('returnUrl') || '/dashboard';

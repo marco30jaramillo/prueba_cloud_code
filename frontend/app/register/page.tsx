@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Container, Row, Col } from 'react-bootstrap';
-import { AuthForm } from '@/components/AuthForm';
+import { AuthForm, AuthFormData } from '@/components/AuthForm';
 import { useAuth } from '@/hooks/useAuth';
 import styles from './page.module.scss';
 
@@ -16,11 +16,11 @@ export default function RegisterPage() {
     if (isAuthenticated) router.push('/dashboard');
   }, [isAuthenticated, router]);
 
-  const onSubmit = async (data: Record<string, string | boolean>) => {
+  const onSubmit = async (data: AuthFormData) => {
     if (data.password !== data.confirmPassword) {
       return { success: false, error: 'Las contraseñas no coinciden' };
     }
-    const result = await handleRegister(data.email as string, data.password as string, data.name as string, data.photo as string);
+    const result = await handleRegister(data.email!, data.password!, data.name!, data.photo);
     if (result.success) {
       router.push('/dashboard');
     }

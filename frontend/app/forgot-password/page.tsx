@@ -3,14 +3,14 @@
 import React from 'react';
 import Link from 'next/link';
 import { Container, Row, Col, Alert } from 'react-bootstrap';
-import { AuthForm } from '@/components/AuthForm';
+import { AuthForm, AuthFormData } from '@/components/AuthForm';
 import { authAPI } from '@/lib/api';
 import styles from './page.module.scss';
 
 export default function ForgotPasswordPage() {
-  const onSubmit = async (data: Record<string, string | boolean>) => {
+  const onSubmit = async (data: AuthFormData) => {
     try {
-      const result = await authAPI.forgotPassword(data.email as string);
+      const result = await authAPI.forgotPassword(data.email!);
       return { success: true, data: result };
     } catch (error: any) {
       const err = error.response?.data;
