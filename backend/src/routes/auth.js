@@ -6,6 +6,7 @@ const Mailer = require('../utils/mailer');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { tokenUtils, authMiddleware, tokenManager } = require('../middleware/auth');
 const roleMiddleware = require('../middleware/roleMiddleware');
+const auditMiddleware = require('../middleware/auditMiddleware');
 const PasswordValidator = require('../utils/passwordValidator');
 const DataNormalizer = require('../utils/dataNormalizer');
 
@@ -63,6 +64,8 @@ router.post('/register', (req, res) => {
 
 router.post('/login', (req, res) => {
   const { email, password } = req.body;
+  const ipAddress = auditMiddleware.getIpAddress(req);
+  const userAgent = auditMiddleware.getUserAgent(req);
 
   if (!email || !password) {
     return ResponseFormatter.badRequest(res, 'Email y contraseña son requeridos', {
@@ -73,6 +76,7 @@ router.post('/login', (req, res) => {
 
   const user = User.authenticate(email, password);
   if (!user) {
+    auditMiddleware.logFailedLoginAttempt(email, ipAddress, userAgent, 'Email o contraseña incorrectos');
     return ResponseFormatter.unauthorized(res, 'Email o contraseña incorrectos. Verifica tus datos e intenta nuevamente');
   }
 
@@ -82,6 +86,8 @@ router.post('/login', (req, res) => {
     role: user.role
   });
   tokenManager.addGrantedToken(tokenId, user.id, email, token, expiresAt);
+
+  auditMiddleware.logLogin(user.id, ipAddress, userAgent, true);
 
   return ResponseFormatter.success(res, {
     message: 'Sesión iniciada exitosamente',

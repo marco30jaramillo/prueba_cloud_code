@@ -5,6 +5,7 @@ const path = require('path');
 const authRoutes = require('./routes/auth');
 const usersRoutes = require('./routes/users');
 const uploadRoutes = require('./routes/upload');
+const auditRoutes = require('./routes/audit');
 const TokenCleaner = require('./scripts/cleanExpiredTokens');
 const TokenManager = require('./utils/tokenManager');
 const ResponseFormatter = require('./utils/responseFormatter');
@@ -42,6 +43,7 @@ app.use(cors(corsOptions));
 app.use('/auth', authRoutes);
 app.use('/users', usersRoutes);
 app.use('/upload', uploadRoutes);
+app.use('/audit', auditRoutes);
 
 app.get('/health', (req, res) => {
   ResponseFormatter.success(res, {
