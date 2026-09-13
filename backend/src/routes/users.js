@@ -6,7 +6,7 @@ const roleMiddleware = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
-router.get('/', authMiddleware, roleMiddleware.requireRole(['superuser', 'administrador']), (req, res) => {
+router.get('/', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), (req, res) => {
   const users = User.getAll();
 
   const safeUsers = users.map(user => ({
@@ -53,7 +53,7 @@ router.get('/:userId', authMiddleware, (req, res) => {
   });
 });
 
-router.patch('/:userId', authMiddleware, roleMiddleware.requireRole(['superuser', 'administrador']), (req, res) => {
+router.patch('/:userId', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), (req, res) => {
   const { userId } = req.params;
   const { name, photo } = req.body;
   const requesterId = req.user.userId;
@@ -94,7 +94,7 @@ router.patch('/:userId', authMiddleware, roleMiddleware.requireRole(['superuser'
   });
 });
 
-router.patch('/:userId/status', authMiddleware, roleMiddleware.requireRole(['superuser', 'administrador']), (req, res) => {
+router.patch('/:userId/status', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), (req, res) => {
   const { userId } = req.params;
   const { isActive } = req.body;
   const requesterId = req.user.userId;
@@ -131,7 +131,7 @@ router.patch('/:userId/status', authMiddleware, roleMiddleware.requireRole(['sup
   });
 });
 
-router.post('/:userId/generate-password', authMiddleware, roleMiddleware.requireRole(['superuser', 'administrador']), (req, res) => {
+router.post('/:userId/generate-password', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), (req, res) => {
   const { userId } = req.params;
   const requesterId = req.user.userId;
 

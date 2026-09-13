@@ -14,6 +14,18 @@ export const Navbar: React.FC = () => {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  const getPhotoUrl = (photo: string | undefined) => {
+    if (!photo) return `${process.env.NEXT_PUBLIC_API_URL}/datos/default/default-avatar.svg`;
+    if (photo.startsWith('http')) return photo;
+
+    let photoPath = photo;
+    if (!photo.startsWith('/datos') && !photo.startsWith('/uploads')) {
+      photoPath = `/datos/${photo}`;
+    }
+
+    return `${process.env.NEXT_PUBLIC_API_URL}${photoPath}`;
+  };
+
   useEffect(() => {
     if (!isAuthenticated) {
       setIsLoggingOut(false);
@@ -78,9 +90,16 @@ export const Navbar: React.FC = () => {
                     👥 Usuarios
                   </Nav.Link>
                 )}
-                <span className={styles.userInfo}>
-                  {user?.name} ({user?.role})
-                </span>
+                <div className={styles.userInfo}>
+                  <img
+                    src={getPhotoUrl(user?.photo)}
+                    alt={user?.name}
+                    className={styles.userPhoto}
+                  />
+                  <span>
+                    {user?.name} ({user?.role})
+                  </span>
+                </div>
                 <Dropdown className={styles.logoutDropdown}>
                   <Dropdown.Toggle
                     variant="outline-danger"

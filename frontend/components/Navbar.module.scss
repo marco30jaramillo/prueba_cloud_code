@@ -43,6 +43,18 @@
   border-radius: 20px;
   font-size: 0.9rem;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.userPhoto {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #10b981;
+  flex-shrink: 0;
 }
 
 .logoutBtn {
