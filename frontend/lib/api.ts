@@ -3,17 +3,25 @@ import { AuthResponse } from '@/types';
 import { getTokenFromStorage, clearAuthStorage } from './auth-store';
 
 const getAPIUrl = () => {
+  // Lado del servidor (Node.js)
   if (typeof window === 'undefined') {
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   }
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (apiUrl && !apiUrl.includes('localhost')) {
-    return apiUrl;
+  // Lado del cliente (Navegador)
+  const configuredUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  // PRODUCCIÓN: Si está configurada una URL específica y no es localhost, usarla
+  if (configuredUrl && !configuredUrl.includes('localhost')) {
+    console.debug('[API] Usando URL configurada:', configuredUrl);
+    return configuredUrl;
   }
 
+  // DESARROLLO: Detectar automáticamente la IP/hostname del servidor
   const backendPort = '3001';
-  return `http://${window.location.hostname}:${backendPort}`;
+  const autoUrl = `http://${window.location.hostname}:${backendPort}`;
+  console.debug('[API] Detectado automáticamente:', autoUrl);
+  return autoUrl;
 };
 
 const API_URL = getAPIUrl();
