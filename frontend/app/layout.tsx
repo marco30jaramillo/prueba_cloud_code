@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Navbar } from '@/components/Navbar';
+import { AuthProvider } from '@/components/AuthProvider';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '@/styles/globals.scss';
 
@@ -16,10 +17,12 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body>
-        <Navbar />
-        <main className="min-vh-100 py-5">
-          {children}
-        </main>
+        <AuthProvider>
+          <Navbar />
+          <main className="min-vh-100 py-5">
+            {children}
+          </main>
+        </AuthProvider>
       </body>
     </html>
   );
