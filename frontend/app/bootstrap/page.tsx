@@ -189,7 +189,7 @@ export default function BootstrapPage() {
 
                 <Form.Group className="mb-3">
                   <Form.Label>Contraseña</Form.Label>
-                  <div className="input-group">
+                  <div className={`input-group ${styles.inputGroupWrapper}`}>
                     <Form.Control
                       type={showPassword ? 'text' : 'password'}
                       name="password"
@@ -217,7 +217,7 @@ export default function BootstrapPage() {
 
                 <Form.Group className="mb-4">
                   <Form.Label>Confirmar Contraseña</Form.Label>
-                  <div className="input-group">
+                  <div className={`input-group ${styles.inputGroupWrapper}`}>
                     <Form.Control
                       type={showConfirmPassword ? 'text' : 'password'}
                       name="confirmPassword"

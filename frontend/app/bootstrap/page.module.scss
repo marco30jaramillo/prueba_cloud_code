@@ -64,12 +64,14 @@
   }
 }
 
-:global(.input-group) :global(.form-control) {
-  border-right: none;
-
-  &:focus {
+.inputGroupWrapper {
+  :global(.form-control) {
     border-right: none;
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+
+    &:focus {
+      border-right: none;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    }
   }
 }
 
