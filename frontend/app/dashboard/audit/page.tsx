@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { useAuthStore } from '@/lib/auth-store';
 import styles from './page.module.scss';
 
 interface AuditLog {
@@ -22,38 +23,35 @@ interface AuditLog {
 
 export default function AuditPage() {
   const router = useRouter();
+  const { user, isInitialized } = useAuthStore();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [userRole, setUserRole] = useState('');
   const [filter, setFilter] = useState<'all' | 'failed' | 'successful'>('all');
 
   useEffect(() => {
-    const user = localStorage.getItem('user');
+    if (!isInitialized) return;
+
     if (!user) {
       router.push('/login');
       return;
     }
 
-    const userData = JSON.parse(user);
-    setUserRole(userData.role);
-
-    if (userData.role !== 'superuser') {
+    if (user.role !== 'superuser') {
       setError('❌ Solo los superuser pueden acceder a este módulo');
       setLoading(false);
       return;
     }
 
     fetchLogs();
-  }, [router]);
+  }, [user, isInitialized, router]);
 
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       const response = await axios.get('/audit/logs', {
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${user?.token}`
         }
       });
 
@@ -121,7 +119,7 @@ export default function AuditPage() {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
 
-  if (userRole !== 'superuser') {
+  if (user?.role !== 'superuser') {
     return (
       <div className={styles.container}>
         <div className={styles.errorAlert}>
