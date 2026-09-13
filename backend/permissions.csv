@@ -1,0 +1,22 @@
+id,name,description,category
+1,auth:register,"register",auth
+2,auth:login,"login",auth
+3,auth:logout,"logout",auth
+4,auth:validate,"validate",auth
+5,auth:forgot-password,"forgot password",auth
+6,auth:reset-password,"reset password",auth
+7,auth:bootstrap-superuser,"bootstrap superuser",auth
+8,auth:create-user,"create user",auth
+9,auth:update-user,"update user",auth
+10,auth:delete-user,"delete user",auth
+11,auth:view-users,"view users",auth
+12,profile:view-own,"view own",profile
+13,profile:edit-own,"edit own",profile
+14,profile:view-all,"view all",profile
+15,profile:view-clients,"view clients",profile
+16,profile:view-vendors,"view vendors",profile
+17,admin:manage-users,"manage users",admin
+18,admin:manage-roles,"manage roles",admin
+19,admin:view-stats,"view stats",admin
+20,admin:view-audit,"view audit",admin
+21,system:full-access,"full access",system

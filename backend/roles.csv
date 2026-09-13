@@ -1,0 +1,5 @@
+id,name,description,permissions
+1,"superuser","Super Usuario - Acceso integral a todas las funciones","system:full-access"
+2,"administrador","Administrador - Gestión de usuarios y sistemas","admin:manage-users|admin:manage-roles|admin:view-stats|admin:view-audit|profile:view-all|profile:view-clients|profile:view-vendors|auth:view-users|auth:create-user|auth:update-user|auth:delete-user"
+3,"vendedor","Vendedor - Permisos limitados para venta","auth:login|auth:logout|auth:validate|profile:view-own|profile:edit-own|profile:view-clients"
+4,"cliente","Cliente - Permisos básicos","auth:login|auth:logout|auth:validate|auth:forgot-password|auth:reset-password|profile:view-own|profile:edit-own"

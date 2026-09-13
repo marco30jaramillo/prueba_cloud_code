@@ -1,0 +1,55 @@
+.navbar {
+  background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%) !important;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.brand {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #3b82f6, #10b981);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+.logo {
+  font-size: 2rem;
+}
+
+.navLink {
+  margin-left: 1.5rem;
+  color: #6b7280 !important;
+  font-weight: 500;
+  transition: all 0.3s ease;
+
+  &:hover {
+    color: #10b981 !important;
+  }
+}
+
+.userInfo {
+  margin-left: 2rem;
+  padding: 0.5rem 1rem;
+  background-color: #ecfdf5;
+  color: #065f46;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.logoutBtn {
+  margin-left: 1rem;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
