@@ -67,10 +67,15 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
       }
 
       const data = await response.json();
-      const photoUrl = `${process.env.NEXT_PUBLIC_API_URL}${data.photo}`;
-
-      onPhotoChange(photoUrl);
+      // La foto se guarda como: /datos/uploads/users/{filename}
+      // Guardamos solo la ruta relativa, el frontend la construye cuando la necesita
+      onPhotoChange(data.photo);
       setMessage({ type: 'success', text: '✅ Foto subida exitosamente' });
+
+      // Actualizar preview con URL completa
+      if (data.url) {
+        setPreview(data.url);
+      }
     } catch (error: any) {
       setMessage({ type: 'error', text: `⚠️ ${error.message}` });
       setPreview(currentPhoto);

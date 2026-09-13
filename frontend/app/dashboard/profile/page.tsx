@@ -14,9 +14,15 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  const getPhotoUrl = (photo: string | undefined) => {
+    if (!photo) return '/datos/default/default-avatar.svg';
+    if (photo.startsWith('http')) return photo;
+    return `${process.env.NEXT_PUBLIC_API_URL}${photo}`;
+  };
+
   const [formData, setFormData] = useState({
     name: user?.name || '',
-    photo: user?.photo || 'https://via.placeholder.com/40?text=👤'
+    photo: user?.photo || '/datos/default/default-avatar.svg'
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -140,7 +146,7 @@ export default function ProfilePage() {
               <div className={styles.photoSection}>
                 {isEditing ? (
                   <PhotoUpload
-                    currentPhoto={formData.photo}
+                    currentPhoto={getPhotoUrl(formData.photo)}
                     onPhotoChange={(photoUrl) =>
                       setFormData(prev => ({ ...prev, photo: photoUrl }))
                     }
@@ -148,7 +154,7 @@ export default function ProfilePage() {
                   />
                 ) : (
                   <img
-                    src={formData.photo}
+                    src={getPhotoUrl(formData.photo)}
                     alt="Foto de perfil"
                     className={styles.profilePhoto}
                   />
