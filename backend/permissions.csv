@@ -10,13 +10,25 @@ id,name,description,category
 9,auth:update-user,"update user",auth
 10,auth:delete-user,"delete user",auth
 11,auth:view-users,"view users",auth
-12,profile:view-own,"view own",profile
-13,profile:edit-own,"edit own",profile
-14,profile:view-all,"view all",profile
-15,profile:view-clients,"view clients",profile
-16,profile:view-vendors,"view vendors",profile
+12,profile:view-own,"view own profile",profile
+13,profile:edit-own,"edit own profile",profile
+14,profile:view-all,"view all profiles",profile
+15,profile:view-clients,"view client profiles",profile
+16,profile:view-vendors,"view vendor profiles",profile
 17,admin:manage-users,"manage users",admin
 18,admin:manage-roles,"manage roles",admin
 19,admin:view-stats,"view stats",admin
 20,admin:view-audit,"view audit",admin
-21,system:full-access,"full access",system
+21,system:full-access,"full system access",system
+22,admin:view-roles,"view roles and permissions config",admin
+23,vale:crear,"Registrar un nuevo vale para un cliente",vale
+24,vale:ver-tienda,"Ver todos los vales activos de la tienda",vale
+25,vale:ver-propio,"Cliente: consultar sus propios vales",vale
+26,vale:anular,"Anular un vale (solo tendero propietario)",vale
+27,abono:crear,"Registrar un abono a un vale",abono
+28,abono:ver,"Ver historial de abonos de un vale",abono
+29,abono:anular,"Anular un abono mal registrado",abono
+30,tienda:ver,"Consultar informacion de la tienda",tienda
+31,tienda:administrar,"Crear y gestionar tiendas",tienda
+32,cartera:ver,"Ver resumen de cartera pendiente",cartera
+33,cartera:reportes,"Generar reportes de deuda y mora",cartera
