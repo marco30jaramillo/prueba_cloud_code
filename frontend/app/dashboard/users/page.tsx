@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Table, Button, Alert, Spinner, Modal, Form, Dropdown } from 'react-bootstrap';
+import { PhotoUpload } from '@/components/PhotoUpload';
 import { useAuthStore } from '@/lib/auth-store';
 import { usersAPI, authAPI } from '@/lib/api';
 import { useRouter } from 'next/navigation';
@@ -280,13 +281,11 @@ export default function UsersPage() {
 
               <Form.Group className="mb-3">
                 <Form.Label>Foto de Perfil</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={editFormData.photo}
-                  onChange={(e) =>
-                    setEditFormData(prev => ({ ...prev, photo: e.target.value }))
+                <PhotoUpload
+                  currentPhoto={editingUser.photo?.startsWith('http') ? editingUser.photo : `${process.env.NEXT_PUBLIC_API_URL}${editingUser.photo}`}
+                  onPhotoChange={(photoUrl) =>
+                    setEditFormData(prev => ({ ...prev, photo: photoUrl }))
                   }
-                  placeholder="URL de imagen"
                 />
               </Form.Group>
 
