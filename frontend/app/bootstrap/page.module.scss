@@ -221,9 +221,9 @@
   .endpointHeader {
     flex-direction: column;
     align-items: flex-start;
-  }
 
-  code {
-    width: 100%;
+    :global(code) {
+      width: 100%;
+    }
   }
 }
