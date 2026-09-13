@@ -48,11 +48,12 @@ router.post('/photo', authMiddleware, upload.single('photo'), (req, res) => {
     return ResponseFormatter.badRequest(res, 'No file uploaded');
   }
 
-  const photoPath = `/datos/uploads/users/${req.file.filename}`;
+  // Ruta relativa: Express sirve desde /datos, así que es solo /uploads/users/...
+  const photoPath = `/uploads/users/${req.file.filename}`;
 
   return ResponseFormatter.success(res, {
     message: 'Foto subida exitosamente',
-    photo: photoPath,
+    photo: `/datos${photoPath}`, // Guardamos con /datos para la BD
     url: `${process.env.APP_URL || 'http://localhost:3001'}${photoPath}`,
     filename: req.file.filename,
     size: req.file.size
