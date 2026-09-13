@@ -51,10 +51,14 @@
 .userPhoto {
   width: 32px;
   height: 32px;
+  min-width: 32px;
+  min-height: 32px;
   border-radius: 50%;
   object-fit: cover;
+  object-position: center;
   border: 2px solid #10b981;
   flex-shrink: 0;
+  display: block;
 }
 
 .logoutBtn {
