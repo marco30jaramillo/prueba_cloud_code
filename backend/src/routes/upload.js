@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
 const ResponseFormatter = require('../utils/responseFormatter');
@@ -13,14 +14,14 @@ function usingAzureBlob() {
   return !!(process.env.AZURE_STORAGE_CONNECTION_STRING && process.env.AZURE_STORAGE_CONTAINER);
 }
 
-async function uploadToBlob(file) {
+async function uploadToBlob(buffer, filename, mimetype) {
   const { BlobServiceClient } = require('@azure/storage-blob');
   const client = BlobServiceClient.fromConnectionString(process.env.AZURE_STORAGE_CONNECTION_STRING);
   const container = client.getContainerClient(process.env.AZURE_STORAGE_CONTAINER);
   await container.createIfNotExists({ access: 'blob' });
-  const blobClient = container.getBlockBlobClient(file.filename);
-  await blobClient.uploadData(file.buffer, {
-    blobHTTPHeaders: { blobContentType: file.mimetype }
+  const blobClient = container.getBlockBlobClient(filename);
+  await blobClient.uploadData(buffer, {
+    blobHTTPHeaders: { blobContentType: mimetype }
   });
   return blobClient.url;
 }
@@ -32,71 +33,70 @@ async function deleteFromBlob(filename) {
   await container.deleteBlob(filename);
 }
 
+// ── Image processing ──────────────────────────────────────────────────────────
+
+// Recorta al centro y comprime a WebP. Devuelve { buffer, filename, mimetype }.
+async function processImage(file, userId) {
+  const filename = `${userId}-${Date.now()}.webp`;
+  const buffer = await sharp(file.buffer)
+    .rotate()                          // respetar EXIF orientation
+    .resize(400, 400, {
+      fit: 'cover',                    // recorte centrado (crop)
+      position: 'attention'            // enfoca la zona de interés (cara)
+    })
+    .webp({ quality: 80 })            // comprimir — ~30-60 KB típico
+    .toBuffer();
+  return { buffer, filename, mimetype: 'image/webp' };
+}
+
 // ── Multer setup ──────────────────────────────────────────────────────────────
 
-const fileFilter = (req, file, cb) => {
-  const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  if (allowedMimes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Tipo de archivo no permitido. Solo JPG, PNG, GIF, WebP'), false);
-  }
-};
-
-function buildFilename(req, ext) {
-  const userId = req.user?.userId || 'anonymous';
-  return `${userId}-${Date.now()}${ext}`;
-}
-
-// Azure Blob: store in memory for direct upload
-const memoryStorage = multer.memoryStorage();
-
-// Local disk storage
-const uploadDir = path.resolve(__dirname, '../../../datos/uploads/users');
-if (!usingAzureBlob() && !fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-const diskStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => cb(null, buildFilename(req, path.extname(file.originalname)))
-});
-
+// Siempre memoria — procesamos con sharp antes de guardar
 const upload = multer({
-  storage: usingAzureBlob() ? memoryStorage : diskStorage,
-  fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    // Aceptar cualquier imagen
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Solo se permiten imágenes'), false);
+    }
+  },
+  limits: { fileSize: 10 * 1024 * 1024 } // 10 MB antes de comprimir
 });
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
 router.post('/photo', authMiddleware, upload.single('photo'), async (req, res) => {
   if (!req.file) {
-    return ResponseFormatter.badRequest(res, 'No file uploaded');
+    return ResponseFormatter.badRequest(res, 'No se recibió ningún archivo');
   }
 
   try {
+    const userId = req.user?.userId || 'anonymous';
+    const { buffer, filename, mimetype } = await processImage(req.file, userId);
+
     let photoUrl;
 
     if (usingAzureBlob()) {
-      // multer stored file in buffer — give it a deterministic name
-      req.file.filename = buildFilename(req, path.extname(req.file.originalname));
-      photoUrl = await uploadToBlob(req.file);
+      photoUrl = await uploadToBlob(buffer, filename, mimetype);
     } else {
-      // multer already wrote to disk — build the local URL
-      const photoPath = `/uploads/users/${req.file.filename}`;
-      photoUrl = `${process.env.APP_URL || 'http://localhost:3001'}${photoPath}`;
+      const uploadDir = path.resolve(__dirname, '../../../datos/uploads/users');
+      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+      fs.writeFileSync(path.join(uploadDir, filename), buffer);
+      photoUrl = `${process.env.APP_URL || 'http://localhost:3001'}/uploads/users/${filename}`;
     }
 
     return ResponseFormatter.success(res, {
       message: 'Foto subida exitosamente',
       photo: photoUrl,
       url: photoUrl,
-      filename: req.file.filename,
-      size: req.file.size
+      filename,
+      size: buffer.length
     }, 201);
   } catch (err) {
     console.error('Upload error:', err.message);
-    return ResponseFormatter.internalError(res, 'Error al subir la foto');
+    return ResponseFormatter.internalError(res, 'Error al procesar la foto');
   }
 });
 
@@ -107,6 +107,7 @@ router.delete('/photo/:filename', authMiddleware, async (req, res) => {
     if (usingAzureBlob()) {
       await deleteFromBlob(filename);
     } else {
+      const uploadDir = path.resolve(__dirname, '../../../datos/uploads/users');
       const filepath = path.join(uploadDir, filename);
       if (!filepath.startsWith(uploadDir)) {
         return ResponseFormatter.forbidden(res, 'Acceso denegado');

@@ -21,7 +21,7 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install --omit=dev
+        run: npm install --omit=dev --platform=linux --arch=x64
         working-directory: backend
 
       - name: Deploy to Azure App Service
