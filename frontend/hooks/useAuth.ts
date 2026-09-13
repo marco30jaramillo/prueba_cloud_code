@@ -17,8 +17,13 @@ export const useAuth = () => {
       }
     } catch (error: any) {
       const err = error.response?.data as ApiError;
-      const errorMsg = err?.message || 'No se pudo iniciar sesión. Intenta nuevamente.';
-      console.error('[Login Error]', errorMsg, err);
+      const errorMsg = err?.message || error.message || 'No se pudo iniciar sesión. Intenta nuevamente.';
+      console.error('[Login Error]', {
+        message: errorMsg,
+        status: error.response?.status,
+        data: error.response?.data,
+        error: error.message
+      });
       return { success: false, error: errorMsg };
     } finally {
       setLoading(false);
