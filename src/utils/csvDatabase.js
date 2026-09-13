@@ -9,9 +9,35 @@ class CSVDatabase {
 
   ensureFile() {
     if (!fs.existsSync(this.filepath)) {
-      const header = 'id,email,password,name,createdAt,resetToken,resetTokenExpiry\n';
+      const header = 'id,email,password,name,role,createdAt,resetToken,resetTokenExpiry\n';
       fs.writeFileSync(this.filepath, header);
+    } else {
+      this.migrateToRoleColumn();
     }
+  }
+
+  migrateToRoleColumn() {
+    const content = fs.readFileSync(this.filepath, 'utf-8');
+    const lines = content.trim().split('\n');
+    if (lines.length === 0) return;
+
+    const headers = lines[0].split(',');
+    if (headers.includes('role')) return;
+
+    const newHeader = 'id,email,password,name,role,createdAt,resetToken,resetTokenExpiry\n';
+    const newLines = [newHeader];
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',');
+      const obj = {};
+      headers.forEach((header, idx) => {
+        obj[header] = values[idx] || '';
+      });
+      const newLine = `${obj.id},${obj.email},${obj.password},${obj.name},cliente,${obj.createdAt},${obj.resetToken || ''},${obj.resetTokenExpiry || ''}\n`;
+      newLines.push(newLine);
+    }
+
+    fs.writeFileSync(this.filepath, newLines.join(''));
   }
 
   readAll() {
@@ -40,8 +66,8 @@ class CSVDatabase {
 
   create(user) {
     const users = this.readAll();
-    const newUser = { ...user };
-    const line = `${newUser.id},${newUser.email},${newUser.password},${newUser.name},${newUser.createdAt},${newUser.resetToken || ''},${newUser.resetTokenExpiry || ''}\n`;
+    const newUser = { ...user, role: user.role || 'cliente' };
+    const line = `${newUser.id},${newUser.email},${newUser.password},${newUser.name},${newUser.role},${newUser.createdAt},${newUser.resetToken || ''},${newUser.resetTokenExpiry || ''}\n`;
     fs.appendFileSync(this.filepath, line);
     return newUser;
   }
@@ -57,9 +83,9 @@ class CSVDatabase {
   }
 
   writeAll(users) {
-    const header = 'id,email,password,name,createdAt,resetToken,resetTokenExpiry\n';
+    const header = 'id,email,password,name,role,createdAt,resetToken,resetTokenExpiry\n';
     const lines = users.map(u =>
-      `${u.id},${u.email},${u.password},${u.name},${u.createdAt},${u.resetToken || ''},${u.resetTokenExpiry || ''}`
+      `${u.id},${u.email},${u.password},${u.name},${u.role || 'cliente'},${u.createdAt},${u.resetToken || ''},${u.resetTokenExpiry || ''}`
     );
     fs.writeFileSync(this.filepath, header + lines.join('\n') + (lines.length > 0 ? '\n' : ''));
   }

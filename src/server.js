@@ -54,76 +54,127 @@ app.post('/tokens/clean', (req, res) => {
 
 app.get('/docs', (req, res) => {
   res.json({
-    name: 'Sistema de Autenticación',
+    name: 'Sistema de Autenticación con Roles',
     version: '1.0.0',
-    endpoints: [
-      {
-        method: 'POST',
-        path: '/auth/register',
-        description: 'Registrar nuevo usuario',
-        body: { email: 'string', password: 'string (min 8)', name: 'string' },
-        response: { user: 'object', token: 'JWT' }
-      },
-      {
-        method: 'POST',
-        path: '/auth/login',
-        description: 'Iniciar sesión',
-        body: { email: 'string', password: 'string' },
-        response: { user: 'object', token: 'JWT' }
-      },
-      {
-        method: 'GET',
-        path: '/auth/validate',
-        description: 'Validar sesión activa (requiere token)',
-        headers: { Authorization: 'Bearer {token}' },
-        response: { user: 'object' }
-      },
-      {
-        method: 'POST',
-        path: '/auth/forgot-password',
-        description: 'Solicitar recuperación de contraseña',
-        body: { email: 'string' },
-        response: { message: 'string' }
-      },
-      {
-        method: 'POST',
-        path: '/auth/reset-password',
-        description: 'Restablecer contraseña con token',
-        body: { token: 'string', newPassword: 'string (min 8)' },
-        response: { message: 'string' }
-      },
-      {
-        method: 'POST',
-        path: '/auth/logout',
-        description: 'Cerrar sesión (requiere token)',
-        headers: { Authorization: 'Bearer {token}' },
-        response: { message: 'string' }
-      },
-      {
-        method: 'GET',
-        path: '/health',
-        description: 'Verificar estado del servidor',
-        response: { status: 'ok' }
-      },
-      {
-        method: 'GET',
-        path: '/tokens/stats',
-        description: 'Ver estadísticas de tokens (otorgados/revocados)',
-        response: { stats: { totalGranted: 'number', totalRevoked: 'number' } }
-      },
-      {
-        method: 'POST',
-        path: '/tokens/clean',
-        description: 'Ejecutar limpieza manual de tokens vencidos',
-        response: { tokensEliminados: 'number' }
-      },
-      {
-        method: 'GET',
-        path: '/docs',
-        description: 'Ver todos los endpoints (este)',
-        response: 'object'
+    description: 'API de autenticación segura con gestión de roles y permisos',
+    endpoints: {
+      authentication: [
+        {
+          method: 'POST',
+          path: '/auth/register',
+          description: 'Registrar nuevo usuario como cliente',
+          auth: 'none',
+          body: { email: 'string', password: 'string (min 8)', name: 'string' },
+          response: { user: { id, email, name, role: "cliente" }, token: 'JWT' }
+        },
+        {
+          method: 'POST',
+          path: '/auth/login',
+          description: 'Iniciar sesión',
+          auth: 'none',
+          body: { email: 'string', password: 'string' },
+          response: { user: { id, email, name, role }, token: 'JWT' }
+        },
+        {
+          method: 'GET',
+          path: '/auth/validate',
+          description: 'Validar sesión activa',
+          auth: 'required',
+          headers: { Authorization: 'Bearer {token}' },
+          response: { user: { id, email, name, role }, token_expires_at: 'ISO string' }
+        },
+        {
+          method: 'POST',
+          path: '/auth/logout',
+          description: 'Cerrar sesión (revoca token)',
+          auth: 'required',
+          headers: { Authorization: 'Bearer {token}' },
+          response: { message: 'string' }
+        }
+      ],
+      passwordRecovery: [
+        {
+          method: 'POST',
+          path: '/auth/forgot-password',
+          description: 'Solicitar recuperación de contraseña',
+          auth: 'none',
+          body: { email: 'string' },
+          response: { message: 'string' }
+        },
+        {
+          method: 'POST',
+          path: '/auth/reset-password',
+          description: 'Restablecer contraseña con token único',
+          auth: 'none',
+          body: { token: 'string', newPassword: 'string (min 8)' },
+          response: { message: 'string' }
+        }
+      ],
+      roleManagement: [
+        {
+          method: 'POST',
+          path: '/auth/bootstrap-superuser',
+          description: 'Crear primer super usuario (solo si no existe)',
+          auth: 'none',
+          body: { email: 'string', password: 'string (min 8)', name: 'string' },
+          response: { user: { id, email, name, role: "superuser" }, token: 'JWT' },
+          restrictions: 'Solo funciona si no existe superuser'
+        },
+        {
+          method: 'POST',
+          path: '/auth/create-user',
+          description: 'Crear usuario con rol específico',
+          auth: 'required',
+          headers: { Authorization: 'Bearer {token}' },
+          body: { email: 'string', password: 'string (min 8)', name: 'string', role: 'enum' },
+          response: { user: { id, email, name, role }, token: 'JWT' },
+          restrictions: {
+            'superuser': 'puede crear cualquier rol',
+            'administrador': 'puede crear vendedor y cliente',
+            'others': 'no pueden crear usuarios'
+          }
+        },
+        {
+          method: 'GET',
+          path: '/auth/user-schema/:roleType',
+          description: 'Obtener esquema de usuario para frontend (campos requeridos según rol)',
+          auth: 'none',
+          params: { roleType: 'string (superuser|administrador|vendedor|cliente)' },
+          response: { roleType, description, permissions: 'array', formFields: 'array', constraints: 'object' }
+        }
+      ],
+      system: [
+        {
+          method: 'GET',
+          path: '/health',
+          description: 'Verificar estado del servidor',
+          response: { status: 'healthy' }
+        },
+        {
+          method: 'GET',
+          path: '/tokens/stats',
+          description: 'Ver estadísticas de tokens',
+          response: { stats: { totalGranted: 'number', totalRevoked: 'number' } }
+        },
+        {
+          method: 'POST',
+          path: '/tokens/clean',
+          description: 'Ejecutar limpieza manual de tokens vencidos',
+          response: { tokensEliminados: 'number' }
+        },
+        {
+          method: 'GET',
+          path: '/docs',
+          description: 'Ver todos los endpoints (este)'
+        }
+      ],
+      roles: {
+        superuser: { permissions: 'system:full-access', description: 'Acceso integral a todas las funciones' },
+        administrador: { permissions: ['admin:manage-users', 'profile:view-all', 'auth:create-user'], description: 'Gestión de usuarios y sistemas' },
+        vendedor: { permissions: ['profile:view-own', 'profile:view-clients'], description: 'Permisos limitados para venta' },
+        cliente: { permissions: ['profile:view-own', 'auth:login', 'auth:logout'], description: 'Permisos básicos' }
       }
-    ]
+    }
   });
 });
 

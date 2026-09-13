@@ -1,10 +1,16 @@
 const express = require('express');
 const User = require('../models/User');
+const Role = require('../models/Role');
+const Permission = require('../models/Permission');
 const Mailer = require('../utils/mailer');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { tokenUtils, authMiddleware, tokenManager } = require('../middleware/auth');
+const roleMiddleware = require('../middleware/roleMiddleware');
 
 const router = express.Router();
+
+Role.initializeRoles();
+Permission.initializePermissions();
 
 router.post('/register', (req, res) => {
   const { email, password, name } = req.body;
@@ -28,10 +34,14 @@ router.post('/register', (req, res) => {
     return ResponseFormatter.conflict(res, `El email ${email} ya está registrado`);
   }
 
-  const user = User.create(email, password, name);
+  const user = User.create(email, password, name, 'cliente');
   Mailer.sendWelcomeEmail(email, name);
 
-  const { token, tokenId, expiresAt } = tokenUtils.generateTokenWithId({ userId: user.id, email: user.email });
+  const { token, tokenId, expiresAt } = tokenUtils.generateTokenWithId({
+    userId: user.id,
+    email: user.email,
+    role: user.role
+  });
   tokenManager.addGrantedToken(tokenId, user.id, email, token, expiresAt);
 
   return ResponseFormatter.success(res, {
@@ -39,7 +49,8 @@ router.post('/register', (req, res) => {
     user: {
       id: user.id,
       email: user.email,
-      name: user.name
+      name: user.name,
+      role: user.role
     },
     token
   }, 201);
@@ -60,7 +71,11 @@ router.post('/login', (req, res) => {
     return ResponseFormatter.unauthorized(res, 'Email o contraseña incorrectos');
   }
 
-  const { token, tokenId, expiresAt } = tokenUtils.generateTokenWithId({ userId: user.id, email: user.email });
+  const { token, tokenId, expiresAt } = tokenUtils.generateTokenWithId({
+    userId: user.id,
+    email: user.email,
+    role: user.role
+  });
   tokenManager.addGrantedToken(tokenId, user.id, email, token, expiresAt);
 
   return ResponseFormatter.success(res, {
@@ -68,7 +83,8 @@ router.post('/login', (req, res) => {
     user: {
       id: user.id,
       email: user.email,
-      name: user.name
+      name: user.name,
+      role: user.role
     },
     token
   });
@@ -129,6 +145,141 @@ router.post('/reset-password', (req, res) => {
   });
 });
 
+router.post('/bootstrap-superuser', (req, res) => {
+  if (User.isSuperuserExists()) {
+    return ResponseFormatter.badRequest(res, 'Ya existe un super usuario en el sistema', {
+      hint: 'Para crear más super usuarios, necesitas tener un token de super usuario'
+    });
+  }
+
+  const { email, password, name } = req.body;
+
+  if (!email || !password || !name) {
+    return ResponseFormatter.badRequest(res, 'Campos requeridos faltantes', {
+      email: email ? '✅' : '❌ requerido',
+      password: password ? '✅' : '❌ requerido',
+      name: name ? '✅' : '❌ requerido'
+    });
+  }
+
+  if (password.length < 8) {
+    return ResponseFormatter.badRequest(res, 'La contraseña debe tener al menos 8 caracteres', {
+      password: `${password.length}/8 caracteres`
+    });
+  }
+
+  const existingUser = User.findByEmail(email);
+  if (existingUser) {
+    return ResponseFormatter.conflict(res, `El email ${email} ya está registrado`);
+  }
+
+  const user = User.create(email, password, name, 'superuser');
+  Mailer.sendWelcomeEmail(email, name);
+
+  const { token, tokenId, expiresAt } = tokenUtils.generateTokenWithId({
+    userId: user.id,
+    email: user.email,
+    role: user.role
+  });
+  tokenManager.addGrantedToken(tokenId, user.id, email, token, expiresAt);
+
+  return ResponseFormatter.success(res, {
+    message: 'Super usuario creado exitosamente',
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role
+    },
+    token
+  }, 201);
+});
+
+router.post('/create-user', authMiddleware, (req, res) => {
+  const { email, password, name, role: targetRole } = req.body;
+  const creatorRole = req.user.role;
+
+  if (!email || !password || !name || !targetRole) {
+    return ResponseFormatter.badRequest(res, 'Campos requeridos faltantes', {
+      email: email ? '✅' : '❌ requerido',
+      password: password ? '✅' : '❌ requerido',
+      name: name ? '✅' : '❌ requerido',
+      role: targetRole ? '✅' : '❌ requerido'
+    });
+  }
+
+  if (password.length < 8) {
+    return ResponseFormatter.badRequest(res, 'La contraseña debe tener al menos 8 caracteres', {
+      password: `${password.length}/8 caracteres`
+    });
+  }
+
+  if (!Role.canCreateRole(creatorRole, targetRole)) {
+    return ResponseFormatter.forbidden(res, `Tu rol '${creatorRole}' no puede crear usuarios con rol '${targetRole}'`, {
+      your_role: creatorRole,
+      target_role: targetRole,
+      allowed_roles: creatorRole === 'superuser' ? ['superuser', 'administrador', 'vendedor', 'cliente'] : ['vendedor', 'cliente']
+    });
+  }
+
+  const existingUser = User.findByEmail(email);
+  if (existingUser) {
+    return ResponseFormatter.conflict(res, `El email ${email} ya está registrado`);
+  }
+
+  const user = User.create(email, password, name, targetRole);
+  Mailer.sendWelcomeEmail(email, name);
+
+  const { token, tokenId, expiresAt } = tokenUtils.generateTokenWithId({
+    userId: user.id,
+    email: user.email,
+    role: user.role
+  });
+  tokenManager.addGrantedToken(tokenId, user.id, email, token, expiresAt);
+
+  return ResponseFormatter.success(res, {
+    message: `Usuario con rol '${targetRole}' creado exitosamente`,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role
+    },
+    token
+  }, 201);
+});
+
+router.get('/user-schema/:roleType', (req, res) => {
+  const { roleType } = req.params;
+  const role = Role.getByName(roleType);
+
+  if (!role) {
+    return ResponseFormatter.notFound(res, `Rol '${roleType}'`, {
+      available_roles: ['superuser', 'administrador', 'vendedor', 'cliente']
+    });
+  }
+
+  const userSchema = {
+    roleType: role.name,
+    description: role.description,
+    permissions: role.permissions,
+    formFields: {
+      superuser: ['email', 'password', 'name', 'role'],
+      administrador: ['email', 'password', 'name', 'role'],
+      vendedor: ['email', 'password', 'name'],
+      cliente: ['email', 'password', 'name']
+    }[roleType] || ['email', 'password', 'name'],
+    constraints: {
+      email: { type: 'string', required: true, pattern: 'email' },
+      password: { type: 'string', required: true, minLength: 8 },
+      name: { type: 'string', required: true, minLength: 2 },
+      role: { type: 'enum', required: false, values: ['superuser', 'administrador', 'vendedor', 'cliente'] }
+    }
+  };
+
+  return ResponseFormatter.success(res, userSchema);
+});
+
 router.get('/validate', authMiddleware, (req, res) => {
   const user = User.findById(req.user.userId);
 
@@ -141,7 +292,8 @@ router.get('/validate', authMiddleware, (req, res) => {
     user: {
       id: user.id,
       email: user.email,
-      name: user.name
+      name: user.name,
+      role: user.role
     },
     token_expires_at: new Date(req.user.exp * 1000).toISOString()
   });

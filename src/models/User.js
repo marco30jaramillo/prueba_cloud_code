@@ -3,18 +3,19 @@ const PasswordUtils = require('../utils/passwordUtils');
 const CSVDatabase = require('../utils/csvDatabase');
 
 class User {
-  constructor(email, password, name) {
+  constructor(email, password, name, role = 'cliente') {
     this.id = crypto.randomUUID();
     this.email = email;
     this.password = PasswordUtils.hashPassword(password);
     this.name = name;
+    this.role = role;
     this.createdAt = new Date().toISOString();
     this.resetToken = null;
     this.resetTokenExpiry = null;
   }
 
-  static create(email, password, name) {
-    const user = new User(email, password, name);
+  static create(email, password, name, role = 'cliente') {
+    const user = new User(email, password, name, role);
     const db = new CSVDatabase();
     return db.create(user);
   }
@@ -70,6 +71,16 @@ class User {
       resetToken: '',
       resetTokenExpiry: ''
     });
+  }
+
+  static countByRole(role) {
+    const db = new CSVDatabase();
+    const users = db.readAll();
+    return users.filter(u => u.role === role).length;
+  }
+
+  static isSuperuserExists() {
+    return User.countByRole('superuser') > 0;
   }
 }
 

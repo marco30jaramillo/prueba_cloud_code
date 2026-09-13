@@ -28,22 +28,24 @@ class ResponseFormatter {
     });
   }
 
-  static forbidden(res, reason = 'Acceso denegado') {
+  static forbidden(res, reason = 'Acceso denegado', details = {}) {
     return res.status(403).json({
       status: 'error',
       statusCode: 403,
       error: 'FORBIDDEN',
       message: reason,
+      ...details,
       timestamp: new Date().toISOString()
     });
   }
 
-  static notFound(res, resource = 'Recurso') {
+  static notFound(res, resource = 'Recurso', details = {}) {
     return res.status(404).json({
       status: 'error',
       statusCode: 404,
       error: 'NOT_FOUND',
       message: `${resource} no encontrado`,
+      ...details,
       timestamp: new Date().toISOString()
     });
   }
