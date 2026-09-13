@@ -19,7 +19,7 @@ const router = express.Router();
 Role.initializeRoles();
 Permission.initializePermissions();
 
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   const { email, password, name, photo } = req.body;
 
   if (!email || !password || !name) {
@@ -39,12 +39,12 @@ router.post('/register', (req, res) => {
   }
 
   const normalizedEmail = DataNormalizer.normalizeEmail(email);
-  const existingUser = User.findByEmail(normalizedEmail);
+  const existingUser = await User.findByEmail(normalizedEmail);
   if (existingUser) {
     return ResponseFormatter.conflict(res, `El email ${normalizedEmail} ya está registrado`);
   }
 
-  const user = User.create(email, password, name, 'cliente', photo);
+  const user = await User.create(email, password, name, 'cliente', photo);
   Mailer.sendWelcomeEmail(email, name);
 
   const { token, tokenId, expiresAt } = tokenUtils.generateTokenWithId({
@@ -52,11 +52,11 @@ router.post('/register', (req, res) => {
     email: user.email,
     role: user.role
   });
-  tokenManager.addGrantedToken(tokenId, user.id, email, token, expiresAt);
+  await tokenManager.addGrantedToken(tokenId, user.id, email, token, expiresAt);
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
-  auditMiddleware.logUserCreation(user.id, user.id, email, 'cliente', ipAddress, userAgent);
+  await auditMiddleware.logUserCreation(user.id, user.id, email, 'cliente', ipAddress, userAgent);
 
   return ResponseFormatter.success(res, {
     message: 'Usuario registrado exitosamente',
@@ -70,7 +70,7 @@ router.post('/register', (req, res) => {
   }, 201);
 });
 
-router.post('/login', rateLimiter.middleware, (req, res) => {
+router.post('/login', rateLimiter.middleware, async (req, res) => {
   const { email, password, rememberMe } = req.body;
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
@@ -83,10 +83,10 @@ router.post('/login', rateLimiter.middleware, (req, res) => {
     return ResponseFormatter.badRequest(res, 'El formato del email es inválido');
   }
 
-  const { user, reason } = User.authenticate(email, password);
+  const { user, reason } = await User.authenticate(email, password);
 
   if (!user) {
-    auditMiddleware.logFailedLoginAttempt(email, ipAddress, userAgent,
+    await auditMiddleware.logFailedLoginAttempt(email, ipAddress, userAgent,
       reason === 'account_disabled' ? 'Cuenta deshabilitada' : 'Credenciales incorrectas'
     );
     rateLimiter.recordFailure(ipAddress);
@@ -109,9 +109,9 @@ router.post('/login', rateLimiter.middleware, (req, res) => {
     { userId: user.id, email: user.email, role: user.role },
     tokenDuration
   );
-  tokenManager.addGrantedToken(tokenId, user.id, user.email, token, expiresAt);
+  await tokenManager.addGrantedToken(tokenId, user.id, user.email, token, expiresAt);
 
-  auditMiddleware.logLogin(user.id, ipAddress, userAgent, true);
+  await auditMiddleware.logLogin(user.id, ipAddress, userAgent, true);
 
   return ResponseFormatter.success(res, {
     message: 'Sesión iniciada exitosamente',
@@ -126,7 +126,7 @@ router.post('/login', rateLimiter.middleware, (req, res) => {
   });
 });
 
-router.post('/forgot-password', (req, res) => {
+router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
   // Respuesta genérica siempre para evitar user enumeration
   const GENERIC_RESPONSE = {
@@ -141,21 +141,21 @@ router.post('/forgot-password', (req, res) => {
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
 
-  const user = User.findByEmail(DataNormalizer.normalizeEmail(email));
+  const user = await User.findByEmail(DataNormalizer.normalizeEmail(email));
   if (!user) {
     // No revelar que el email no existe — respuesta idéntica al éxito
     return ResponseFormatter.success(res, GENERIC_RESPONSE);
   }
 
   const resetToken = User.generatePasswordResetToken();
-  User.setResetToken(user.id, resetToken);
+  await User.setResetToken(user.id, resetToken);
   Mailer.sendPasswordResetEmail(email, resetToken);
-  auditMiddleware.logPasswordResetRequest(email, ipAddress, userAgent);
+  await auditMiddleware.logPasswordResetRequest(email, ipAddress, userAgent);
 
   return ResponseFormatter.success(res, GENERIC_RESPONSE);
 });
 
-router.post('/reset-password', (req, res) => {
+router.post('/reset-password', async (req, res) => {
   const { token, newPassword } = req.body;
 
   if (!token || !newPassword) {
@@ -171,18 +171,18 @@ router.post('/reset-password', (req, res) => {
     });
   }
 
-  const user = User.findByResetToken(token);
+  const user = await User.findByResetToken(token);
   if (!user) {
     return ResponseFormatter.badRequest(res, 'Token de recuperación inválido o expirado', {
       hint: 'Solicita un nuevo enlace de recuperación'
     });
   }
 
-  User.resetPassword(user.id, newPassword);
+  await User.resetPassword(user.id, newPassword);
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
-  auditMiddleware.logPasswordChange(user.id, user.id, ipAddress, userAgent, false);
+  await auditMiddleware.logPasswordChange(user.id, user.id, ipAddress, userAgent, false);
 
   return ResponseFormatter.success(res, {
     message: 'Contraseña restablecida exitosamente',
@@ -191,8 +191,8 @@ router.post('/reset-password', (req, res) => {
   });
 });
 
-router.post('/bootstrap-superuser', (req, res) => {
-  if (User.isSuperuserExists()) {
+router.post('/bootstrap-superuser', async (req, res) => {
+  if (await User.isSuperuserExists()) {
     return ResponseFormatter.badRequest(res, 'Ya existe un super usuario en el sistema', {
       hint: 'Para crear más super usuarios, necesitas tener un token de super usuario'
     });
@@ -214,12 +214,12 @@ router.post('/bootstrap-superuser', (req, res) => {
     });
   }
 
-  const existingUser = User.findByEmail(email);
+  const existingUser = await User.findByEmail(email);
   if (existingUser) {
     return ResponseFormatter.conflict(res, `El email ${email} ya está registrado`);
   }
 
-  const user = User.create(email, password, name, 'superuser');
+  const user = await User.create(email, password, name, 'superuser');
   Mailer.sendWelcomeEmail(email, name);
 
   const { token, tokenId, expiresAt } = tokenUtils.generateTokenWithId({
@@ -227,11 +227,11 @@ router.post('/bootstrap-superuser', (req, res) => {
     email: user.email,
     role: user.role
   });
-  tokenManager.addGrantedToken(tokenId, user.id, email, token, expiresAt);
+  await tokenManager.addGrantedToken(tokenId, user.id, email, token, expiresAt);
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
-  auditMiddleware.logUserCreation(user.id, user.id, user.email, 'superuser', ipAddress, userAgent);
+  await auditMiddleware.logUserCreation(user.id, user.id, user.email, 'superuser', ipAddress, userAgent);
 
   return ResponseFormatter.success(res, {
     message: 'Super usuario creado exitosamente',
@@ -245,7 +245,7 @@ router.post('/bootstrap-superuser', (req, res) => {
   }, 201);
 });
 
-router.post('/create-user', authMiddleware, (req, res) => {
+router.post('/create-user', authMiddleware, async (req, res) => {
   const { email, password, name, role: targetRole } = req.body;
   const creatorRole = req.user.role;
 
@@ -264,7 +264,7 @@ router.post('/create-user', authMiddleware, (req, res) => {
     });
   }
 
-  if (!Role.canCreateRole(creatorRole, targetRole)) {
+  if (!await Role.canCreateRole(creatorRole, targetRole)) {
     return ResponseFormatter.forbidden(res, `Tu rol '${creatorRole}' no puede crear usuarios con rol '${targetRole}'`, {
       your_role: creatorRole,
       target_role: targetRole,
@@ -272,12 +272,12 @@ router.post('/create-user', authMiddleware, (req, res) => {
     });
   }
 
-  const existingUser = User.findByEmail(email);
+  const existingUser = await User.findByEmail(email);
   if (existingUser) {
     return ResponseFormatter.conflict(res, `El email ${email} ya está registrado`);
   }
 
-  const user = User.create(email, password, name, targetRole);
+  const user = await User.create(email, password, name, targetRole);
   Mailer.sendWelcomeEmail(email, name);
 
   const { token, tokenId, expiresAt } = tokenUtils.generateTokenWithId({
@@ -285,11 +285,11 @@ router.post('/create-user', authMiddleware, (req, res) => {
     email: user.email,
     role: user.role
   });
-  tokenManager.addGrantedToken(tokenId, user.id, email, token, expiresAt);
+  await tokenManager.addGrantedToken(tokenId, user.id, email, token, expiresAt);
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
-  auditMiddleware.logUserCreation(req.user.userId, user.id, email, targetRole, ipAddress, userAgent);
+  await auditMiddleware.logUserCreation(req.user.userId, user.id, email, targetRole, ipAddress, userAgent);
 
   return ResponseFormatter.success(res, {
     message: `Usuario con rol '${targetRole}' creado exitosamente`,
@@ -303,9 +303,9 @@ router.post('/create-user', authMiddleware, (req, res) => {
   }, 201);
 });
 
-router.get('/user-schema/:roleType', (req, res) => {
+router.get('/user-schema/:roleType', async (req, res) => {
   const { roleType } = req.params;
-  const role = Role.getByName(roleType);
+  const role = await Role.getByName(roleType);
 
   if (!role) {
     return ResponseFormatter.notFound(res, `Rol '${roleType}'`, {
@@ -334,8 +334,8 @@ router.get('/user-schema/:roleType', (req, res) => {
   return ResponseFormatter.success(res, userSchema);
 });
 
-router.get('/validate', authMiddleware, (req, res) => {
-  const user = User.findById(req.user.userId);
+router.get('/validate', authMiddleware, async (req, res) => {
+  const user = await User.findById(req.user.userId);
 
   if (!user) {
     return ResponseFormatter.notFound(res, 'Usuario');
@@ -354,16 +354,16 @@ router.get('/validate', authMiddleware, (req, res) => {
   });
 });
 
-router.post('/logout', authMiddleware, (req, res) => {
+router.post('/logout', authMiddleware, async (req, res) => {
   const token = req.token;
   const userId = req.user.userId;
   const email = req.user.email;
 
-  tokenManager.revokeToken(userId, token, req.user.exp);
+  await tokenManager.revokeToken(userId, token, req.user.exp);
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
-  auditMiddleware.logLogout(userId, ipAddress, userAgent);
+  await auditMiddleware.logLogout(userId, ipAddress, userAgent);
 
   return ResponseFormatter.success(res, {
     message: 'Sesión cerrada exitosamente',
@@ -372,11 +372,11 @@ router.post('/logout', authMiddleware, (req, res) => {
   });
 });
 
-router.post('/logout-all', authMiddleware, (req, res) => {
+router.post('/logout-all', authMiddleware, async (req, res) => {
   const userId = req.user.userId;
   const email = req.user.email;
 
-  const revokedCount = tokenManager.revokeAllUserTokens(userId, email);
+  const revokedCount = await tokenManager.revokeAllUserTokens(userId, email);
 
   return ResponseFormatter.success(res, {
     message: `Sesiones cerradas en todos los dispositivos`,
@@ -386,7 +386,7 @@ router.post('/logout-all', authMiddleware, (req, res) => {
   });
 });
 
-router.patch('/change-password', authMiddleware, (req, res) => {
+router.patch('/change-password', authMiddleware, async (req, res) => {
   const { currentPassword, newPassword, confirmPassword } = req.body;
   const userId = req.user.userId;
 
@@ -402,21 +402,21 @@ router.patch('/change-password', authMiddleware, (req, res) => {
     return ResponseFormatter.badRequest(res, 'Las contraseñas no coinciden');
   }
 
-  const result = User.changePassword(userId, currentPassword, newPassword);
+  const result = await User.changePassword(userId, currentPassword, newPassword);
   if (result && result.error) {
     return ResponseFormatter.badRequest(res, result.error);
   }
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
-  auditMiddleware.logPasswordChange(userId, userId, ipAddress, userAgent, false);
+  await auditMiddleware.logPasswordChange(userId, userId, ipAddress, userAgent, false);
 
   return ResponseFormatter.success(res, {
     message: 'Contraseña cambiada exitosamente'
   });
 });
 
-router.patch('/profile', authMiddleware, (req, res) => {
+router.patch('/profile', authMiddleware, async (req, res) => {
   const { name, photo } = req.body;
   const userId = req.user.userId;
 
@@ -428,14 +428,14 @@ router.patch('/profile', authMiddleware, (req, res) => {
   if (name) updates.name = name;
   if (photo) updates.photo = photo;
 
-  const updatedUser = User.updateProfile(userId, updates);
+  const updatedUser = await User.updateProfile(userId, updates);
   if (!updatedUser) {
     return ResponseFormatter.notFound(res, 'Usuario');
   }
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
-  auditMiddleware.logProfileUpdate(userId, ipAddress, userAgent, updates);
+  await auditMiddleware.logProfileUpdate(userId, ipAddress, userAgent, updates);
 
   return ResponseFormatter.success(res, {
     message: 'Perfil actualizado exitosamente',
@@ -449,7 +449,7 @@ router.patch('/profile', authMiddleware, (req, res) => {
   });
 });
 
-router.patch('/password/:userId', authMiddleware, roleMiddleware.requireRole(['superuser', 'administrador']), (req, res) => {
+router.patch('/password/:userId', authMiddleware, roleMiddleware.requireRole(['superuser', 'administrador']), async (req, res) => {
   const { newPassword } = req.body;
   const { userId } = req.params;
   const requesterId = req.user.userId;
@@ -462,21 +462,21 @@ router.patch('/password/:userId', authMiddleware, roleMiddleware.requireRole(['s
     return ResponseFormatter.badRequest(res, 'La nueva contraseña debe tener al menos 8 caracteres');
   }
 
-  const targetUser = User.findById(userId);
+  const targetUser = await User.findById(userId);
   if (!targetUser) {
     return ResponseFormatter.notFound(res, 'Usuario');
   }
 
-  const requester = User.findById(requesterId);
+  const requester = await User.findById(requesterId);
   if (requester.role === 'administrador' && targetUser.role === 'superuser') {
     return ResponseFormatter.forbidden(res, 'No puedes cambiar la contraseña de un superuser');
   }
 
-  User.setPasswordForUser(userId, newPassword);
+  await User.setPasswordForUser(userId, newPassword);
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
-  auditMiddleware.logPasswordChange(requesterId, userId, ipAddress, userAgent, true);
+  await auditMiddleware.logPasswordChange(requesterId, userId, ipAddress, userAgent, true);
 
   return ResponseFormatter.success(res, {
     message: 'Contraseña del usuario actualizada exitosamente',
@@ -484,7 +484,7 @@ router.patch('/password/:userId', authMiddleware, roleMiddleware.requireRole(['s
   });
 });
 
-router.patch('/change-password-temporary', authMiddleware, (req, res) => {
+router.patch('/change-password-temporary', authMiddleware, async (req, res) => {
   const { newPassword } = req.body;
   const userId = req.user.userId;
 
@@ -496,9 +496,7 @@ router.patch('/change-password-temporary', authMiddleware, (req, res) => {
     return ResponseFormatter.badRequest(res, 'La nueva contraseña debe tener al menos 8 caracteres');
   }
 
-  const hashedPassword = require('../utils/passwordUtils').hashPassword(newPassword);
-  const db = new (require('../utils/csvDatabase'))();
-  const updatedUser = db.update(userId, { password: hashedPassword, mustChangePassword: 'false' });
+  const updatedUser = await User.completeTemporaryPasswordChange(userId, newPassword);
 
   if (!updatedUser) {
     return ResponseFormatter.notFound(res, 'Usuario');
@@ -506,7 +504,7 @@ router.patch('/change-password-temporary', authMiddleware, (req, res) => {
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
-  auditMiddleware.logPasswordChange(userId, userId, ipAddress, userAgent, false);
+  await auditMiddleware.logPasswordChange(userId, userId, ipAddress, userAgent, false);
 
   return ResponseFormatter.success(res, {
     message: 'Contraseña actualizada exitosamente',

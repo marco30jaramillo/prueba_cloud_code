@@ -21,13 +21,13 @@ const roleMiddleware = {
   },
 
   requirePermission: (permissionName) => {
-    return (req, res, next) => {
+    return async (req, res, next) => {
       if (!req.user) {
         return ResponseFormatter.unauthorized(res, 'Token requerido para esta acción');
       }
 
       const userRole = req.user.role || 'cliente';
-      if (!Role.hasPermission(userRole, permissionName)) {
+      if (!await Role.hasPermission(userRole, permissionName)) {
         return ResponseFormatter.forbidden(res, `No tienes permiso para '${permissionName}'`, {
           required_permission: permissionName,
           your_role: userRole

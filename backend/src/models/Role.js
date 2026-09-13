@@ -1,188 +1,71 @@
 const fs = require('fs');
 const path = require('path');
-
+const { sql, usingSql, request } = require('../database/sqlPool');
 const ROLES_PATH = path.join(__dirname, '../../roles.csv');
 
-// Parse "moduleId:level|moduleId:level|..." → [{id, level}]
-function parseModuleAccess(str) {
-  return str.split('|').filter(Boolean).map(entry => {
-    const [id, level = 'read'] = entry.split(':');
-    return { id, level };
-  });
-}
-
-// Serialize [{id, level}] → "id:level|id:level|..."
-function serializeModuleAccess(access) {
-  return access.map(({ id, level }) => `${id}:${level}`).join('|');
-}
+const parseAccess = (value = '') => String(value).split('|').filter(Boolean).map((entry) => { const [id, level = 'read'] = entry.split(':'); return { id, level }; });
+const serializeAccess = (access = []) => access.map(({ id, level }) => `${id}:${level}`).join('|');
+const csvRows = () => {
+  if (!fs.existsSync(ROLES_PATH)) return [];
+  return fs.readFileSync(ROLES_PATH, 'utf8').trim().split('\n').slice(1).filter(Boolean).map((line) => {
+    const match = line.match(/^(\d+),"([^"]+)","([^"]+)","([^"]*)","([^"]*)","([^"]*)"/);
+    return match && { id: match[1], name: match[2], description: match[3], permissions: match[4], canManage: match[5], modules: match[6] };
+  }).filter(Boolean);
+};
 
 class Role {
-  constructor(id, name, description, permissions = [], canManage = [], moduleAccess = []) {
-    this.id           = id;
-    this.name         = name;
-    this.description  = description;
-    this.permissions  = permissions;
-    this.canManage    = canManage;
-    this.moduleAccess = moduleAccess; // [{id, level}]
-    // Legacy: flat list of IDs (used by older callers)
-    this.modules      = moduleAccess.map(a => a.id);
+  constructor(row) {
+    this.id = String(row.id); this.name = row.name; this.description = row.description;
+    this.permissions = String(row.permissions || '').split('|').filter(Boolean);
+    this.canManage = String(row.canManage || '').split('|').filter(Boolean);
+    this.moduleAccess = parseAccess(row.modules);
+    this.modules = this.moduleAccess.map((item) => item.id);
   }
-
-  static initializeRoles() {
-    if (fs.existsSync(ROLES_PATH)) {
-      this._migrate();
-      return;
-    }
-
-    const rows = [
-      { id: 1, name: 'superuser',     description: 'Super Usuario - Acceso integral a todas las funciones',  permissions: 'system:full-access',  canManage: 'superuser|administrador|vendedor|cliente', modules: '1:full|2:full|3:full|4:full' },
-      { id: 2, name: 'administrador', description: 'Administrador - Gestión de usuarios y sistemas',          permissions: 'admin:manage-users|admin:manage-roles|admin:view-stats|admin:view-audit|profile:view-all|profile:view-clients|profile:view-vendors|auth:view-users|auth:create-user|auth:update-user|auth:delete-user', canManage: 'vendedor|cliente', modules: '1:full|2:write' },
-      { id: 3, name: 'vendedor',      description: 'Vendedor - Permisos limitados para venta',                permissions: 'auth:login|auth:logout|auth:validate|profile:view-own|profile:edit-own|profile:view-clients', canManage: '', modules: '1:write' },
-      { id: 4, name: 'cliente',       description: 'Cliente - Permisos básicos',                              permissions: 'auth:login|auth:logout|auth:validate|auth:forgot-password|auth:reset-password|profile:view-own|profile:edit-own', canManage: '', modules: '1:read' },
-    ];
-
-    const header = 'id,name,description,permissions,canManage,modules\n';
-    const content = rows.map(r =>
-      `${r.id},"${r.name}","${r.description}","${r.permissions}","${r.canManage}","${r.modules}"`
-    ).join('\n') + '\n';
-
-    fs.writeFileSync(ROLES_PATH, header + content);
+  static initializeRoles() { /* Los catálogos deben cargarse por migración; CSV permanece solo para rollback. */ }
+  static async getAll() {
+    if (!usingSql()) return csvRows().map((row) => new Role(row));
+    const result = await (await request()).query('SELECT id,name,description,permissions,canManage,modules FROM dbo.roles ORDER BY id');
+    return result.recordset.map((row) => new Role(row));
   }
-
-  static _migrate() {
-    const content = fs.readFileSync(ROLES_PATH, 'utf8');
-    const lines   = content.trim().split('\n');
-    const header  = lines[0];
-    let changed   = false;
-
-    const needsCanManage = !header.includes('canManage');
-    const needsModules   = !header.includes('modules');
-    if (!needsCanManage && !needsModules) return;
-
-    const canManageDefaults = { superuser: 'superuser|administrador|vendedor|cliente', administrador: 'vendedor|cliente', vendedor: '', cliente: '' };
-    const modulesDefaults   = { superuser: '1:full|2:full|3:full|4:full', administrador: '1:full|2:write', vendedor: '1:write', cliente: '1:read' };
-
-    let newHeader = header;
-    if (needsCanManage) newHeader += ',canManage';
-    if (needsModules)   newHeader += ',modules';
-
-    const newLines = [newHeader];
-    for (let i = 1; i < lines.length; i++) {
-      let line = lines[i].trim();
-      if (!line) continue;
-      const nameMatch = line.match(/^\d+,"([^"]+)"/);
-      const name = nameMatch ? nameMatch[1] : '';
-      if (needsCanManage) line += `,"${canManageDefaults[name] || ''}"`;
-      if (needsModules)   line += `,"${modulesDefaults[name]   || ''}"`;
-      newLines.push(line);
-      changed = true;
-    }
-
-    if (changed) fs.writeFileSync(ROLES_PATH, newLines.join('\n') + '\n');
-  }
-
-  static getAll() {
-    if (!fs.existsSync(ROLES_PATH)) this.initializeRoles();
-    this._migrate();
-
-    const content = fs.readFileSync(ROLES_PATH, 'utf8');
-    const lines   = content.trim().split('\n');
-    const roles   = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-      const m = line.match(/^(\d+),"([^"]+)","([^"]+)","([^"]*)","([^"]*)","([^"]*)"/);
-      if (m) {
-        const [, id, name, description, permStr, manageStr, modulesStr] = m;
-        roles.push(new Role(
-          id, name, description,
-          permStr.split('|').filter(Boolean),
-          manageStr.split('|').filter(Boolean),
-          parseModuleAccess(modulesStr),
-        ));
-      }
-    }
-    return roles;
-  }
-
-  static getByName(name) { return Role.getAll().find(r => r.name === name); }
-  static getById(id)     { return Role.getAll().find(r => r.id === String(id)); }
-
-  // Returns [{id, level}] for modules this role can access
-  static getModuleAccess(roleName) {
-    const role = Role.getByName(roleName);
-    return role ? role.moduleAccess : [];
-  }
-
-  // Legacy: flat list of module IDs
-  static getModuleIds(roleName) {
-    return Role.getModuleAccess(roleName).map(a => a.id);
-  }
-
-  static getManageableRoles(roleName) {
-    const role = Role.getByName(roleName);
-    return role ? role.canManage : [];
-  }
-
-  static canCreateRole(creatorRole, targetRole) {
-    return Role.getManageableRoles(creatorRole).includes(targetRole);
-  }
-
-  static getEffectivePermissions(roleName) {
-    const role = Role.getByName(roleName);
+  static async getByName(name) { return (await Role.getAll()).find((role) => role.name === name); }
+  static async getById(id) { return (await Role.getAll()).find((role) => role.id === String(id)); }
+  static async getModuleAccess(roleName) { const role = await Role.getByName(roleName); return role ? role.moduleAccess : []; }
+  static async getModuleIds(roleName) { return (await Role.getModuleAccess(roleName)).map((item) => item.id); }
+  static async getManageableRoles(roleName) { const role = await Role.getByName(roleName); return role ? role.canManage : []; }
+  static async canCreateRole(creatorRole, targetRole) { return (await Role.getManageableRoles(creatorRole)).includes(targetRole); }
+  static async getEffectivePermissions(roleName) {
+    const role = await Role.getByName(roleName);
     if (!role) return [];
     if (role.permissions.includes('system:full-access')) return ['system:full-access'];
-
-    const Module  = require('./Module');
-    const inherited = Module.getPermissionsForAccess(role.moduleAccess);
-    const all = new Set([...role.permissions, ...inherited]);
-    return [...all];
+    const Module = require('./Module');
+    return [...new Set([...role.permissions, ...(await Module.getPermissionsForAccess(role.moduleAccess))])];
   }
-
-  static hasPermission(roleName, permissionName) {
-    const role = Role.getByName(roleName);
-    if (!role) return false;
-    if (role.permissions.includes('system:full-access')) return true;
-    return Role.getEffectivePermissions(roleName).includes(permissionName);
+  static async hasPermission(roleName, permissionName) {
+    const role = await Role.getByName(roleName);
+    return Boolean(role && (role.permissions.includes('system:full-access') || (await Role.getEffectivePermissions(roleName)).includes(permissionName)));
   }
-
-  // Create a new role and append it to roles.csv
-  static createRole({ name, description, moduleAccess = [], permissions = [], canManage = [] }) {
-    const all = Role.getAll();
-    const maxId = all.reduce((m, r) => Math.max(m, parseInt(r.id) || 0), 0);
-    const newId = maxId + 1;
-
-    const permStr    = permissions.join('|');
-    const manageStr  = canManage.join('|');
-    const modulesStr = serializeModuleAccess(moduleAccess);
-
-    const line = `${newId},"${name}","${description}","${permStr}","${manageStr}","${modulesStr}"`;
-    fs.appendFileSync(ROLES_PATH, line + '\n');
+  static async createRole({ name, description, moduleAccess = [], permissions = [], canManage = [] }) {
+    const all = await Role.getAll(); const id = all.reduce((max, role) => Math.max(max, Number(role.id)), 0) + 1;
+    const row = { id, name, description, permissions: permissions.join('|'), canManage: canManage.join('|'), modules: serializeAccess(moduleAccess) };
+    if (usingSql()) {
+      await (await request()).input('id', sql.Int, id).input('name', sql.NVarChar(100), row.name).input('description', sql.NVarChar(500), row.description)
+        .input('permissions', sql.NVarChar(sql.MAX), row.permissions).input('canManage', sql.NVarChar(sql.MAX), row.canManage).input('modules', sql.NVarChar(sql.MAX), row.modules)
+        .query('INSERT INTO dbo.roles (id,name,description,permissions,canManage,modules) VALUES (@id,@name,@description,@permissions,@canManage,@modules)');
+    } else fs.appendFileSync(ROLES_PATH, `${id},"${name}","${description}","${row.permissions}","${row.canManage}","${row.modules}"\n`);
+    return new Role(row);
   }
-
-  // Persist a role's module access and direct permissions to CSV
-  static updateRole(roleId, { moduleAccess, permissions }) {
-    const content = fs.readFileSync(ROLES_PATH, 'utf8');
-    const lines   = content.trim().split('\n');
-    const newLines = [lines[0]];
-
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-      const m = line.match(/^(\d+),"([^"]+)","([^"]+)","([^"]*)","([^"]*)","([^"]*)"/);
-      if (m && m[1] === String(roleId)) {
-        const [, id, name, description, , manageStr] = m;
-        const newPerms   = permissions  !== undefined ? permissions.join('|')               : m[4];
-        const newModules = moduleAccess !== undefined ? serializeModuleAccess(moduleAccess) : m[6];
-        newLines.push(`${id},"${name}","${description}","${newPerms}","${manageStr}","${newModules}"`);
-      } else {
-        newLines.push(line);
-      }
+  static async updateRole(roleId, { moduleAccess, permissions }) {
+    const role = await Role.getById(roleId); if (!role) return null;
+    const values = { permissions: permissions === undefined ? role.permissions.join('|') : permissions.join('|'), modules: moduleAccess === undefined ? serializeAccess(role.moduleAccess) : serializeAccess(moduleAccess) };
+    if (usingSql()) {
+      await (await request()).input('id', sql.Int, Number(roleId)).input('permissions', sql.NVarChar(sql.MAX), values.permissions).input('modules', sql.NVarChar(sql.MAX), values.modules)
+        .query('UPDATE dbo.roles SET permissions=@permissions, modules=@modules WHERE id=@id');
+    } else {
+      const lines = fs.readFileSync(ROLES_PATH, 'utf8').trim().split('\n');
+      const updated = lines.map((line, index) => index && line.startsWith(`${roleId},`) ? `${roleId},"${role.name}","${role.description}","${values.permissions}","${role.canManage.join('|')}","${values.modules}"` : line);
+      fs.writeFileSync(ROLES_PATH, `${updated.join('\n')}\n`);
     }
-
-    fs.writeFileSync(ROLES_PATH, newLines.join('\n') + '\n');
+    return Role.getById(roleId);
   }
 }
-
 module.exports = Role;
