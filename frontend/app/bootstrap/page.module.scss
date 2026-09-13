@@ -64,7 +64,7 @@
   }
 }
 
-:global(.input-group .form-control) {
+:global(.input-group) :global(.form-control) {
   border-right: none;
 
   &:focus {
