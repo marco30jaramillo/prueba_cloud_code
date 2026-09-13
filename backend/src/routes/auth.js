@@ -7,6 +7,7 @@ const ResponseFormatter = require('../utils/responseFormatter');
 const { tokenUtils, authMiddleware, tokenManager } = require('../middleware/auth');
 const roleMiddleware = require('../middleware/roleMiddleware');
 const auditMiddleware = require('../middleware/auditMiddleware');
+const AuditLog = require('../models/AuditLog');
 const PasswordValidator = require('../utils/passwordValidator');
 const DataNormalizer = require('../utils/dataNormalizer');
 
@@ -124,7 +125,6 @@ router.post('/forgot-password', (req, res) => {
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
-  const AuditLog = require('../models/AuditLog');
   const auditLog = new AuditLog(
     'password_reset_requested',
     'unknown',
@@ -221,7 +221,6 @@ router.post('/bootstrap-superuser', (req, res) => {
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
-  const AuditLog = require('../models/AuditLog');
   const auditLog = new AuditLog(
     'superuser_created',
     user.id,
