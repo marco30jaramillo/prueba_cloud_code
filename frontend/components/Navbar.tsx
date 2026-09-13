@@ -79,6 +79,11 @@ export const Navbar: React.FC = () => {
                     👥 Usuarios
                   </Nav.Link>
                 )}
+                {user?.role === 'superuser' && (
+                  <Nav.Link as={Link} href="/dashboard/audit" className={styles.navLink}>
+                    📋 Auditoría
+                  </Nav.Link>
+                )}
                 <div className={styles.userInfo}>
                   <img
                     src={getImageUrl(user?.photo)}
