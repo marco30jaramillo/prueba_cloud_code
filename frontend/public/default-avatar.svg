@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Fondo circular -->
+  <circle cx="100" cy="100" r="100" fill="#e5e7eb"/>
+
+  <!-- Cabeza -->
+  <circle cx="100" cy="70" r="35" fill="#9ca3af"/>
+
+  <!-- Cuerpo -->
+  <path d="M 65 105 Q 65 105 65 140 L 135 140 Q 135 105 135 105 Q 130 100 100 100 Q 70 100 65 105 Z" fill="#9ca3af"/>
+</svg>

@@ -1,6 +1,8 @@
+const DEFAULT_AVATAR = '/default-avatar.svg';
+
 export const getImageUrl = (photoPath: string | undefined): string => {
-  if (!photoPath) {
-    return getBaseUrl() + '/datos/default/default-avatar.svg';
+  if (!photoPath || photoPath.includes('/datos/default/default-avatar.svg')) {
+    return DEFAULT_AVATAR;
   }
 
   if (photoPath.startsWith('http')) {
