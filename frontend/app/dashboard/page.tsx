@@ -124,24 +124,34 @@ export default function DashboardPage() {
             <Card.Body>
               <Card.Title className={styles.cardTitle}>👤 Mi Perfil</Card.Title>
               <Card.Text>Ver y editar información de tu perfil</Card.Text>
-              <Button variant="secondary" className={styles.actionBtn}>
+              <Button
+                variant="secondary"
+                className={styles.actionBtn}
+                onClick={() => router.push('/dashboard/profile')}
+              >
                 Ver Perfil
               </Button>
             </Card.Body>
           </Card>
         </Col>
 
-        <Col lg={6} md={12}>
-          <Card className={`${styles.actionCard} h-100`}>
-            <Card.Body>
-              <Card.Title className={styles.cardTitle}>📊 Estadísticas</Card.Title>
-              <Card.Text>Ver estadísticas y actividades</Card.Text>
-              <Button variant="secondary" className={styles.actionBtn}>
-                Ver Estadísticas
-              </Button>
-            </Card.Body>
-          </Card>
-        </Col>
+        {(user.role === 'superuser' || user.role === 'administrador') && (
+          <Col lg={6} md={12}>
+            <Card className={`${styles.actionCard} h-100`}>
+              <Card.Body>
+                <Card.Title className={styles.cardTitle}>👥 Gestionar Usuarios</Card.Title>
+                <Card.Text>Ver y administrar todos los usuarios del sistema</Card.Text>
+                <Button
+                  variant="secondary"
+                  className={styles.actionBtn}
+                  onClick={() => router.push('/dashboard/users')}
+                >
+                  Ver Usuarios
+                </Button>
+              </Card.Body>
+            </Card>
+          </Col>
+        )}
       </Row>
 
       <Modal show={showCreateUser} onHide={() => setShowCreateUser(false)} centered className={styles.modal}>
