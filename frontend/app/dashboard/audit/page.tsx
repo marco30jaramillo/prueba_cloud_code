@@ -23,7 +23,7 @@ interface AuditLog {
 
 export default function AuditPage() {
   const router = useRouter();
-  const { user, isInitialized } = useAuthStore();
+  const { user, token, isInitialized } = useAuthStore();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -51,7 +51,7 @@ export default function AuditPage() {
       setLoading(true);
       const response = await axios.get('/audit/logs', {
         headers: {
-          Authorization: `Bearer ${user?.token}`
+          Authorization: `Bearer ${token}`
         }
       });
 
