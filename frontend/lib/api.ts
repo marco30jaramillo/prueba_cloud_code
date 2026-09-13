@@ -221,4 +221,66 @@ export const usersAPI = {
   }
 };
 
+export const tiendasAPI = {
+  getMisTiendas: async () => {
+    const { data } = await apiClient.get('/tiendas/mis-tiendas');
+    return data;
+  },
+  getById: async (id: string) => {
+    const { data } = await apiClient.get(`/tiendas/${id}`);
+    return data;
+  },
+  update: async (id: string, body: Record<string, unknown>) => {
+    const { data } = await apiClient.patch(`/tiendas/${id}`, body);
+    return data;
+  },
+  getUsuarios: async (id: string) => {
+    const { data } = await apiClient.get(`/tiendas/${id}/usuarios`);
+    return data;
+  },
+  addUsuario: async (id: string, userId: string, esPropietario: boolean) => {
+    const { data } = await apiClient.post(`/tiendas/${id}/usuarios`, { userId, esPropietario });
+    return data;
+  },
+  removeUsuario: async (id: string, userId: string) => {
+    const { data } = await apiClient.delete(`/tiendas/${id}/usuarios/${userId}`);
+    return data;
+  }
+};
+
+export const valesAPI = {
+  crear: async (body: { tiendaId: string; clienteId: string; descripcion: string; montoTotal: number; fechaVencimiento?: string; notas?: string }) => {
+    const { data } = await apiClient.post('/vales', body);
+    return data;
+  },
+  getMisVales: async () => {
+    const { data } = await apiClient.get('/vales/mis-vales');
+    return data;
+  },
+  getCartera: async (tiendaId: string, estado?: string) => {
+    const { data } = await apiClient.get(`/vales/tienda/${tiendaId}`, { params: estado ? { estado } : {} });
+    return data;
+  },
+  getById: async (id: string) => {
+    const { data } = await apiClient.get(`/vales/${id}`);
+    return data;
+  },
+  anular: async (id: string) => {
+    const { data } = await apiClient.patch(`/vales/${id}/anular`);
+    return data;
+  },
+  registrarAbono: async (valeId: string, monto: number, notas?: string) => {
+    const { data } = await apiClient.post(`/vales/${valeId}/abonos`, { monto, notas });
+    return data;
+  },
+  getAbonos: async (valeId: string) => {
+    const { data } = await apiClient.get(`/vales/${valeId}/abonos`);
+    return data;
+  },
+  anularAbono: async (valeId: string, abonoId: string) => {
+    const { data } = await apiClient.patch(`/vales/${valeId}/abonos/${abonoId}/anular`);
+    return data;
+  }
+};
+
 export default apiClient;

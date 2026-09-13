@@ -1,0 +1,64 @@
+.container { padding: 2rem 0; min-height: 100vh; }
+
+.header { margin-bottom: 2rem; }
+
+.title {
+  font-weight: 800;
+  font-size: 2rem;
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle { color: #6b7280; font-size: 1.05rem; }
+
+.loadingCenter { display: flex; justify-content: center; align-items: center; min-height: 300px; }
+
+.card {
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  height: 100%;
+}
+
+.cardHeader {
+  background: #f9fafb;
+  border-bottom: 2px solid #e5e7eb;
+  font-size: 1rem;
+  padding: 0.9rem 1.2rem;
+  display: flex;
+  align-items: center;
+}
+
+.label { font-weight: 600; color: #374151; font-size: 0.92rem; }
+
+.table {
+  margin-bottom: 0;
+  thead th { padding: 0.75rem 1rem; font-weight: 600; color: #4b5563; font-size: 0.85rem; border: none; background: #f9fafb; }
+  tbody td { padding: 0.75rem 1rem; vertical-align: middle; border-color: #f3f4f6; }
+}
+
+.email { color: #9ca3af; font-size: 0.82rem; }
+
+.emptySmall { text-align: center; padding: 2rem 1rem; color: #9ca3af; font-size: 0.95rem; }
+
+.searchDropdown {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  background: white;
+  margin-top: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.searchItem {
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+  &:hover { background: #f0fdf4; }
+  &:last-child { border-bottom: none; }
+}
+
+.selected { background: #dcfce7; }

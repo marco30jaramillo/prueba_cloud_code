@@ -1,0 +1,45 @@
+.container { padding: 2rem 0; min-height: 100vh; }
+
+.header { margin-bottom: 2rem; }
+
+.title {
+  font-weight: 800;
+  font-size: 2rem;
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle { color: #6b7280; font-size: 1.05rem; }
+
+.loadingCenter { display: flex; justify-content: center; align-items: center; min-height: 300px; }
+
+.card {
+  border: 2px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+
+.label { font-weight: 600; color: #374151; font-size: 0.95rem; }
+
+.searchDropdown {
+  position: absolute;
+  z-index: 100;
+  width: 100%;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  background: white;
+  top: 100%;
+  left: 0;
+  margin-top: 2px;
+}
+
+.searchItem {
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  &:hover { background-color: #f0fdf4; }
+}
