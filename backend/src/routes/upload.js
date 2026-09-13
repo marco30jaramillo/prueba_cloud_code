@@ -67,15 +67,39 @@ const upload = multer({
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
-router.post('/photo', authMiddleware, upload.single('photo'), async (req, res) => {
+router.post('/photo', authMiddleware, (req, res, next) => {
+  upload.single('photo')(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return ResponseFormatter.badRequest(res, 'El archivo supera el límite de 10 MB');
+      }
+      return ResponseFormatter.badRequest(res, `Error al recibir el archivo: ${err.message}`);
+    }
+    if (err) {
+      return ResponseFormatter.badRequest(res, err.message || 'Solo se permiten imágenes');
+    }
+    next();
+  });
+}, async (req, res) => {
   if (!req.file) {
     return ResponseFormatter.badRequest(res, 'No se recibió ningún archivo');
   }
 
-  try {
-    const userId = req.user?.userId || 'anonymous';
-    const { buffer, filename, mimetype } = await processImage(req.file, userId);
+  const userId = req.user?.userId || 'anonymous';
 
+  // Comprimir y recortar
+  let processed;
+  try {
+    processed = await processImage(req.file, userId);
+  } catch (err) {
+    console.error('Image processing error:', err.message);
+    return ResponseFormatter.badRequest(res, 'No se pudo comprimir la imagen. Asegúrate de subir un archivo de imagen válido (JPG, PNG, WebP, HEIC, etc.)');
+  }
+
+  const { buffer, filename, mimetype } = processed;
+
+  // Guardar (blob o disco)
+  try {
     let photoUrl;
 
     if (usingAzureBlob()) {
@@ -95,8 +119,8 @@ router.post('/photo', authMiddleware, upload.single('photo'), async (req, res) =
       size: buffer.length
     }, 201);
   } catch (err) {
-    console.error('Upload error:', err.message);
-    return ResponseFormatter.internalError(res, 'Error al procesar la foto');
+    console.error('Storage error:', err.message);
+    return ResponseFormatter.internalError(res, 'Error al guardar la foto. Intenta nuevamente.');
   }
 });
 
