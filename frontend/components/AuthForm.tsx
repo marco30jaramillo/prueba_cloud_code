@@ -111,11 +111,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = 
       {message && (
         <Alert
           variant={message.type === 'success' ? 'success' : 'danger'}
-          onClose={() => setMessage(null)}
-          dismissible
+          onClose={message.type === 'success' ? () => setMessage(null) : undefined}
+          dismissible={message.type === 'success'}
           className={`mb-4 ${message.type === 'error' ? 'fade-in' : ''}`}
         >
-          <strong>{message.type === 'success' ? '✓ Éxito' : '⚠ Error'}:</strong> {message.text}
+          <strong>{message.type === 'success' ? '✓ Éxito' : '❌ Error'}:</strong> {message.text}
         </Alert>
       )}
 
