@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Container, Row, Col } from 'react-bootstrap';
@@ -8,7 +8,7 @@ import { AuthForm, AuthFormData } from '@/components/AuthForm';
 import { useAuth } from '@/hooks/useAuth';
 import styles from './page.module.scss';
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { handleLogin, isLoading, isAuthenticated } = useAuth();
@@ -57,5 +57,13 @@ export default function LoginPage() {
         </Col>
       </Row>
     </Container>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
   );
 }

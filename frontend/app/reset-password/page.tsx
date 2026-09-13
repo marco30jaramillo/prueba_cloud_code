@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useSearchParams } from 'next/navigation';
-import { useRouter } from 'next/navigation';
+import React, { Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Container, Row, Col, Alert } from 'react-bootstrap';
 import { AuthForm, AuthFormData } from '@/components/AuthForm';
 import { authAPI } from '@/lib/api';
 import styles from './page.module.scss';
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -52,5 +52,13 @@ export default function ResetPasswordPage() {
         </Col>
       </Row>
     </Container>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }
