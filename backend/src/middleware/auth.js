@@ -5,7 +5,7 @@ const ResponseFormatter = require('../utils/responseFormatter');
 const tokenUtils = new TokenUtils();
 const tokenManager = new TokenManager();
 
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   let token = null;
 
@@ -27,17 +27,9 @@ const authMiddleware = (req, res, next) => {
     return ResponseFormatter.unauthorized(res, 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente');
   }
 
-  const grantedTokens = tokenManager.readGrantedTokens();
-  const revokedTokens = tokenManager.readRevokedTokens();
-  const inGranted = grantedTokens.some(t => t.token === token);
-  const inRevoked = revokedTokens.some(t => t.token === token);
-
-  if (!inGranted) {
-    return ResponseFormatter.unauthorized(res, 'Sesión no válida. Inicia sesión nuevamente');
-  }
-
-  if (inRevoked) {
-    return ResponseFormatter.unauthorized(res, 'Tu sesión se cerró. Inicia sesión nuevamente');
+  const valid = await tokenManager.isTokenValid(token);
+  if (!valid) {
+    return ResponseFormatter.unauthorized(res, 'Sesión no válida o cerrada. Inicia sesión nuevamente');
   }
 
   req.user = payload;

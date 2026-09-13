@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { sql, usingSql, request } = require('../database/sqlPool');
 
 const MODULES_PATH = path.join(__dirname, '../../modules.csv');
 
@@ -29,9 +30,36 @@ function parseLine(line) {
   return fields;
 }
 
+function readAllFromCsv() {
+  if (!fs.existsSync(MODULES_PATH)) return [];
+  const lines = fs.readFileSync(MODULES_PATH, 'utf8').trim().split('\n');
+  const headers = parseLine(lines[0]);
+  const modules = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const values = parseLine(line);
+    const row = {};
+    headers.forEach((h, idx) => { row[h] = values[idx] ?? ''; });
+    modules.push(new Module({
+      id:          row.id,
+      name:        row.name,
+      description: row.description,
+      buttonLabel: row.buttonLabel,
+      href:        row.href,
+      icon:        row.icon,
+      showInNav:   row.showInNav,
+      permRead:    (row.permRead  || '').split('|').filter(Boolean),
+      permWrite:   (row.permWrite || '').split('|').filter(Boolean),
+      permFull:    (row.permFull  || '').split('|').filter(Boolean),
+    }));
+  }
+  return modules;
+}
+
 class Module {
   constructor({ id, name, description, buttonLabel, href, icon, showInNav, permRead, permWrite, permFull }) {
-    this.id          = id;
+    this.id          = String(id);
     this.name        = name;
     this.description = description;
     this.buttonLabel = buttonLabel;
@@ -43,7 +71,6 @@ class Module {
     this.permFull    = permFull  || [];
   }
 
-  // All permissions at a given level (cumulative: full ⊇ write ⊇ read)
   getPermissionsForLevel(level) {
     switch (level) {
       case 'full':  return [...new Set([...this.permRead, ...this.permWrite, ...this.permFull])];
@@ -53,46 +80,32 @@ class Module {
     }
   }
 
-  static getAll() {
-    if (!fs.existsSync(MODULES_PATH)) return [];
-    const lines = fs.readFileSync(MODULES_PATH, 'utf8').trim().split('\n');
-    const headers = parseLine(lines[0]);
-    const modules = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-      const values = parseLine(line);
-      const row = {};
-      headers.forEach((h, idx) => { row[h] = values[idx] ?? ''; });
-
-      modules.push(new Module({
-        id:          row.id,
-        name:        row.name,
-        description: row.description,
-        buttonLabel: row.buttonLabel,
-        href:        row.href,
-        icon:        row.icon,
-        showInNav:   row.showInNav,
-        permRead:    (row.permRead  || '').split('|').filter(Boolean),
-        permWrite:   (row.permWrite || '').split('|').filter(Boolean),
-        permFull:    (row.permFull  || '').split('|').filter(Boolean),
-      }));
-    }
-    return modules;
+  static async getAll() {
+    if (!usingSql()) return readAllFromCsv();
+    const result = await (await request()).query('SELECT * FROM dbo.modules ORDER BY id');
+    return result.recordset.map(row => new Module({
+      id:          String(row.id),
+      name:        row.name,
+      description: row.description,
+      buttonLabel: row.buttonLabel,
+      href:        row.href,
+      icon:        row.icon,
+      showInNav:   Boolean(row.showInNav),
+      permRead:    (row.permRead  || '').split('|').filter(Boolean),
+      permWrite:   (row.permWrite || '').split('|').filter(Boolean),
+      permFull:    (row.permFull  || '').split('|').filter(Boolean),
+    }));
   }
 
-  // Returns modules for a role (ordered as defined in roles.csv)
-  static getForRole(roleName) {
-    const Role = require('./Role'); // lazy to avoid circular dep
-    const access = Role.getModuleAccess(roleName); // [{id, level}]
-    const all    = Module.getAll();
-    return access.map(({ id }) => all.find(m => m.id === id)).filter(Boolean);
+  static async getForRole(roleName) {
+    const Role = require('./Role');
+    const access = await Role.getModuleAccess(roleName);
+    const all    = await Module.getAll();
+    return access.map(({ id }) => all.find(m => m.id === String(id))).filter(Boolean);
   }
 
-  // Returns the union of permissions for a set of {id, level} entries
-  static getPermissionsForAccess(moduleAccess) {
-    const all = Module.getAll();
+  static async getPermissionsForAccess(moduleAccess) {
+    const all = await Module.getAll();
     const perms = new Set();
     moduleAccess.forEach(({ id, level }) => {
       const mod = all.find(m => m.id === String(id));
@@ -101,9 +114,8 @@ class Module {
     return [...perms];
   }
 
-  // Legacy compatibility — returns read-tier permissions for each id (used by old callers)
-  static getRequiredPermissionsForIds(moduleIds) {
-    const all = Module.getAll();
+  static async getRequiredPermissionsForIds(moduleIds) {
+    const all = await Module.getAll();
     const perms = new Set();
     moduleIds.forEach(id => {
       const mod = all.find(m => m.id === String(id));
@@ -112,8 +124,8 @@ class Module {
     return [...perms];
   }
 
-  static getById(id) {
-    return Module.getAll().find(m => m.id === String(id));
+  static async getById(id) {
+    return (await Module.getAll()).find(m => m.id === String(id));
   }
 
   toJSON() {
