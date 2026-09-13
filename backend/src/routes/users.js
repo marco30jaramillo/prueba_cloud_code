@@ -10,20 +10,20 @@ const router = express.Router();
 
 // Returns the roles that the current user can create/manage
 // Superuser always gets ALL roles (including custom ones)
-router.get('/manageable-roles', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), (req, res) => {
+router.get('/manageable-roles', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), async (req, res) => {
   if (req.user.role === 'superuser') {
-    const allRoles = Role.getAll().map(r => r.name);
+    const allRoles = (await Role.getAll()).map(r => r.name);
     return ResponseFormatter.success(res, { roles: allRoles });
   }
-  const manageableRoles = Role.getManageableRoles(req.user.role);
+  const manageableRoles = await Role.getManageableRoles(req.user.role);
   return ResponseFormatter.success(res, { roles: manageableRoles });
 });
 
-router.get('/', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), (req, res) => {
+router.get('/', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), async (req, res) => {
   const requesterRole = req.user.role;
-  const allUsers = User.getAll();
+  const allUsers = await User.getAll();
 
-  const allowed = Role.getManageableRoles(requesterRole);
+  const allowed = await Role.getManageableRoles(requesterRole);
   const filtered = allUsers.filter(u => allowed.includes(u.role));
 
   const safeUsers = filtered.map(user => ({
@@ -44,16 +44,16 @@ router.get('/', authMiddleware, roleMiddleware.requireRole('superuser', 'adminis
   });
 });
 
-router.get('/:userId', authMiddleware, (req, res) => {
+router.get('/:userId', authMiddleware, async (req, res) => {
   const { userId } = req.params;
   const requesterId = req.user.userId;
 
-  const user = User.findById(userId);
+  const user = await User.findById(userId);
   if (!user) {
     return ResponseFormatter.notFound(res, 'Usuario');
   }
 
-  const requester = User.findById(requesterId);
+  const requester = await User.findById(requesterId);
   if (requester.role !== 'superuser' && requester.role !== 'administrador' && userId !== requesterId) {
     return ResponseFormatter.forbidden(res, 'No tienes permiso para ver este usuario');
   }
@@ -71,37 +71,49 @@ router.get('/:userId', authMiddleware, (req, res) => {
   });
 });
 
-router.patch('/:userId', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), (req, res) => {
+router.patch('/:userId', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), async (req, res) => {
   const { userId } = req.params;
-  const { name, photo } = req.body;
+  const { name, photo, role } = req.body;
   const requesterId = req.user.userId;
 
-  const targetUser = User.findById(userId);
+  const targetUser = await User.findById(userId);
   if (!targetUser) {
     return ResponseFormatter.notFound(res, 'Usuario');
   }
 
-  const requester = User.findById(requesterId);
+  const requester = await User.findById(requesterId);
   if (requester.role === 'administrador' && targetUser.role === 'superuser') {
     return ResponseFormatter.forbidden(res, 'No puedes editar a un superuser');
   }
 
-  if (!name) {
-    return ResponseFormatter.badRequest(res, 'El nombre es requerido');
-  }
-
-  const updates = {};
-  if (name) updates.name = name;
-  if (photo) updates.photo = photo;
-
-  const updatedUser = User.updateProfile(userId, updates);
-  if (!updatedUser) {
-    return ResponseFormatter.notFound(res, 'Usuario');
+  if (!name && !photo && !role) {
+    return ResponseFormatter.badRequest(res, 'Se requiere al menos un campo para actualizar');
   }
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
-  auditMiddleware.logProfileUpdate(requesterId, ipAddress, userAgent, updates);
+
+  // Handle role change
+  if (role && role !== targetUser.role) {
+    if (requester.role !== 'superuser') {
+      const canManage = await Role.getManageableRoles(requester.role);
+      if (!canManage.includes(role)) {
+        return ResponseFormatter.forbidden(res, `No tienes permiso para asignar el rol "${role}"`);
+      }
+    }
+    await User.update(userId, { role });
+    auditMiddleware.logUserRoleChanged(requesterId, userId, targetUser.role, role, ipAddress, userAgent).catch(() => {});
+  }
+
+  const profileUpdates = {};
+  if (name) profileUpdates.name = name;
+  if (photo) profileUpdates.photo = photo;
+
+  let updatedUser = await User.findById(userId);
+  if (Object.keys(profileUpdates).length) {
+    updatedUser = await User.updateProfile(userId, profileUpdates) || updatedUser;
+    await auditMiddleware.logProfileUpdate(requesterId, ipAddress, userAgent, profileUpdates);
+  }
 
   return ResponseFormatter.success(res, {
     message: 'Usuario actualizado exitosamente',
@@ -111,12 +123,12 @@ router.patch('/:userId', authMiddleware, roleMiddleware.requireRole('superuser',
       name: updatedUser.name,
       photo: updatedUser.photo,
       role: updatedUser.role,
-      isActive: updatedUser.isActive === 'true' || updatedUser.isActive === true
-    }
+      isActive: updatedUser.isActive === 'true' || updatedUser.isActive === true,
+    },
   });
 });
 
-router.patch('/:userId/status', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), (req, res) => {
+router.patch('/:userId/status', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), async (req, res) => {
   const { userId } = req.params;
   const { isActive } = req.body;
   const requesterId = req.user.userId;
@@ -129,25 +141,25 @@ router.patch('/:userId/status', authMiddleware, roleMiddleware.requireRole('supe
     return ResponseFormatter.badRequest(res, 'No puedes cambiar tu propio estado');
   }
 
-  const targetUser = User.findById(userId);
+  const targetUser = await User.findById(userId);
   if (!targetUser) {
     return ResponseFormatter.notFound(res, 'Usuario');
   }
 
-  const requester = User.findById(requesterId);
+  const requester = await User.findById(requesterId);
   if (requester.role === 'administrador' && targetUser.role === 'superuser') {
     return ResponseFormatter.forbidden(res, 'No puedes deshabilitar un superuser');
   }
 
-  const updatedUser = User.toggleActive(userId, isActive);
+  const updatedUser = await User.toggleActive(userId, isActive);
 
   if (!isActive) {
-    tokenManager.revokeAllUserTokens(userId, targetUser.email);
+    await tokenManager.revokeAllUserTokens(userId, targetUser.email);
   }
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
-  auditMiddleware.logUserStatusChange(requesterId, userId, isActive, ipAddress, userAgent);
+  await auditMiddleware.logUserStatusChange(requesterId, userId, isActive, ipAddress, userAgent);
 
   return ResponseFormatter.success(res, {
     message: `Usuario ${isActive ? 'habilitado' : 'deshabilitado'} exitosamente`,
@@ -161,26 +173,26 @@ router.patch('/:userId/status', authMiddleware, roleMiddleware.requireRole('supe
   });
 });
 
-router.post('/:userId/generate-password', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), (req, res) => {
+router.post('/:userId/generate-password', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), async (req, res) => {
   const { userId } = req.params;
   const requesterId = req.user.userId;
 
-  const targetUser = User.findById(userId);
+  const targetUser = await User.findById(userId);
   if (!targetUser) {
     return ResponseFormatter.notFound(res, 'Usuario');
   }
 
-  const requester = User.findById(requesterId);
+  const requester = await User.findById(requesterId);
   if (requester.role === 'administrador' && targetUser.role === 'superuser') {
     return ResponseFormatter.forbidden(res, 'No puedes generar contraseña para un superuser');
   }
 
   const newPassword = User.generateRandomPassword();
-  User.setPasswordForUser(userId, newPassword);
+  await User.setPasswordForUser(userId, newPassword);
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
-  auditMiddleware.logPasswordGeneration(requesterId, userId, ipAddress, userAgent);
+  await auditMiddleware.logPasswordGeneration(requesterId, userId, ipAddress, userAgent);
 
   return ResponseFormatter.success(res, {
     message: 'Contraseña generada exitosamente',
