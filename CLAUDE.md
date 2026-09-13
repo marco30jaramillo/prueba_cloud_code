@@ -29,21 +29,38 @@ Plataforma segura y escalable para gestionar usuarios con autenticación JWT, ro
 - ✅ Recuperación de contraseña con token de una sola vez
 - ✅ CORS configurado para red local
 - ✅ Limpieza automática de tokens vencidos (2 AM)
+- ✅ Gestión de usuarios (foto, estado activo/inactivo)
+- ✅ Cambio de contraseña propia y de otros usuarios
+- ✅ Generación de contraseñas aleatorias seguras
+- ✅ Edición de perfil de usuario
+- ✅ Habilitar/deshabilitar usuarios
 
 ### Frontend (Next.js)
 - ✅ Home sin sesión (características, información, CTA)
 - ✅ Login con validación
-- ✅ Registro de clientes
+- ✅ Registro de clientes con foto de perfil (opcional)
 - ✅ Recuperación de contraseña
 - ✅ Reset de contraseña con token
 - ✅ Dashboard con menú dinámico por rol
 - ✅ Crear usuarios (modal, solo admin/superuser)
-- ✅ Navbar responsiva con logout
+- ✅ Navbar responsiva con logout y dropdown
+- ✅ Logout en este dispositivo + Logout en todos los dispositivos
+- ✅ **Mi Perfil** (/dashboard/profile) - para todos
+  - Ver info bloqueada
+  - Editar nombre/foto
+  - Cambiar contraseña propia
+- ✅ **Gestión de Usuarios** (/dashboard/users) - solo admin/superuser
+  - Tabla de usuarios con foto, estado, rol
+  - Editar nombre/foto de usuarios
+  - Generar contraseña aleatoria y mostrar
+  - Habilitar/deshabilitar usuarios
 - ✅ Diseño responsive (móvil, tablet, desktop)
 - ✅ Colores suavizados: verde (#10b981), azul (#3b82f6), blanco
-- ✅ Animaciones fade-in, slide-in
+- ✅ Animaciones fade-in, slide-in, transiciones suaves
 - ✅ Validación de formularios con mensajes de error
 - ✅ Manejo robusto de errores API
+- ✅ Sesión persistente sin generar nuevos tokens en reload
+- ✅ Sincronización de sesión entre pestañas
 
 ---
 
@@ -60,7 +77,8 @@ Plataforma segura y escalable para gestionar usuarios con autenticación JWT, ro
 │   │   │   ├── Role.js                 # Gestión de roles
 │   │   │   └── Permission.js           # Gestión de permisos
 │   │   ├── routes/
-│   │   │   └── auth.js                 # Endpoints /auth/*
+│   │   │   ├── auth.js                 # Endpoints /auth/*
+│   │   │   └── users.js                # Endpoints /users/*
 │   │   ├── middleware/
 │   │   │   ├── auth.js                 # JWT verification
 │   │   │   └── roleMiddleware.js       # Role/permission checks
@@ -100,9 +118,18 @@ Plataforma segura y escalable para gestionar usuarios con autenticación JWT, ro
 │   │   ├── reset-password/
 │   │   │   ├── page.tsx
 │   │   │   └── page.module.scss
+│   │   ├── bootstrap/
+│   │   │   ├── page.tsx
+│   │   │   └── page.module.scss
 │   │   └── dashboard/
 │   │       ├── page.tsx
-│   │       └── page.module.scss
+│   │       ├── page.module.scss
+│   │       ├── profile/
+│   │       │   ├── page.tsx
+│   │       │   └── page.module.scss
+│   │       └── users/
+│   │           ├── page.tsx
+│   │           └── page.module.scss
 │   │
 │   ├── components/
 │   │   ├── Navbar.tsx
@@ -222,7 +249,21 @@ system:full-access   - Acceso total (solo superuser)
 |--------|----------|-------------|
 | GET | `/auth/validate` | Validar sesión actual |
 | POST | `/auth/logout` | Cerrar sesión |
+| POST | `/auth/logout-all` | Cerrar sesión en todos los dispositivos |
 | POST | `/auth/create-user` | Crear usuario (validación de permisos) |
+| PATCH | `/auth/change-password` | Cambiar propia contraseña |
+| PATCH | `/auth/profile` | Actualizar perfil propio |
+| PATCH | `/auth/password/:userId` | Cambiar contraseña de otro usuario (admin/superuser) |
+
+### Gestión de Usuarios (Requiere token - admin/superuser)
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/users` | Listar todos los usuarios |
+| GET | `/users/:userId` | Obtener usuario específico |
+| PATCH | `/users/:userId` | Actualizar usuario (nombre, foto) |
+| PATCH | `/users/:userId/status` | Habilitar/deshabilitar usuario |
+| POST | `/users/:userId/generate-password` | Generar contraseña aleatoria |
 
 ### Sistema
 
@@ -293,15 +334,39 @@ $text-light:       #6b7280   // Texto secundario
 6. Nuevo usuario con token retornado
 7. Mensaje de éxito
 
+### Mi Perfil (Todos los usuarios)
+1. Usuario autenticado navega a `/dashboard/profile`
+2. Ve formulario bloqueado con: nombre, email (deshabilitado), rol (deshabilitado), foto
+3. Click "Editar Perfil" desbloquea campos (excepto email y rol)
+4. Puede cambiar nombre y foto
+5. Click "Guardar Cambios" → PATCH `/auth/profile`
+6. Sección "Seguridad" con botón "Cambiar Contraseña"
+7. Modal para ingresar contraseña actual y nueva
+8. PATCH `/auth/change-password` → actualiza contraseña
+
+### Gestión de Usuarios (Admin/Superuser)
+1. Admin/Superuser navega a `/dashboard/users`
+2. Tabla con todos los usuarios (foto, nombre, email, rol, estado, creación)
+3. Dropdown de acciones por usuario:
+   - **✏️ Editar**: Modal para cambiar nombre y foto
+   - **🔑 Generar Contraseña**: POST `/users/:id/generate-password` → muestra contraseña generada
+   - **🔴/🟢 Habilitar/Deshabilitar**: PATCH `/users/:id/status` → cambia estado
+4. Admin no puede editar superuser
+5. Confirmación en cambio de estado crítico
+
 ---
 
 ## 💾 Base de Datos (CSV)
 
 ### users.csv
 ```csv
-id,email,password,name,role,createdAt,resetToken,resetTokenExpiry
-uuid,user@ex.com,pbkdf2_hash:salt,John,cliente,2024-09-12T12:00:00Z,,
+id,email,password,name,role,photo,isActive,createdAt,resetToken,resetTokenExpiry
+uuid,user@ex.com,pbkdf2_hash:salt,John,cliente,https://example.com/photo.jpg,true,2024-09-12T12:00:00Z,,
+uuid2,admin@ex.com,pbkdf2_hash:salt,Admin,superuser,https://via.placeholder.com/40?text=👤,true,2024-09-12T12:00:00Z,,
 ```
+**Campos nuevos:**
+- `photo`: URL de imagen (por defecto: https://via.placeholder.com/40?text=👤)
+- `isActive`: true/false (habilitar/deshabilitar usuario)
 
 ### roles.csv
 ```csv
@@ -334,18 +399,31 @@ uuid2,user_id,user@ex.com,eyJ0eXA...,2024-09-12T14:00:00Z,2024-09-13T12:00:00Z
 
 ---
 
+## ✅ Recientemente Implementado
+
+- ✅ PATCH `/auth/change-password` - Cambiar contraseña propia
+- ✅ GET `/users` - Listar usuarios (admin)
+- ✅ GET `/users/:id` - Ver usuario específico
+- ✅ PATCH `/users/:id` - Editar usuario (nombre, foto)
+- ✅ PATCH `/users/:id/status` - Habilitar/deshabilitar usuario
+- ✅ POST `/users/:id/generate-password` - Generar contraseña aleatoria
+- ✅ PATCH `/auth/profile` - Actualizar perfil propio
+- ✅ POST `/auth/logout-all` - Logout en todos los dispositivos
+- ✅ `/dashboard/profile` - Página Mi Perfil
+- ✅ `/dashboard/users` - Página Gestión de Usuarios
+- ✅ Bootstrap page sin autenticación
+
 ## 🎯 Endpoints Faltantes (Posibles Mejoras)
 
 ```
-PATCH /auth/change-password         Cambiar contraseña (en sesión)
-GET   /users                        Listar usuarios (admin)
-GET   /users/:id                    Ver usuario específico
-PUT   /users/:id                    Editar usuario
-DELETE /users/:id                   Eliminar usuario
+DELETE /users/:id                   Eliminar usuario (soft delete)
 GET   /sessions                     Listar sesiones activas
 DELETE /sessions/:id                Cerrar sesión específica
 POST  /auth/refresh-token           Renovar token
 GET   /admin/analytics              Estadísticas administrativas
+PATCH /users/:id/email              Cambiar email (verificación requerida)
+POST  /users/export                 Exportar usuarios (CSV/Excel)
+GET   /audit-log                    Log de auditoría
 ```
 
 ---
@@ -390,12 +468,18 @@ NEXT_PUBLIC_API_URL=http://localhost:3000
 ## 📈 Próximas Versiones
 
 - [ ] Integración email real (SendGrid/Gmail)
-- [ ] Rate limiting
-- [ ] Validación de email
+- [ ] Rate limiting en endpoints
+- [ ] Validación de email con confirmación
 - [ ] Two-factor authentication (2FA)
 - [ ] Migración a PostgreSQL/MongoDB
-- [ ] Dashboard administrativo avanzado
-- [ ] Logs y auditoría
+- [ ] Dashboard administrativo con estadísticas
+- [ ] Logs y auditoría de acciones
 - [ ] OAuth2/Google login
 - [ ] Notificaciones en tiempo real (WebSocket)
 - [ ] Cambio de rol en sesión
+- [ ] Soft delete de usuarios
+- [ ] Exportar usuarios a CSV
+- [ ] Búsqueda y filtrado avanzado en tabla de usuarios
+- [ ] Dark mode
+- [ ] Internacionalización (i18n)
+- [ ] Sistema de permisos granulares por endpoint
