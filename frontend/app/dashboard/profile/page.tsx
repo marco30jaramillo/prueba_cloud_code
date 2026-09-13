@@ -24,9 +24,7 @@ export default function ProfilePage() {
       photoPath = `/datos/${photo}`;
     }
 
-    const url = `${process.env.NEXT_PUBLIC_API_URL}${photoPath}`;
-    console.log('[PhotoDebug]', { photo, photoPath, url });
-    return url;
+    return `${process.env.NEXT_PUBLIC_API_URL}${photoPath}`;
   };
 
   const [formData, setFormData] = useState({

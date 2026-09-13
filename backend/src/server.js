@@ -14,9 +14,7 @@ const PORT = process.env.PORT || 3001;
 
 app.use(express.json());
 // Servir archivos estáticos desde /datos en la raíz del proyecto
-// __dirname es backend/src/, así que ../ sube a backend/, ../ de nuevo sube a raíz
 const datosPath = path.resolve(__dirname, '../../datos');
-console.log('📁 Sirviendo archivos estáticos desde:', datosPath);
 app.use(express.static(datosPath));
 
 const corsOptions = {
