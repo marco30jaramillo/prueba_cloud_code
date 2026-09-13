@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import apiClient from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
+import axios from 'axios';
+import { getAPIUrl } from '@/lib/image-url';
 import styles from './page.module.scss';
 
 interface AuditLog {
@@ -49,7 +50,12 @@ export default function AuditPage() {
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/audit/logs');
+      const apiUrl = getAPIUrl();
+      const response = await axios.get(`${apiUrl}/audit/logs`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
 
       setLogs(response.data.logs || []);
       setError('');
