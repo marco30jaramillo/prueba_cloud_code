@@ -313,4 +313,18 @@ router.post('/logout', authMiddleware, (req, res) => {
   });
 });
 
+router.post('/logout-all', authMiddleware, (req, res) => {
+  const userId = req.user.userId;
+  const email = req.user.email;
+
+  const revokedCount = tokenManager.revokeAllUserTokens(userId, email);
+
+  return ResponseFormatter.success(res, {
+    message: `Sesiones cerradas en todos los dispositivos`,
+    email,
+    sessionsRevoked: revokedCount,
+    details: `Se revocaron ${revokedCount} sesiones activas. Necesitarás iniciar sesión nuevamente en todos tus dispositivos.`
+  });
+});
+
 module.exports = router;

@@ -62,6 +62,11 @@ export const authAPI = {
     return data;
   },
 
+  logoutAll: async () => {
+    const { data } = await apiClient.post<any>('/auth/logout-all');
+    return data;
+  },
+
   forgotPassword: async (email: string) => {
     const { data } = await apiClient.post<AuthResponse>('/auth/forgot-password', { email });
     return data;

@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { Navbar as BSNavbar, Nav, Container, Button } from 'react-bootstrap';
+import { Navbar as BSNavbar, Nav, Container, Button, Dropdown } from 'react-bootstrap';
 import { useAuthStore } from '@/lib/auth-store';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
@@ -10,12 +10,24 @@ import styles from './Navbar.module.scss';
 
 export const Navbar: React.FC = () => {
   const { isAuthenticated, user } = useAuthStore();
-  const { handleLogout } = useAuth();
+  const { handleLogout, handleLogoutAll } = useAuth();
   const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogoutClick = async () => {
+    setIsLoggingOut(true);
     await handleLogout();
     router.push('/');
+  };
+
+  const handleLogoutAllClick = async () => {
+    setIsLoggingOut(true);
+    if (confirm('⚠️ Esto cerrará tu sesión en TODOS tus dispositivos. ¿Continuar?')) {
+      await handleLogoutAll();
+      router.push('/');
+    } else {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -45,14 +57,33 @@ export const Navbar: React.FC = () => {
                 <span className={styles.userInfo}>
                   {user?.name} ({user?.role})
                 </span>
-                <Button
-                  variant="outline-danger"
-                  size="sm"
-                  onClick={handleLogoutClick}
-                  className={styles.logoutBtn}
-                >
-                  Logout
-                </Button>
+                <Dropdown className={styles.logoutDropdown}>
+                  <Dropdown.Toggle
+                    variant="outline-danger"
+                    size="sm"
+                    id="logout-dropdown"
+                    disabled={isLoggingOut}
+                  >
+                    Logout
+                  </Dropdown.Toggle>
+
+                  <Dropdown.Menu align="end">
+                    <Dropdown.Item
+                      onClick={handleLogoutClick}
+                      disabled={isLoggingOut}
+                    >
+                      🚪 Logout en este dispositivo
+                    </Dropdown.Item>
+                    <Dropdown.Divider />
+                    <Dropdown.Item
+                      onClick={handleLogoutAllClick}
+                      disabled={isLoggingOut}
+                      className={styles.logoutAllItem}
+                    >
+                      🌍 Logout en todos los dispositivos
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown>
               </>
             )}
           </Nav>

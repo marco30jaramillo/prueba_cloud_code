@@ -55,6 +55,18 @@ export const useAuth = () => {
     }
   }, [storeLogout]);
 
+  const handleLogoutAll = useCallback(async () => {
+    try {
+      const response = await authAPI.logoutAll();
+      console.log(`[Logout All] ${response.sessionsRevoked} sesiones cerradas`);
+    } catch (error) {
+      console.error('Logout all error:', error);
+    } finally {
+      storeLogout();
+      clearAuthStorage();
+    }
+  }, [storeLogout]);
+
   return {
     user,
     token,
@@ -62,6 +74,7 @@ export const useAuth = () => {
     isAuthenticated,
     handleLogin,
     handleRegister,
-    handleLogout
+    handleLogout,
+    handleLogoutAll
   };
 };
