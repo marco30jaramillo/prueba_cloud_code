@@ -33,10 +33,6 @@
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(239, 68, 68, 0.15);
   animation: fadeIn 0.4s ease-out;
-
-  :global(.card-body) {
-    padding: 2rem;
-  }
 }
 
 .toggleBtn {
@@ -65,14 +61,7 @@
 }
 
 .inputGroupWrapper {
-  :global(.form-control) {
-    border-right: none;
-
-    &:focus {
-      border-right: none;
-      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-    }
-  }
+  margin-bottom: 1rem;
 }
 
 .footer {
@@ -86,18 +75,6 @@
   font-size: 0.9rem;
   margin: 0;
   font-weight: 500;
-}
-
-@media (max-width: 768px) {
-  .title {
-    font-size: 1.5rem;
-  }
-
-  .card {
-    :global(.card-body) {
-      padding: 1.5rem;
-    }
-  }
 }
 
 @keyframes slideIn {
@@ -125,11 +102,6 @@
   color: white;
   border-radius: 12px 12px 0 0 !important;
   padding: 1.5rem;
-
-  :global(.card-title) {
-    color: white;
-    margin: 0;
-  }
 }
 
 .endpoint {
@@ -156,15 +128,6 @@
   gap: 1rem;
   margin-bottom: 0.5rem;
   font-weight: 600;
-
-  code {
-    background: #ffffff;
-    padding: 0.25rem 0.75rem;
-    border-radius: 4px;
-    color: #1e40af;
-    font-size: 0.95rem;
-    border: 1px solid #dbeafe;
-  }
 }
 
 .endpointDetails {
@@ -177,11 +140,6 @@
 .rolesSection {
   padding-top: 2rem;
   border-top: 2px solid #e5e7eb;
-
-  :global(.card-title) {
-    color: #1f2937;
-    margin: 0;
-  }
 }
 
 .roleCard {
@@ -193,10 +151,6 @@
     border-color: #3b82f6;
     box-shadow: 0 8px 16px rgba(59, 130, 246, 0.15);
     transform: translateY(-4px);
-  }
-
-  :global(.card-body) {
-    padding: 1.5rem;
   }
 }
 
@@ -214,6 +168,10 @@
 }
 
 @media (max-width: 768px) {
+  .title {
+    font-size: 1.5rem;
+  }
+
   .endpoint {
     padding: 1rem;
   }
@@ -221,9 +179,5 @@
   .endpointHeader {
     flex-direction: column;
     align-items: flex-start;
-
-    :global(code) {
-      width: 100%;
-    }
   }
 }
