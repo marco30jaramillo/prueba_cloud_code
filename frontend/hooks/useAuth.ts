@@ -48,6 +48,7 @@ export const useAuth = () => {
         saveAuthToStorage(response.user, response.token);
         return { success: true, data: response };
       }
+      return { success: false, error: 'Respuesta inesperada del servidor' };
     } catch (error: any) {
       const err = error.response?.data as ApiError;
       const errorMsg = err?.message || 'No se pudo completar el registro. Intenta nuevamente.';
