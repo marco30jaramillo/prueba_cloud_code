@@ -1,7 +1,7 @@
 const express = require('express');
 const User = require('../models/User');
 const ResponseFormatter = require('../utils/responseFormatter');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, tokenManager } = require('../middleware/auth');
 const roleMiddleware = require('../middleware/roleMiddleware');
 
 const router = express.Router();
@@ -118,6 +118,10 @@ router.patch('/:userId/status', authMiddleware, roleMiddleware.requireRole('supe
   }
 
   const updatedUser = User.toggleActive(userId, isActive);
+
+  if (!isActive) {
+    tokenManager.revokeAllUserTokens(userId, targetUser.email);
+  }
 
   return ResponseFormatter.success(res, {
     message: `Usuario ${isActive ? 'habilitado' : 'deshabilitado'} exitosamente`,
