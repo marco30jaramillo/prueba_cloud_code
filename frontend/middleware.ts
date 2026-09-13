@@ -2,10 +2,14 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  const { method, pathname } = request;
+  const method = request.method;
+  const url = new URL(request.url);
+  const pathname = url.pathname;
   const origin = request.headers.get('origin') || request.headers.get('x-forwarded-for') || 'unknown';
 
-  console.log(`[FRONTEND] ${method} ${pathname} - Origin: ${origin}`);
+  if (pathname.startsWith('/_next') === false && pathname !== '/favicon.ico') {
+    console.log(`[FRONTEND] ${method} ${pathname} - Origin: ${origin}`);
+  }
 
   const response = NextResponse.next();
 
@@ -26,5 +30,7 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/:path*']
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ]
 };
