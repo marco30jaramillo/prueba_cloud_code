@@ -70,3 +70,4 @@ datos/
 
 # Audit logs (runtime data)
 backend/audit_logs
+backend/audit_logs.csv
