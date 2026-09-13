@@ -13,7 +13,7 @@ Role.initializeRoles();
 Permission.initializePermissions();
 
 router.post('/register', (req, res) => {
-  const { email, password, name } = req.body;
+  const { email, password, name, photo } = req.body;
 
   if (!email || !password || !name) {
     return ResponseFormatter.badRequest(res, 'Campos requeridos faltantes', {
@@ -34,7 +34,7 @@ router.post('/register', (req, res) => {
     return ResponseFormatter.conflict(res, `El email ${email} ya está registrado`);
   }
 
-  const user = User.create(email, password, name, 'cliente');
+  const user = User.create(email, password, name, 'cliente', photo);
   Mailer.sendWelcomeEmail(email, name);
 
   const { token, tokenId, expiresAt } = tokenUtils.generateTokenWithId({
@@ -324,6 +324,92 @@ router.post('/logout-all', authMiddleware, (req, res) => {
     email,
     sessionsRevoked: revokedCount,
     details: `Se revocaron ${revokedCount} sesiones activas. Necesitarás iniciar sesión nuevamente en todos tus dispositivos.`
+  });
+});
+
+router.patch('/change-password', authMiddleware, (req, res) => {
+  const { currentPassword, newPassword, confirmPassword } = req.body;
+  const userId = req.user.userId;
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    return ResponseFormatter.badRequest(res, 'Campos requeridos faltantes');
+  }
+
+  if (newPassword.length < 8) {
+    return ResponseFormatter.badRequest(res, 'La nueva contraseña debe tener al menos 8 caracteres');
+  }
+
+  if (newPassword !== confirmPassword) {
+    return ResponseFormatter.badRequest(res, 'Las contraseñas no coinciden');
+  }
+
+  const result = User.changePassword(userId, currentPassword, newPassword);
+  if (result && result.error) {
+    return ResponseFormatter.badRequest(res, result.error);
+  }
+
+  return ResponseFormatter.success(res, {
+    message: 'Contraseña cambiada exitosamente'
+  });
+});
+
+router.patch('/profile', authMiddleware, (req, res) => {
+  const { name, photo } = req.body;
+  const userId = req.user.userId;
+
+  if (!name) {
+    return ResponseFormatter.badRequest(res, 'El nombre es requerido');
+  }
+
+  const updates = {};
+  if (name) updates.name = name;
+  if (photo) updates.photo = photo;
+
+  const updatedUser = User.updateProfile(userId, updates);
+  if (!updatedUser) {
+    return ResponseFormatter.notFound(res, 'Usuario');
+  }
+
+  return ResponseFormatter.success(res, {
+    message: 'Perfil actualizado exitosamente',
+    user: {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      name: updatedUser.name,
+      photo: updatedUser.photo,
+      role: updatedUser.role
+    }
+  });
+});
+
+router.patch('/password/:userId', authMiddleware, roleMiddleware.requireRole(['superuser', 'administrador']), (req, res) => {
+  const { newPassword } = req.body;
+  const { userId } = req.params;
+  const requesterId = req.user.userId;
+
+  if (!newPassword) {
+    return ResponseFormatter.badRequest(res, 'Nueva contraseña es requerida');
+  }
+
+  if (newPassword.length < 8) {
+    return ResponseFormatter.badRequest(res, 'La nueva contraseña debe tener al menos 8 caracteres');
+  }
+
+  const targetUser = User.findById(userId);
+  if (!targetUser) {
+    return ResponseFormatter.notFound(res, 'Usuario');
+  }
+
+  const requester = User.findById(requesterId);
+  if (requester.role === 'administrador' && targetUser.role === 'superuser') {
+    return ResponseFormatter.forbidden(res, 'No puedes cambiar la contraseña de un superuser');
+  }
+
+  User.setPasswordForUser(userId, newPassword);
+
+  return ResponseFormatter.success(res, {
+    message: 'Contraseña del usuario actualizada exitosamente',
+    userId: userId
   });
 });
 

@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const authRoutes = require('./routes/auth');
+const usersRoutes = require('./routes/users');
 const TokenCleaner = require('./scripts/cleanExpiredTokens');
 const TokenManager = require('./utils/tokenManager');
 const ResponseFormatter = require('./utils/responseFormatter');
@@ -25,7 +26,7 @@ const corsOptions = {
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
 
@@ -37,6 +38,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/auth', authRoutes);
+app.use('/users', usersRoutes);
 
 app.get('/health', (req, res) => {
   ResponseFormatter.success(res, {
