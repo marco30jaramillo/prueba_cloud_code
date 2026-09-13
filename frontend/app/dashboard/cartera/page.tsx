@@ -77,8 +77,9 @@ function CarteraContent() {
       const list: Tienda[] = res.tiendas || [];
       setTiendas(list);
       if (list.length > 0) setTiendaId(list[0].id);
-    } catch {
-      setError('No se pudieron cargar tus tiendas.');
+    } catch (err: any) {
+      if (err?.response?.status === 500) setError('Error de base de datos al cargar tiendas. Verifica que la migración SQL haya sido ejecutada.');
+      else setError('No se pudieron cargar tus tiendas.');
     }
   }
 
@@ -169,126 +170,135 @@ function CarteraContent() {
         <p className={styles.subtitle}>Gestiona los vales al fiado de tu tienda</p>
       </div>
 
-      {error && <Alert variant="danger" onClose={() => setError('')} dismissible>{error}</Alert>}
+      {error && tiendas.length === 0 && (
+        <Alert variant="warning">{error}</Alert>
+      )}
+      {error && tiendas.length > 0 && (
+        <Alert variant="danger" onClose={() => setError('')} dismissible>{error}</Alert>
+      )}
 
-      {/* Filtros */}
-      <Card className={styles.filterCard}>
-        <Card.Body>
-          <Row className="g-2 align-items-end">
-            <Col md={5}>
-              <Form.Label className={styles.label}>Tienda</Form.Label>
-              <Form.Select value={tiendaId} onChange={e => setTiendaId(e.target.value)}>
-                {tiendas.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
-              </Form.Select>
+      {tiendas.length > 0 && (
+        <>
+          {/* Filtros */}
+          <Card className={styles.filterCard}>
+            <Card.Body>
+              <Row className="g-2 align-items-end">
+                <Col md={5}>
+                  <Form.Label className={styles.label}>Tienda</Form.Label>
+                  <Form.Select value={tiendaId} onChange={e => setTiendaId(e.target.value)}>
+                    {tiendas.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+                  </Form.Select>
+                </Col>
+                <Col md={4}>
+                  <Form.Label className={styles.label}>Estado</Form.Label>
+                  <Form.Select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
+                    <option value="">Todos</option>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="parcial">Parcial</option>
+                    <option value="pagado">Pagado</option>
+                    <option value="anulado">Anulado</option>
+                  </Form.Select>
+                </Col>
+                <Col md={3}>
+                  <Button variant="outline-success" onClick={loadCartera} className="w-100">
+                    Actualizar
+                  </Button>
+                </Col>
+              </Row>
+            </Card.Body>
+          </Card>
+
+          {/* Resumen */}
+          <Row className="g-3 my-3">
+            <Col xs={6} md={3}>
+              <Card className={styles.statCard}>
+                <Card.Body className="text-center">
+                  <div className={styles.statNum}>{vales.length}</div>
+                  <div className={styles.statLabel}>Vales</div>
+                </Card.Body>
+              </Card>
             </Col>
-            <Col md={4}>
-              <Form.Label className={styles.label}>Estado</Form.Label>
-              <Form.Select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
-                <option value="">Todos</option>
-                <option value="pendiente">Pendiente</option>
-                <option value="parcial">Parcial</option>
-                <option value="pagado">Pagado</option>
-                <option value="anulado">Anulado</option>
-              </Form.Select>
+            <Col xs={6} md={3}>
+              <Card className={`${styles.statCard} ${styles.statWarning}`}>
+                <Card.Body className="text-center">
+                  <div className={styles.statNum}>{vales.filter(v => ['pendiente','parcial'].includes(v.estado)).length}</div>
+                  <div className={styles.statLabel}>Por cobrar</div>
+                </Card.Body>
+              </Card>
             </Col>
-            <Col md={3}>
-              <Button variant="outline-success" onClick={loadCartera} className="w-100">
-                Actualizar
-              </Button>
+            <Col xs={6} md={3}>
+              <Card className={`${styles.statCard} ${styles.statDanger}`}>
+                <Card.Body className="text-center">
+                  <div className={styles.statNum}>{enMora}</div>
+                  <div className={styles.statLabel}>En mora</div>
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col xs={6} md={3}>
+              <Card className={`${styles.statCard} ${styles.statPrimary}`}>
+                <Card.Body className="text-center">
+                  <div className={styles.statNum}>{fmt(totalPendiente)}</div>
+                  <div className={styles.statLabel}>Total pendiente</div>
+                </Card.Body>
+              </Card>
             </Col>
           </Row>
-        </Card.Body>
-      </Card>
 
-      {/* Resumen */}
-      <Row className="g-3 my-3">
-        <Col xs={6} md={3}>
-          <Card className={styles.statCard}>
-            <Card.Body className="text-center">
-              <div className={styles.statNum}>{vales.length}</div>
-              <div className={styles.statLabel}>Vales</div>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col xs={6} md={3}>
-          <Card className={`${styles.statCard} ${styles.statWarning}`}>
-            <Card.Body className="text-center">
-              <div className={styles.statNum}>{vales.filter(v => ['pendiente','parcial'].includes(v.estado)).length}</div>
-              <div className={styles.statLabel}>Por cobrar</div>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col xs={6} md={3}>
-          <Card className={`${styles.statCard} ${styles.statDanger}`}>
-            <Card.Body className="text-center">
-              <div className={styles.statNum}>{enMora}</div>
-              <div className={styles.statLabel}>En mora</div>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col xs={6} md={3}>
-          <Card className={`${styles.statCard} ${styles.statPrimary}`}>
-            <Card.Body className="text-center">
-              <div className={styles.statNum}>{fmt(totalPendiente)}</div>
-              <div className={styles.statLabel}>Total pendiente</div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-
-      {loading ? (
-        <div className={styles.loadingCenter}><Spinner animation="border" variant="success" /></div>
-      ) : vales.length === 0 ? (
-        <Card className={styles.card}>
-          <Card.Body className={styles.emptyState}>Sin vales con ese filtro.</Card.Body>
-        </Card>
-      ) : (
-        <Card className={styles.card}>
-          <div className={styles.tableWrapper}>
-            <Table className={styles.table} hover>
-              <thead>
-                <tr>
-                  <th>Cliente</th>
-                  <th>Descripción</th>
-                  <th>Total</th>
-                  <th>Pendiente</th>
-                  <th>Estado</th>
-                  <th>Fecha</th>
-                  <th>Vence</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {vales.map(v => {
-                  const cfg = ESTADO_CONFIG[v.estado];
-                  const mora = ['pendiente','parcial'].includes(v.estado) && v.fechaVencimiento && new Date(v.fechaVencimiento) < new Date();
-                  return (
-                    <tr key={v.id} className={v.estado === 'anulado' ? styles.anulado : ''}>
-                      <td>
-                        <strong>{v.clienteNombre || '—'}</strong>
-                        {v.clienteEmail && <div className={styles.email}>{v.clienteEmail}</div>}
-                      </td>
-                      <td>{v.descripcion}</td>
-                      <td className={styles.monto}>{fmt(v.montoTotal)}</td>
-                      <td className={styles.monto}>{v.estado === 'pagado' ? <span className={styles.pagado}>✓</span> : fmt(v.saldoPendiente)}</td>
-                      <td>
-                        <Badge bg={cfg.bg}>{cfg.label}</Badge>
-                        {mora && <Badge bg="danger" className="ms-1">Mora</Badge>}
-                      </td>
-                      <td className={styles.date}>{fmtDate(v.fechaVale)}</td>
-                      <td className={styles.date}>{fmtDate(v.fechaVencimiento)}</td>
-                      <td>
-                        <Button size="sm" variant="outline-success" onClick={() => openDetalle(v)}>
-                          Gestionar
-                        </Button>
-                      </td>
+          {loading ? (
+            <div className={styles.loadingCenter}><Spinner animation="border" variant="success" /></div>
+          ) : vales.length === 0 ? (
+            <Card className={styles.card}>
+              <Card.Body className={styles.emptyState}>Sin vales con ese filtro.</Card.Body>
+            </Card>
+          ) : (
+            <Card className={styles.card}>
+              <div className={styles.tableWrapper}>
+                <Table className={styles.table} hover>
+                  <thead>
+                    <tr>
+                      <th>Cliente</th>
+                      <th>Descripción</th>
+                      <th>Total</th>
+                      <th>Pendiente</th>
+                      <th>Estado</th>
+                      <th>Fecha</th>
+                      <th>Vence</th>
+                      <th></th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </Table>
-          </div>
-        </Card>
+                  </thead>
+                  <tbody>
+                    {vales.map(v => {
+                      const cfg = ESTADO_CONFIG[v.estado];
+                      const mora = ['pendiente','parcial'].includes(v.estado) && v.fechaVencimiento && new Date(v.fechaVencimiento) < new Date();
+                      return (
+                        <tr key={v.id} className={v.estado === 'anulado' ? styles.anulado : ''}>
+                          <td>
+                            <strong>{v.clienteNombre || '—'}</strong>
+                            {v.clienteEmail && <div className={styles.email}>{v.clienteEmail}</div>}
+                          </td>
+                          <td>{v.descripcion}</td>
+                          <td className={styles.monto}>{fmt(v.montoTotal)}</td>
+                          <td className={styles.monto}>{v.estado === 'pagado' ? <span className={styles.pagado}>✓</span> : fmt(v.saldoPendiente)}</td>
+                          <td>
+                            <Badge bg={cfg.bg}>{cfg.label}</Badge>
+                            {mora && <Badge bg="danger" className="ms-1">Mora</Badge>}
+                          </td>
+                          <td className={styles.date}>{fmtDate(v.fechaVale)}</td>
+                          <td className={styles.date}>{fmtDate(v.fechaVencimiento)}</td>
+                          <td>
+                            <Button size="sm" variant="outline-success" onClick={() => openDetalle(v)}>
+                              Gestionar
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </Table>
+              </div>
+            </Card>
+          )}
+        </>
       )}
 
       {/* Modal gestión */}

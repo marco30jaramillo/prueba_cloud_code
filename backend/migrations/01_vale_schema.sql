@@ -297,6 +297,18 @@ UPDATE dbo.roles SET
 WHERE name = 'cliente';
 
 PRINT '✅ Roles actualizados';
+
+-- ── 9. GRANT DE PERMISOS AL USUARIO DE LA APP ────────────────────────────────
+-- El usuario 'auth_app_runtime' es el login que usa el backend en tiempo de
+-- ejecución. Necesita SELECT/INSERT/UPDATE/DELETE sobre las cuatro tablas nuevas.
+-- (dbo.users ya debería tener permisos otorgados de la configuración inicial.)
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.tiendas         TO [auth_app_runtime];
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.tienda_usuarios TO [auth_app_runtime];
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.vales           TO [auth_app_runtime];
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.abonos          TO [auth_app_runtime];
+
+PRINT '✅ Permisos otorgados a auth_app_runtime';
 PRINT '';
 PRINT '============================================================';
 PRINT ' Migración 001 completada exitosamente';

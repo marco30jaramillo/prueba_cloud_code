@@ -65,8 +65,11 @@ function MisValesContent() {
       const res = await valesAPI.getMisVales();
       setVales(res.vales || []);
       setTotalPendiente(res.totalPendiente || 0);
-    } catch {
-      setError('No se pudieron cargar tus vales.');
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 403) setError('No tienes permiso para ver tus vales.');
+      else if (status === 500) setError('Error del servidor al cargar vales. Intenta más tarde.');
+      else setError('No se pudieron cargar tus vales.');
     } finally {
       setLoading(false);
     }
