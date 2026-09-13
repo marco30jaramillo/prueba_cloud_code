@@ -84,7 +84,8 @@ router.post('/login', (req, res) => {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role
+      role: user.role,
+      mustChangePassword: user.mustChangePassword === 'true' || user.mustChangePassword === true
     },
     token
   });
@@ -293,7 +294,8 @@ router.get('/validate', authMiddleware, (req, res) => {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role
+      role: user.role,
+      mustChangePassword: user.mustChangePassword === 'true' || user.mustChangePassword === true
     },
     token_expires_at: new Date(req.user.exp * 1000).toISOString()
   });
@@ -410,6 +412,38 @@ router.patch('/password/:userId', authMiddleware, roleMiddleware.requireRole(['s
   return ResponseFormatter.success(res, {
     message: 'Contraseña del usuario actualizada exitosamente',
     userId: userId
+  });
+});
+
+router.patch('/change-password-temporary', authMiddleware, (req, res) => {
+  const { newPassword } = req.body;
+  const userId = req.user.userId;
+
+  if (!newPassword) {
+    return ResponseFormatter.badRequest(res, 'Nueva contraseña es requerida');
+  }
+
+  if (newPassword.length < 8) {
+    return ResponseFormatter.badRequest(res, 'La nueva contraseña debe tener al menos 8 caracteres');
+  }
+
+  const hashedPassword = require('../utils/passwordUtils').hashPassword(newPassword);
+  const db = new (require('../utils/csvDatabase'))();
+  const updatedUser = db.update(userId, { password: hashedPassword, mustChangePassword: 'false' });
+
+  if (!updatedUser) {
+    return ResponseFormatter.notFound(res, 'Usuario');
+  }
+
+  return ResponseFormatter.success(res, {
+    message: 'Contraseña actualizada exitosamente',
+    user: {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      name: updatedUser.name,
+      role: updatedUser.role,
+      mustChangePassword: false
+    }
   });
 });
 

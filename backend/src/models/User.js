@@ -11,6 +11,7 @@ class User {
     this.role = role;
     this.photo = photo || '/datos/default/default-avatar.svg';
     this.isActive = true;
+    this.mustChangePassword = false;
     this.createdAt = new Date().toISOString();
     this.resetToken = null;
     this.resetTokenExpiry = null;
@@ -117,7 +118,7 @@ class User {
   static setPasswordForUser(userId, newPassword) {
     const hashedPassword = PasswordUtils.hashPassword(newPassword);
     const db = new CSVDatabase();
-    return db.update(userId, { password: hashedPassword });
+    return db.update(userId, { password: hashedPassword, mustChangePassword: 'true' });
   }
 
   static updateProfile(userId, updates) {

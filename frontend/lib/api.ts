@@ -134,6 +134,13 @@ export const authAPI = {
       newPassword
     });
     return data;
+  },
+
+  changePasswordTemporary: async (newPassword: string) => {
+    const { data } = await apiClient.patch('/auth/change-password-temporary', {
+      newPassword
+    });
+    return data;
   }
 };
 

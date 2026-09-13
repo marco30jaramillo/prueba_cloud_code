@@ -16,6 +16,7 @@ router.get('/', authMiddleware, roleMiddleware.requireRole('superuser', 'adminis
     role: user.role,
     photo: user.photo || 'https://via.placeholder.com/40?text=👤',
     isActive: user.isActive === 'true' || user.isActive === true,
+    mustChangePassword: user.mustChangePassword === 'true' || user.mustChangePassword === true,
     createdAt: user.createdAt
   }));
 
