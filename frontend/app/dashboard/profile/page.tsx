@@ -17,7 +17,9 @@ export default function ProfilePage() {
   const getPhotoUrl = (photo: string | undefined) => {
     if (!photo) return '/datos/default/default-avatar.svg';
     if (photo.startsWith('http')) return photo;
-    return `${process.env.NEXT_PUBLIC_API_URL}${photo}`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL}${photo}`;
+    console.log('[PhotoDebug]', { photo, url });
+    return url;
   };
 
   const [formData, setFormData] = useState({
@@ -38,7 +40,7 @@ export default function ProfilePage() {
     if (user) {
       setFormData({
         name: user.name,
-        photo: user.photo || 'https://via.placeholder.com/40?text=👤'
+        photo: user.photo || '/datos/default/default-avatar.svg'
       });
     }
   }, [user]);
