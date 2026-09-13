@@ -53,7 +53,7 @@ router.post('/photo', authMiddleware, upload.single('photo'), (req, res) => {
 
   return ResponseFormatter.success(res, {
     message: 'Foto subida exitosamente',
-    photo: `/datos${photoPath}`, // Guardamos con /datos para la BD
+    photo: photoPath, // Retornar solo /uploads/users/... (Express sirve desde /datos)
     url: `${process.env.APP_URL || 'http://localhost:3001'}${photoPath}`,
     filename: req.file.filename,
     size: req.file.size

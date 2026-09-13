@@ -15,10 +15,17 @@ export default function ProfilePage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const getPhotoUrl = (photo: string | undefined) => {
-    if (!photo) return '/datos/default/default-avatar.svg';
+    if (!photo) return `${process.env.NEXT_PUBLIC_API_URL}/datos/default/default-avatar.svg`;
     if (photo.startsWith('http')) return photo;
-    const url = `${process.env.NEXT_PUBLIC_API_URL}${photo}`;
-    console.log('[PhotoDebug]', { photo, url });
+
+    // Manejar rutas con /datos (viejas) y sin /datos (nuevas)
+    let photoPath = photo;
+    if (!photo.startsWith('/datos') && !photo.startsWith('/uploads')) {
+      photoPath = `/datos/${photo}`;
+    }
+
+    const url = `${process.env.NEXT_PUBLIC_API_URL}${photoPath}`;
+    console.log('[PhotoDebug]', { photo, photoPath, url });
     return url;
   };
 
