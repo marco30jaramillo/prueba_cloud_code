@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import axios from 'axios';
 import { getBaseUrl } from '@/lib/image-url';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 import styles from './page.module.scss';
 
 interface AuditEntry {
@@ -57,9 +57,8 @@ function actionBadge(log: AuditEntry) {
   return <span style={{ backgroundColor: color, color: '#fff', borderRadius: 4, padding: '2px 8px', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>{label}</span>;
 }
 
-export default function AuditPage() {
-  const router = useRouter();
-  const { user, token, isInitialized } = useAuthStore();
+function AuditPageContent() {
+  const { user, token } = useAuthStore();
   const [logs, setLogs] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -84,22 +83,13 @@ export default function AuditPage() {
   }, [token]);
 
   useEffect(() => {
-    if (!isInitialized) return;
-    if (!user) { router.push('/login'); return; }
-    if (user.role !== 'superuser') {
-      setError('Solo los superusuarios pueden acceder a este módulo');
-      setLoading(false);
-      return;
-    }
     fetchLogs();
-  }, [user, isInitialized, router, fetchLogs]);
+  // fetchLogs should not be in deps — calling it once on mount is enough
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  if (!isInitialized || (loading && logs.length === 0)) {
+  if (loading && logs.length === 0) {
     return <div className={styles.container}><div className={styles.loading}>Cargando registros de auditoría...</div></div>;
-  }
-
-  if (user?.role !== 'superuser') {
-    return <div className={styles.container}><div className={styles.errorAlert}>⛔ Acceso denegado. Solo superusuarios.</div></div>;
   }
 
   const filtered = logs.filter(log => {
@@ -209,5 +199,13 @@ export default function AuditPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AuditPage() {
+  return (
+    <ProtectedRoute>
+      <AuditPageContent />
+    </ProtectedRoute>
   );
 }

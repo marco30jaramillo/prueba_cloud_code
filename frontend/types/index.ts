@@ -5,6 +5,7 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
+  photo?: string;
   mustChangePassword?: boolean;
 }
 

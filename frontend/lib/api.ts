@@ -167,6 +167,28 @@ export const authAPI = {
   }
 };
 
+export const modulesAPI = {
+  getAll: async () => {
+    const { data } = await apiClient.get('/modules');
+    return data;
+  }
+};
+
+export const rolesConfigAPI = {
+  get: async () => {
+    const { data } = await apiClient.get('/roles-config');
+    return data;
+  },
+  create: async (payload: { name: string; description: string; moduleAccess?: { id: string; level: string }[]; directPermissions?: string[] }) => {
+    const { data } = await apiClient.post('/roles-config', payload);
+    return data;
+  },
+  updateRole: async (roleId: string, payload: { moduleAccess?: { id: string; level: string }[]; directPermissions?: string[] }) => {
+    const { data } = await apiClient.patch(`/roles-config/${roleId}`, payload);
+    return data;
+  }
+};
+
 export const usersAPI = {
   getAll: async () => {
     const { data } = await apiClient.get('/users');
@@ -190,6 +212,11 @@ export const usersAPI = {
 
   generatePassword: async (userId: string) => {
     const { data } = await apiClient.post(`/users/${userId}/generate-password`, {});
+    return data;
+  },
+
+  getManageableRoles: async () => {
+    const { data } = await apiClient.get('/users/manageable-roles');
     return data;
   }
 };

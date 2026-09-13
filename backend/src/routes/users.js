@@ -1,5 +1,6 @@
 const express = require('express');
 const User = require('../models/User');
+const Role = require('../models/Role');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { authMiddleware, tokenManager } = require('../middleware/auth');
 const roleMiddleware = require('../middleware/roleMiddleware');
@@ -7,15 +8,30 @@ const auditMiddleware = require('../middleware/auditMiddleware');
 
 const router = express.Router();
 
-router.get('/', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), (req, res) => {
-  const users = User.getAll();
+// Returns the roles that the current user can create/manage
+// Superuser always gets ALL roles (including custom ones)
+router.get('/manageable-roles', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), (req, res) => {
+  if (req.user.role === 'superuser') {
+    const allRoles = Role.getAll().map(r => r.name);
+    return ResponseFormatter.success(res, { roles: allRoles });
+  }
+  const manageableRoles = Role.getManageableRoles(req.user.role);
+  return ResponseFormatter.success(res, { roles: manageableRoles });
+});
 
-  const safeUsers = users.map(user => ({
+router.get('/', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), (req, res) => {
+  const requesterRole = req.user.role;
+  const allUsers = User.getAll();
+
+  const allowed = Role.getManageableRoles(requesterRole);
+  const filtered = allUsers.filter(u => allowed.includes(u.role));
+
+  const safeUsers = filtered.map(user => ({
     id: user.id,
     email: user.email,
     name: user.name,
     role: user.role,
-    photo: user.photo || 'https://via.placeholder.com/40?text=👤',
+    photo: user.photo || '/datos/default/default-avatar.svg',
     isActive: user.isActive === 'true' || user.isActive === true,
     mustChangePassword: user.mustChangePassword === 'true' || user.mustChangePassword === true,
     createdAt: user.createdAt

@@ -7,7 +7,7 @@ const roleMiddleware = require('../middleware/roleMiddleware');
 const router = express.Router();
 
 // Últimos 100 eventos
-router.get('/logs', authMiddleware, roleMiddleware.requireRole('superuser'), (req, res) => {
+router.get('/logs', authMiddleware, roleMiddleware.requirePermission('admin:view-audit'), (req, res) => {
   const all = AuditLog.getAll();
   const logs = all.slice(-100).reverse(); // más recientes primero
 

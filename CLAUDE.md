@@ -20,8 +20,8 @@ Plataforma segura y escalable para gestionar usuarios con autenticación JWT, ro
 
 ### Backend (Express.js)
 - ✅ Autenticación JWT (24h expiry) con token ID único
-- ✅ Roles: superuser, administrador, vendedor, cliente
-- ✅ Permisos granulares por rol
+- ✅ Roles dinámicos desde CSV: superuser, administrador, vendedor, cliente (+ roles personalizados)
+- ✅ Permisos granulares por rol con herencia desde módulos
 - ✅ Hashing PBKDF2 (100k iteraciones + salt)
 - ✅ Token Manager (granted/revoked lists)
 - ✅ Bootstrap de superuser único
@@ -34,6 +34,13 @@ Plataforma segura y escalable para gestionar usuarios con autenticación JWT, ro
 - ✅ Generación de contraseñas aleatorias seguras
 - ✅ Edición de perfil de usuario
 - ✅ Habilitar/deshabilitar usuarios
+- ✅ Logs de auditoría (todas las acciones del sistema)
+- ✅ Sistema de módulos dinámico desde `modules.csv`
+- ✅ Jerarquía de roles desde `roles.csv` (`canManage` + `modules` con niveles)
+- ✅ Herencia de permisos: asignar módulo a rol hereda sus permisos automáticamente
+- ✅ Tiers de permisos por módulo: `read`, `write`, `full`
+- ✅ API de configuración de roles (`/roles-config`)
+- ✅ Middleware `requirePermission()` — acceso basado en permisos, no roles hardcodeados
 
 ### Frontend (Next.js)
 - ✅ Home sin sesión (características, información, CTA)
@@ -41,26 +48,22 @@ Plataforma segura y escalable para gestionar usuarios con autenticación JWT, ro
 - ✅ Registro de clientes con foto de perfil (opcional)
 - ✅ Recuperación de contraseña
 - ✅ Reset de contraseña con token
-- ✅ Dashboard con menú dinámico por rol
+- ✅ Dashboard con módulos dinámicos desde API (sin hardcoding)
 - ✅ Crear usuarios (modal, solo admin/superuser)
 - ✅ Navbar responsiva con logout y dropdown
+- ✅ Sidebar móvil/tablet (aparece al hacer scroll, <1024px)
+- ✅ Botón de panel (icono 9 cuadros) en navbar → `/dashboard`
 - ✅ Logout en este dispositivo + Logout en todos los dispositivos
-- ✅ **Mi Perfil** (/dashboard/profile) - para todos
-  - Ver info bloqueada
-  - Editar nombre/foto
-  - Cambiar contraseña propia
-- ✅ **Gestión de Usuarios** (/dashboard/users) - solo admin/superuser
-  - Tabla de usuarios con foto, estado, rol
-  - Editar nombre/foto de usuarios
-  - Generar contraseña aleatoria y mostrar
-  - Habilitar/deshabilitar usuarios
+- ✅ **Mi Perfil** (`/dashboard/profile`) - para todos
+- ✅ **Gestión de Usuarios** (`/dashboard/users`) - permisos dinámicos
+- ✅ **Auditoría** (`/dashboard/audit`) - acceso por permiso `admin:view-audit`
+- ✅ **Roles y Permisos** (`/dashboard/roles`) - acceso por permiso `admin:view-roles`
+  - Selector de nivel de acceso por módulo (Sin acceso / Lectura / Escritura / Completo)
+  - Gestión de permisos directos con vista de huérfanos
+  - Vista de permisos efectivos
+  - Crear nuevo rol con modal
 - ✅ Diseño responsive (móvil, tablet, desktop)
-- ✅ Colores suavizados: verde (#10b981), azul (#3b82f6), blanco
-- ✅ Animaciones fade-in, slide-in, transiciones suaves
-- ✅ Validación de formularios con mensajes de error
-- ✅ Manejo robusto de errores API
-- ✅ Sesión persistente sin generar nuevos tokens en reload
-- ✅ Sincronización de sesión entre pestañas
+- ✅ `ProtectedRoute` — solo requiere autenticación; el backend controla los permisos
 
 ---
 
@@ -71,95 +74,53 @@ Plataforma segura y escalable para gestionar usuarios con autenticación JWT, ro
 │
 ├── 📁 backend/
 │   ├── src/
-│   │   ├── server.js                    # Express app principal
+│   │   ├── server.js
 │   │   ├── models/
-│   │   │   ├── User.js                 # CRUD usuarios
-│   │   │   ├── Role.js                 # Gestión de roles
-│   │   │   └── Permission.js           # Gestión de permisos
+│   │   │   ├── User.js
+│   │   │   ├── Role.js          # Jerarquía, herencia, tiers, createRole/updateRole
+│   │   │   ├── Module.js        # Módulos con permRead/permWrite/permFull
+│   │   │   ├── AuditLog.js
+│   │   │   └── Permission.js
 │   │   ├── routes/
-│   │   │   ├── auth.js                 # Endpoints /auth/*
-│   │   │   └── users.js                # Endpoints /users/*
+│   │   │   ├── auth.js
+│   │   │   ├── users.js         # /manageable-roles → superuser ve todos los roles
+│   │   │   ├── modules.js       # GET /modules (por rol), GET /modules/all
+│   │   │   ├── roles-config.js  # GET/POST/PATCH /roles-config
+│   │   │   └── audit.js         # Protegido por requirePermission('admin:view-audit')
 │   │   ├── middleware/
-│   │   │   ├── auth.js                 # JWT verification
-│   │   │   └── roleMiddleware.js       # Role/permission checks
-│   │   ├── utils/
-│   │   │   ├── passwordUtils.js        # PBKDF2 hashing
-│   │   │   ├── tokenUtils.js           # JWT generation
-│   │   │   ├── tokenManager.js         # Token lists
-│   │   │   ├── csvDatabase.js          # CSV ORM
-│   │   │   ├── mailer.js               # Email stubs
-│   │   │   └── responseFormatter.js    # JSON formatting
-│   │   └── scripts/
-│   │       └── cleanExpiredTokens.js   # Auto cleanup
+│   │   │   ├── auth.js
+│   │   │   ├── roleMiddleware.js  # requireRole() + requirePermission()
+│   │   │   └── auditMiddleware.js
+│   │   └── utils/
+│   │       ├── passwordUtils.js
+│   │       ├── tokenUtils.js
+│   │       ├── tokenManager.js
+│   │       ├── responseFormatter.js
+│   │       └── ...
 │   │
-│   ├── users.csv                       # User database
-│   ├── roles.csv                       # Role definitions
-│   ├── permissions.csv                 # Permission definitions
-│   ├── tokens_granted.csv              # Active tokens
-│   ├── tokens_revoked.csv              # Revoked tokens
-│   ├── package.json
-│   ├── .env.example
-│   └── [docs]
+│   ├── users.csv
+│   ├── roles.csv          # id,name,description,permissions,canManage,modules
+│   ├── modules.csv        # id,name,...,permRead,permWrite,permFull
+│   ├── audit_logs/
+│   └── tokens_granted.csv / tokens_revoked.csv
 │
 ├── 📁 frontend/
 │   ├── app/
-│   │   ├── layout.tsx                  # Root layout + Navbar
-│   │   ├── page.tsx                    # Home (landing)
-│   │   ├── page.module.scss
-│   │   ├── login/
-│   │   │   ├── page.tsx
-│   │   │   └── page.module.scss
-│   │   ├── register/
-│   │   │   ├── page.tsx
-│   │   │   └── page.module.scss
-│   │   ├── forgot-password/
-│   │   │   ├── page.tsx
-│   │   │   └── page.module.scss
-│   │   ├── reset-password/
-│   │   │   ├── page.tsx
-│   │   │   └── page.module.scss
-│   │   ├── bootstrap/
-│   │   │   ├── page.tsx
-│   │   │   └── page.module.scss
 │   │   └── dashboard/
-│   │       ├── page.tsx
-│   │       ├── page.module.scss
+│   │       ├── page.tsx         # Módulos dinámicos desde /modules API
 │   │       ├── profile/
-│   │       │   ├── page.tsx
-│   │       │   └── page.module.scss
-│   │       └── users/
-│   │           ├── page.tsx
-│   │           └── page.module.scss
+│   │       ├── users/
+│   │       ├── audit/           # Acceso por permiso admin:view-audit
+│   │       └── roles/           # Acceso por permiso admin:view-roles
 │   │
 │   ├── components/
-│   │   ├── Navbar.tsx
+│   │   ├── Navbar.tsx           # Sidebar móvil + botón panel 9-cuadros
 │   │   ├── Navbar.module.scss
-│   │   ├── AuthForm.tsx
-│   │   └── AuthForm.module.scss
+│   │   └── ProtectedRoute.tsx   # Solo valida autenticación, no rol
 │   │
-│   ├── hooks/
-│   │   └── useAuth.ts                  # Auth logic
-│   │
-│   ├── lib/
-│   │   ├── api.ts                      # Axios + interceptors
-│   │   └── auth-store.ts               # Zustand store
-│   │
-│   ├── types/
-│   │   └── index.ts                    # TypeScript interfaces
-│   │
-│   ├── styles/
-│   │   └── globals.scss                # Global styles + colors
-│   │
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── next.config.js
-│   ├── .env.example
-│   └── .gitignore
-│
-├── README_BACKEND.md                   # Backend docs
-├── README_FRONTEND.md                  # Frontend docs
-├── CLAUDE.md                           # Este archivo
-└── [otros docs del proyecto]
+│   └── lib/
+│       ├── api.ts               # authAPI, modulesAPI, rolesConfigAPI, usersAPI
+│       └── auth-store.ts
 ```
 
 ---
@@ -170,261 +131,135 @@ Plataforma segura y escalable para gestionar usuarios con autenticación JWT, ro
 ```bash
 cd backend
 npm install
-# Crear .env con JWT_SECRET
+# Crear .env con JWT_SECRET y PORT=3001
 npm run dev
-# → Escucha en http://localhost:3000
+# → Escucha en http://localhost:3001
 ```
 
 ### Frontend
 ```bash
 cd frontend
 npm install
-# Crear .env.local con NEXT_PUBLIC_API_URL
 npm run dev
-# → Abre http://localhost:3000 en navegador
-```
-
-> **Nota**: El backend usa puerto 3000, el frontend está en Next.js (también 3000 por defecto pero redirige a 3001 si hay conflicto).
-
----
-
-## 🔐 Seguridad
-
-### Autenticación
-- **JWT HS256** con firma usando JWT_SECRET
-- **Expiración**: 24 horas
-- **Token ID único**: Rastrea sesiones individuales
-- **Dos listas CSV**: granted (activos) vs revoked (inválidos)
-- **Logout real**: Revocación inmediata sin invalidar otros tokens
-
-### Contraseñas
-- **PBKDF2** 100,000 iteraciones (NIST recomendado)
-- **Salt aleatorio**: 16 bytes por usuario
-- **Nunca se guardan**: Solo hash+salt en CSV
-
-### CORS
-- Backend acepta solo de `localhost`, `127.0.0.1`, red local (192.168.*, 10.*)
-- Frontend acepta solicitudes de cualquier dispositivo en red local
-
----
-
-## 👥 Roles y Permisos
-
-### Roles Disponibles
-
-| Rol | Crear Usuarios | Permisos | Caso de Uso |
-|-----|---|---|---|
-| **superuser** | Cualquiera | `system:full-access` | Admin del sistema |
-| **administrador** | cliente, vendedor | admin:*, profile:view-all | Manager |
-| **vendedor** | ❌ | profile:view-own, profile:view-clients | Vendedor |
-| **cliente** | ❌ | profile:view-own, auth:* | Usuario estándar |
-
-### Permisos Categorizados
-
-```
-auth:*               - Autenticación (login, logout, validate, etc)
-profile:*            - Perfil de usuario (view-own, edit-own, view-all)
-admin:*              - Administración (manage-users, manage-roles, etc)
-system:full-access   - Acceso total (solo superuser)
+# → Abre http://localhost:3000
 ```
 
 ---
 
-## 📡 Endpoints Principales
+## 🔐 Sistema de Módulos y Permisos
 
-### Autenticación (Sin token requerido)
+### modules.csv — Definición de módulos
 
+```csv
+id,name,description,buttonLabel,href,icon,showInNav,permRead,permWrite,permFull
+1,"Mi Perfil",...,"/dashboard/profile","👤","true","profile:view-own","profile:view-own|profile:edit-own","profile:view-own|profile:edit-own"
+2,"Gestionar Usuarios",...,"/dashboard/users","👥","true","auth:view-users","auth:view-users|auth:create-user|...","...auth:delete-user|admin:manage-roles"
+3,"Auditoría",...,"/dashboard/audit","📋","true","admin:view-audit|admin:view-stats","...","..."
+4,"Roles y Permisos",...,"/dashboard/roles","🛡️","true","admin:view-roles","admin:view-roles|admin:manage-roles","..."
+```
+
+- `permRead` — permisos mínimos para acceso de solo lectura
+- `permWrite` — permisos para crear/editar (acumulativo: incluye permRead)
+- `permFull` — permisos completos incluyendo borrar (acumulativo: incluye permWrite)
+
+### roles.csv — Roles con acceso a módulos por nivel
+
+```csv
+id,name,description,permissions,canManage,modules
+1,"superuser",...,"system:full-access","superuser|administrador|vendedor|cliente","1:full|2:full|3:full|4:full"
+2,"administrador",...,"admin:manage-users|...","vendedor|cliente","1:full|2:write|3:read"
+3,"vendedor",...,"...","","1:write"
+4,"cliente",...,"...","","1:read"
+```
+
+- `modules` column: `"moduleId:level|moduleId:level"` donde level = `read | write | full`
+- `canManage`: roles que este rol puede crear/gestionar
+- Al asignar un módulo con nivel, el rol **hereda automáticamente** los permisos de ese nivel
+
+### Herencia de permisos
+
+`Role.getEffectivePermissions(roleName)` = permisos propios ∪ permisos de módulos asignados al nivel correcto
+
+### Cómo agregar acceso a un módulo
+
+1. En `/dashboard/roles`, seleccionar el rol
+2. En la pestaña "Acceso a módulos", cambiar el nivel del módulo deseado
+3. Los permisos se heredan automáticamente
+4. El módulo aparece en el dashboard y navbar del usuario al próximo login
+
+---
+
+## 📡 Endpoints
+
+### Autenticación (sin token)
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | POST | `/auth/register` | Registrar nuevo cliente |
 | POST | `/auth/login` | Iniciar sesión |
 | POST | `/auth/forgot-password` | Solicitar recuperación |
 | POST | `/auth/reset-password` | Restablecer con token |
-| POST | `/auth/bootstrap-superuser` | Crear primer superuser (solo si no existe) |
-| GET | `/auth/user-schema/:roleType` | Esquema para formulario dinámico |
+| POST | `/auth/bootstrap-superuser` | Crear primer superuser |
 
-### Autenticación (Requiere token)
-
+### Autenticación (con token)
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| GET | `/auth/validate` | Validar sesión actual |
+| GET | `/auth/validate` | Validar sesión |
 | POST | `/auth/logout` | Cerrar sesión |
-| POST | `/auth/logout-all` | Cerrar sesión en todos los dispositivos |
-| POST | `/auth/create-user` | Crear usuario (validación de permisos) |
+| POST | `/auth/logout-all` | Cerrar en todos los dispositivos |
+| POST | `/auth/create-user` | Crear usuario |
 | PATCH | `/auth/change-password` | Cambiar propia contraseña |
 | PATCH | `/auth/profile` | Actualizar perfil propio |
-| PATCH | `/auth/password/:userId` | Cambiar contraseña de otro usuario (admin/superuser) |
+| PATCH | `/auth/password/:userId` | Cambiar contraseña de otro usuario |
 
-### Gestión de Usuarios (Requiere token - admin/superuser)
+### Módulos
+| Método | Endpoint | Permiso | Descripción |
+|--------|----------|---------|-------------|
+| GET | `/modules` | auth | Módulos accesibles al rol actual |
+| GET | `/modules/all` | system:full-access | Todos los módulos + roles |
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/users` | Listar todos los usuarios |
-| GET | `/users/:userId` | Obtener usuario específico |
-| PATCH | `/users/:userId` | Actualizar usuario (nombre, foto) |
-| PATCH | `/users/:userId/status` | Habilitar/deshabilitar usuario |
-| POST | `/users/:userId/generate-password` | Generar contraseña aleatoria |
+### Usuarios
+| Método | Endpoint | Permiso | Descripción |
+|--------|----------|---------|-------------|
+| GET | `/users` | admin:manage-users | Listar usuarios gestionables |
+| GET | `/users/manageable-roles` | admin:manage-users | Roles disponibles para crear |
+| PATCH | `/users/:id` | admin:manage-users | Editar usuario |
+| PATCH | `/users/:id/status` | admin:manage-users | Habilitar/deshabilitar |
+| POST | `/users/:id/generate-password` | admin:manage-users | Generar contraseña |
 
-### Sistema
+### Configuración de Roles
+| Método | Endpoint | Permiso | Descripción |
+|--------|----------|---------|-------------|
+| GET | `/roles-config` | admin:view-roles | Ver matriz módulos/roles/permisos |
+| POST | `/roles-config` | admin:manage-roles | Crear nuevo rol |
+| PATCH | `/roles-config/:roleId` | admin:manage-roles | Actualizar acceso/permisos de un rol |
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/health` | Estado del servidor |
-| GET | `/docs` | Documentación API |
-| GET | `/tokens/stats` | Estadísticas de tokens |
-| POST | `/tokens/clean` | Limpieza manual |
-
----
-
-## 🎨 Diseño y UX
-
-### Paleta de Colores (Suavizados)
-
-```scss
-$primary-green:    #10b981   // Botones primarios, acciones
-$secondary-green:  #34d399   // Hover effects
-$primary-blue:     #3b82f6   // Enlaces, secundarios
-$light-gray:       #f3f4f6   // Fondos, bordes
-$text-dark:        #1f2937   // Texto principal
-$text-light:       #6b7280   // Texto secundario
-```
-
-### Componentes
-
-- **Navbar**: Responsive, collapsa en móvil, muestra rol del usuario
-- **AuthForm**: Reutilizable, validación inline, feedback inmediato
-- **Cards**: Hover effects, sombras sutiles, animaciones
-- **Botones**: Transiciones suaves, iconos emoji
-
-### Animaciones
-
-```scss
-.fade-in  // Aparición suave (0.3s)
-.slide-in // Entrada desde la izquierda (0.4s)
-```
+### Auditoría
+| Método | Endpoint | Permiso | Descripción |
+|--------|----------|---------|-------------|
+| GET | `/audit/logs` | admin:view-audit | Últimos 100 eventos |
 
 ---
 
-## 🔄 Flujos de Usuario
+## 🏗️ Decisiones de Arquitectura
 
-### Registro → Login
-1. Usuario accede a `/register`
-2. Completa: email, password (8+ chars), nombre
-3. POST `/auth/register` → crea cliente automáticamente
-4. Backend retorna JWT + datos usuario
-5. Frontend guarda en localStorage + Zustand store
-6. Redirecciona a `/dashboard`
+### Fuente única de verdad: roles.csv
+- El acceso de cada rol a cada módulo se define en la columna `modules` de `roles.csv`
+- `modules.csv` define qué permisos corresponden a cada nivel de acceso
+- No hay listas de roles en `modules.csv` — cada módulo no sabe quién tiene acceso
 
-### Olvidó Contraseña
-1. Click en "¿Olvidaste tu contraseña?"
-2. Ingresa email en `/forgot-password`
-3. Backend envía token de reset (simula envío en consola)
-4. Usuario recibe enlace con token
-5. Accede a `/reset-password?token=...`
-6. Crea nueva contraseña
-7. POST `/auth/reset-password` con token
-8. Redirecciona a `/login`
+### Permisos basados en permisos, no en roles
+- Todos los endpoints de API usan `requirePermission('perm:name')`, nunca `requireRole('superuser')`  
+- Excepción: `system:full-access` en superuser es evaluado como comodín por `hasPermission()`
+- Las páginas de frontend usan `<ProtectedRoute>` solo para validar autenticación; el backend controla permisos
 
-### Crear Usuario (Admin/Superuser)
-1. Superuser/Admin en `/dashboard`
-2. Click "Crear Usuario"
-3. Modal con formulario (email, password, name, role)
-4. POST `/auth/create-user` con token
-5. Backend valida: creador puede crear ese rol
-6. Nuevo usuario con token retornado
-7. Mensaje de éxito
+### Dependencia circular Role ↔ Module
+- `Role.getEffectivePermissions` necesita Module → lazy `require('./Module')` dentro del método
+- `Module.getForRole` necesita Role → lazy `require('./Role')` dentro del método
 
-### Mi Perfil (Todos los usuarios)
-1. Usuario autenticado navega a `/dashboard/profile`
-2. Ve formulario bloqueado con: nombre, email (deshabilitado), rol (deshabilitado), foto
-3. Click "Editar Perfil" desbloquea campos (excepto email y rol)
-4. Puede cambiar nombre y foto
-5. Click "Guardar Cambios" → PATCH `/auth/profile`
-6. Sección "Seguridad" con botón "Cambiar Contraseña"
-7. Modal para ingresar contraseña actual y nueva
-8. PATCH `/auth/change-password` → actualiza contraseña
-
-### Gestión de Usuarios (Admin/Superuser)
-1. Admin/Superuser navega a `/dashboard/users`
-2. Tabla con todos los usuarios (foto, nombre, email, rol, estado, creación)
-3. Dropdown de acciones por usuario:
-   - **✏️ Editar**: Modal para cambiar nombre y foto
-   - **🔑 Generar Contraseña**: POST `/users/:id/generate-password` → muestra contraseña generada
-   - **🔴/🟢 Habilitar/Deshabilitar**: PATCH `/users/:id/status` → cambia estado
-4. Admin no puede editar superuser
-5. Confirmación en cambio de estado crítico
-
----
-
-## 💾 Base de Datos (CSV)
-
-### users.csv
-```csv
-id,email,password,name,role,photo,isActive,createdAt,resetToken,resetTokenExpiry
-uuid,user@ex.com,pbkdf2_hash:salt,John,cliente,https://example.com/photo.jpg,true,2024-09-12T12:00:00Z,,
-uuid2,admin@ex.com,pbkdf2_hash:salt,Admin,superuser,https://via.placeholder.com/40?text=👤,true,2024-09-12T12:00:00Z,,
-```
-**Campos nuevos:**
-- `photo`: URL de imagen (por defecto: https://via.placeholder.com/40?text=👤)
-- `isActive`: true/false (habilitar/deshabilitar usuario)
-
-### roles.csv
-```csv
-id,name,description,permissions
-1,superuser,Super Usuario,system:full-access
-2,administrador,Admin,admin:manage-users|profile:view-all|...
-3,vendedor,Vendedor,profile:view-own|...
-4,cliente,Cliente,auth:login|auth:logout|...
-```
-
-### permissions.csv
-```csv
-id,name,description,category
-1,auth:login,Iniciar sesión,auth
-2,profile:view-own,Ver propio perfil,profile
-...
-```
-
-### tokens_granted.csv
-```csv
-tokenId,userId,email,token,issuedAt,expiresAt
-uuid1,user_id,user@ex.com,eyJ0eXA...,2024-09-12T12:00:00Z,2024-09-13T12:00:00Z
-```
-
-### tokens_revoked.csv
-```csv
-tokenId,userId,email,token,revokedAt,expiresAt
-uuid2,user_id,user@ex.com,eyJ0eXA...,2024-09-12T14:00:00Z,2024-09-13T12:00:00Z
-```
-
----
-
-## ✅ Recientemente Implementado
-
-- ✅ PATCH `/auth/change-password` - Cambiar contraseña propia
-- ✅ GET `/users` - Listar usuarios (admin)
-- ✅ GET `/users/:id` - Ver usuario específico
-- ✅ PATCH `/users/:id` - Editar usuario (nombre, foto)
-- ✅ PATCH `/users/:id/status` - Habilitar/deshabilitar usuario
-- ✅ POST `/users/:id/generate-password` - Generar contraseña aleatoria
-- ✅ PATCH `/auth/profile` - Actualizar perfil propio
-- ✅ POST `/auth/logout-all` - Logout en todos los dispositivos
-- ✅ `/dashboard/profile` - Página Mi Perfil
-- ✅ `/dashboard/users` - Página Gestión de Usuarios
-- ✅ Bootstrap page sin autenticación
-
-## 🎯 Endpoints Faltantes (Posibles Mejoras)
-
-```
-DELETE /users/:id                   Eliminar usuario (soft delete)
-GET   /sessions                     Listar sesiones activas
-DELETE /sessions/:id                Cerrar sesión específica
-POST  /auth/refresh-token           Renovar token
-GET   /admin/analytics              Estadísticas administrativas
-PATCH /users/:id/email              Cambiar email (verificación requerida)
-POST  /users/export                 Exportar usuarios (CSV/Excel)
-GET   /audit-log                    Log de auditoría
-```
+### Roles personalizados
+- `Role.createRole()` hace append a roles.csv con ID auto-incremental
+- `GET /users/manageable-roles` devuelve todos los roles para superuser (incluye nuevos)
+- Los nuevos roles aparecen en el dropdown de creación de usuarios automáticamente
 
 ---
 
@@ -432,24 +267,17 @@ GET   /audit-log                    Log de auditoría
 
 ### Backend (.env)
 ```env
-PORT=3000
+PORT=3001
 JWT_SECRET=your-super-secret-key-here-min-32-chars
-APP_URL=http://localhost:3000
+APP_URL=http://localhost:3001
 ```
 
 ### Frontend (.env.local)
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:3000
-# Para desarrollo remoto:
-# NEXT_PUBLIC_API_URL=http://192.168.1.100:3000
+NEXT_PUBLIC_API_URL=http://localhost:3001
+# Para desarrollo remoto (detección automática si no se configura):
+# NEXT_PUBLIC_API_URL=http://192.168.1.100:3001
 ```
-
----
-
-## 📚 Documentación Adicional
-
-- **[README_BACKEND.md](./README_BACKEND.md)** - Guía completa del backend
-- **[README_FRONTEND.md](./README_FRONTEND.md)** - Guía completa del frontend
 
 ---
 
@@ -459,9 +287,10 @@ NEXT_PUBLIC_API_URL=http://localhost:3000
 |----------|----------|
 | CORS error | Verificar IP backend en NEXT_PUBLIC_API_URL |
 | Token inválido | Limpiar localStorage, hacer logout e iniciar sesión |
+| Módulo no aparece | Verificar que el rol tiene el módulo asignado en roles.csv con nivel correcto |
+| Página se queda cargando | Verificar que no hay `user?.role === 'superuser'` hardcodeado en el componente |
+| Invalid status code en API | Verificar que `ResponseFormatter.success(res, data)` — el mensaje va dentro de `data`, no como tercer arg |
 | Puerto ocupado | Cambiar PORT en .env backend |
-| Página en blanco | Revisar console (F12) para errores |
-| npm not found | Instalar Node.js desde nodejs.org |
 
 ---
 
@@ -472,14 +301,11 @@ NEXT_PUBLIC_API_URL=http://localhost:3000
 - [ ] Validación de email con confirmación
 - [ ] Two-factor authentication (2FA)
 - [ ] Migración a PostgreSQL/MongoDB
-- [ ] Dashboard administrativo con estadísticas
-- [ ] Logs y auditoría de acciones
 - [ ] OAuth2/Google login
 - [ ] Notificaciones en tiempo real (WebSocket)
-- [ ] Cambio de rol en sesión
 - [ ] Soft delete de usuarios
 - [ ] Exportar usuarios a CSV
 - [ ] Búsqueda y filtrado avanzado en tabla de usuarios
-- [ ] Dark mode
 - [ ] Internacionalización (i18n)
-- [ ] Sistema de permisos granulares por endpoint
+- [ ] Editor visual de permisos por endpoint en `/dashboard/roles`
+- [ ] Asignación de rol a usuario desde `/dashboard/roles`

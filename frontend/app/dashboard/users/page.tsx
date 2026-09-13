@@ -39,12 +39,25 @@ function UsersPageContent() {
   const [generatedPassword, setGeneratedPassword] = useState('');
 
   const [showCreateUser, setShowCreateUser] = useState(false);
+  const [creatableRoles, setCreatableRoles] = useState<string[]>(['cliente']);
   const [createFormData, setCreateFormData] = useState({ email: '', password: '', name: '', role: 'cliente' });
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     loadUsers();
+    loadCreatableRoles();
   }, []);
+
+  const loadCreatableRoles = async () => {
+    try {
+      const response = await usersAPI.getManageableRoles();
+      const roles: string[] = response.roles || ['cliente'];
+      setCreatableRoles(roles);
+      setCreateFormData(prev => ({ ...prev, role: roles[roles.length - 1] || 'cliente' }));
+    } catch {
+      // fallback: keep default ['cliente']
+    }
+  };
 
   const loadUsers = async () => {
     setIsLoading(true);
@@ -165,7 +178,11 @@ function UsersPageContent() {
             <div className="d-flex justify-content-between align-items-center">
               <div>
                 <h1 className={styles.title}>👥 Gestión de Usuarios</h1>
-                <p className={styles.subtitle}>Administra todos los usuarios del sistema</p>
+                <p className={styles.subtitle}>
+                  {user?.role === 'superuser'
+                    ? 'Administra todos los usuarios del sistema'
+                    : 'Administra los usuarios bajo tu gestión'}
+                </p>
               </div>
               <Button
                 variant="success"
@@ -444,9 +461,11 @@ function UsersPageContent() {
                 onChange={(e) => setCreateFormData(prev => ({ ...prev, role: e.target.value }))}
                 disabled={isCreating}
               >
-                <option value="cliente">Cliente</option>
-                <option value="vendedor">Vendedor</option>
-                <option value="administrador">Administrador</option>
+                {creatableRoles.map(r => (
+                  <option key={r} value={r}>
+                    {r.charAt(0).toUpperCase() + r.slice(1)}
+                  </option>
+                ))}
               </Form.Select>
             </Form.Group>
           </Form>

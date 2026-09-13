@@ -6,6 +6,8 @@ const authRoutes = require('./routes/auth');
 const usersRoutes = require('./routes/users');
 const uploadRoutes = require('./routes/upload');
 const auditRoutes = require('./routes/audit');
+const modulesRoutes     = require('./routes/modules');
+const rolesConfigRoutes = require('./routes/roles-config');
 const TokenCleaner = require('./scripts/cleanExpiredTokens');
 const TokenManager = require('./utils/tokenManager');
 const ResponseFormatter = require('./utils/responseFormatter');
@@ -44,6 +46,8 @@ app.use('/auth', authRoutes);
 app.use('/users', usersRoutes);
 app.use('/upload', uploadRoutes);
 app.use('/audit', auditRoutes);
+app.use('/modules', modulesRoutes);
+app.use('/roles-config', rolesConfigRoutes);
 
 app.get('/health', (req, res) => {
   ResponseFormatter.success(res, {

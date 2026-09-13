@@ -1,0 +1,5 @@
+id,name,description,buttonLabel,href,icon,showInNav,permRead,permWrite,permFull
+1,"Mi Perfil","Ver y editar información de tu perfil","Ver Perfil","/dashboard/profile","👤","true","profile:view-own","profile:view-own|profile:edit-own","profile:view-own|profile:edit-own"
+2,"Gestionar Usuarios","Ver y administrar todos los usuarios del sistema","Ver Usuarios","/dashboard/users","👥","true","auth:view-users","auth:view-users|auth:create-user|auth:update-user|admin:manage-users","auth:view-users|auth:create-user|auth:update-user|auth:delete-user|admin:manage-users|admin:manage-roles"
+3,"Auditoría","Registro de eventos y acciones del sistema","Ver Auditoría","/dashboard/audit","📋","true","admin:view-audit|admin:view-stats","admin:view-audit|admin:view-stats","admin:view-audit|admin:view-stats"
+4,"Roles y Permisos","Gestionar roles, permisos y accesos del sistema","Gestionar","/dashboard/roles","🛡️","true","admin:view-roles","admin:view-roles|admin:manage-roles","admin:view-roles|admin:manage-roles"
