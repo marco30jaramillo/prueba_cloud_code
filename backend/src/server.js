@@ -20,14 +20,22 @@ app.use(express.json());
 const datosPath = path.resolve(__dirname, '../../datos');
 app.use(express.static(datosPath));
 
+const allowedOriginPatterns = [
+  /^https?:\/\/localhost(:\d+)?$/,
+  /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+  /^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/,
+  /^https?:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/,
+  /^https?:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+(:\d+)?$/,
+  /^https:\/\/[^.]+\.azurestaticapps\.net$/,
+  /^https:\/\/[^.]+\.azurewebsites\.net$/,
+];
+if (process.env.FRONTEND_URL) {
+  allowedOriginPatterns.push(new RegExp(`^${process.env.FRONTEND_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`));
+}
+
 const corsOptions = {
   origin: (origin, callback) => {
-    const isLocalhost = !origin ||
-                        origin.includes('localhost') ||
-                        origin.includes('127.0.0.1') ||
-                        origin.match(/^http:\/\/192\.168\.|^http:\/\/10\.|^http:\/\/172\./);
-
-    if (isLocalhost) {
+    if (!origin || allowedOriginPatterns.some(r => r.test(origin))) {
       callback(null, true);
     } else {
       callback(new Error('CORS policy: solicitud no permitida'), false);
@@ -231,14 +239,46 @@ function getLocalIPs() {
   return ips;
 }
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
   const localIPs = getLocalIPs();
   console.log(`🚀 Servidor corriendo`);
   console.log(`   Local: http://localhost:${PORT}`);
   localIPs.forEach(ip => {
     console.log(`   Red: http://${ip}:${PORT}`);
   });
-  console.log(`📝 Base de datos: users.csv`);
+
+  const { usingSql, getPool } = require('./database/sqlPool');
+  if (usingSql()) {
+    try {
+      await getPool();
+      console.log(`🗄️  Base de datos: Azure SQL (conectado)`);
+    } catch (err) {
+      console.error(`❌ Azure SQL: error de conexión`);
+      console.error(`   Mensaje : ${err.message}`);
+      if (err.code)   console.error(`   Código  : ${err.code}`);
+      if (err.number) console.error(`   Número  : ${err.number}`);
+      if (err.state)  console.error(`   Estado  : ${err.state}`);
+      // Diagnóstico según tipo de error
+      const msg = err.message || '';
+      if (msg.includes('in 15000ms') || msg.includes('ETIMEOUT') || msg.includes('ECONNREFUSED')) {
+        console.error(`   Causa probable: Firewall de Azure no permite tu IP.`);
+        console.error(`   → Portal Azure > SQL Server > Redes > Agregar IP de cliente`);
+        console.error(`   → O activa "Permitir servicios y recursos de Azure"`);
+      } else if (msg.toLowerCase().includes('login failed') || msg.includes('18456')) {
+        console.error(`   Causa probable: Credenciales incorrectas (usuario/contraseña).`);
+      } else if (msg.toLowerCase().includes('cannot open database') || msg.includes('4060')) {
+        console.error(`   Causa probable: El nombre de la base de datos no existe o no tienes acceso.`);
+      } else if (msg.toLowerCase().includes('server name') || msg.includes('ENOTFOUND')) {
+        console.error(`   Causa probable: Nombre del servidor incorrecto o no resuelve DNS.`);
+      }
+      console.error(`   Servidor : ${process.env.AZURE_SQL_SERVER || '(no definido)'}`);
+      console.error(`   Base     : ${process.env.AZURE_SQL_DATABASE || '(no definido)'}`);
+      console.error(`   Usuario  : ${process.env.AZURE_SQL_USER || '(no definido)'}`);
+    }
+  } else {
+    console.log(`📝 Base de datos: CSV (modo local)`);
+  }
+
   console.log(`📚 Documentación: http://localhost:${PORT}/docs`);
   console.log(`📋 Tokens: http://localhost:${PORT}/tokens/stats`);
 
