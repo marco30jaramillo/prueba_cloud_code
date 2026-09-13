@@ -32,7 +32,6 @@ class TokenManager {
     const tokenRecord = grantedTokens.find(t => t.token === token && t.userId === userId);
 
     if (!tokenRecord) {
-      console.log(`⚠️  Token no encontrado en lista de otorgados`);
       return false;
     }
 

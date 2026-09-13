@@ -37,10 +37,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path} from ${req.ip}`);
-  next();
-});
+// Logging removido - demasiado verbose para producción
 
 app.use('/auth', authRoutes);
 app.use('/users', usersRoutes);
