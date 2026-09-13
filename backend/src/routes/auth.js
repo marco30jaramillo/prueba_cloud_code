@@ -119,6 +119,7 @@ router.post('/login', rateLimiter.middleware, async (req, res) => {
       id: user.id,
       email: user.email,
       name: user.name,
+      photo: user.photo,
       role: user.role,
       mustChangePassword: user.mustChangePassword === 'true' || user.mustChangePassword === true
     },
@@ -347,6 +348,7 @@ router.get('/validate', authMiddleware, async (req, res) => {
       id: user.id,
       email: user.email,
       name: user.name,
+      photo: user.photo,
       role: user.role,
       mustChangePassword: user.mustChangePassword === 'true' || user.mustChangePassword === true
     },
