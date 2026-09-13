@@ -13,8 +13,10 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(express.json());
-// process.cwd() es backend/, entonces ../ sube a la raíz donde está /datos
-app.use(express.static(path.join(process.cwd(), '../datos')));
+// Servir archivos estáticos desde /datos en la raíz del proyecto
+// __dirname es backend/src/, así que ../../.. sube a la raíz
+const datosPath = path.resolve(__dirname, '../../datos');
+app.use(express.static(datosPath));
 
 const corsOptions = {
   origin: (origin, callback) => {
