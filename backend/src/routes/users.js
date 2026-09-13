@@ -3,6 +3,7 @@ const User = require('../models/User');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { authMiddleware, tokenManager } = require('../middleware/auth');
 const roleMiddleware = require('../middleware/roleMiddleware');
+const auditMiddleware = require('../middleware/auditMiddleware');
 
 const router = express.Router();
 
@@ -82,6 +83,10 @@ router.patch('/:userId', authMiddleware, roleMiddleware.requireRole('superuser',
     return ResponseFormatter.notFound(res, 'Usuario');
   }
 
+  const ipAddress = auditMiddleware.getIpAddress(req);
+  const userAgent = auditMiddleware.getUserAgent(req);
+  auditMiddleware.logProfileUpdate(requesterId, ipAddress, userAgent, updates);
+
   return ResponseFormatter.success(res, {
     message: 'Usuario actualizado exitosamente',
     user: {
@@ -124,6 +129,10 @@ router.patch('/:userId/status', authMiddleware, roleMiddleware.requireRole('supe
     tokenManager.revokeAllUserTokens(userId, targetUser.email);
   }
 
+  const ipAddress = auditMiddleware.getIpAddress(req);
+  const userAgent = auditMiddleware.getUserAgent(req);
+  auditMiddleware.logUserStatusChange(requesterId, userId, isActive, ipAddress, userAgent);
+
   return ResponseFormatter.success(res, {
     message: `Usuario ${isActive ? 'habilitado' : 'deshabilitado'} exitosamente`,
     user: {
@@ -152,6 +161,10 @@ router.post('/:userId/generate-password', authMiddleware, roleMiddleware.require
 
   const newPassword = User.generateRandomPassword();
   User.setPasswordForUser(userId, newPassword);
+
+  const ipAddress = auditMiddleware.getIpAddress(req);
+  const userAgent = auditMiddleware.getUserAgent(req);
+  auditMiddleware.logPasswordGeneration(requesterId, userId, ipAddress, userAgent);
 
   return ResponseFormatter.success(res, {
     message: 'Contraseña generada exitosamente',

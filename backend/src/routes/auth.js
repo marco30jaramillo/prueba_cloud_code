@@ -249,6 +249,10 @@ router.post('/create-user', authMiddleware, (req, res) => {
   });
   tokenManager.addGrantedToken(tokenId, user.id, email, token, expiresAt);
 
+  const ipAddress = auditMiddleware.getIpAddress(req);
+  const userAgent = auditMiddleware.getUserAgent(req);
+  auditMiddleware.logUserCreation(req.user.userId, user.id, email, targetRole, ipAddress, userAgent);
+
   return ResponseFormatter.success(res, {
     message: `Usuario con rol '${targetRole}' creado exitosamente`,
     user: {
@@ -319,6 +323,10 @@ router.post('/logout', authMiddleware, (req, res) => {
 
   tokenManager.revokeToken(userId, token, req.user.exp);
 
+  const ipAddress = auditMiddleware.getIpAddress(req);
+  const userAgent = auditMiddleware.getUserAgent(req);
+  auditMiddleware.logLogout(userId, ipAddress, userAgent);
+
   return ResponseFormatter.success(res, {
     message: 'Sesión cerrada exitosamente',
     email,
@@ -361,6 +369,10 @@ router.patch('/change-password', authMiddleware, (req, res) => {
     return ResponseFormatter.badRequest(res, result.error);
   }
 
+  const ipAddress = auditMiddleware.getIpAddress(req);
+  const userAgent = auditMiddleware.getUserAgent(req);
+  auditMiddleware.logPasswordChange(userId, userId, ipAddress, userAgent, false);
+
   return ResponseFormatter.success(res, {
     message: 'Contraseña cambiada exitosamente'
   });
@@ -382,6 +394,10 @@ router.patch('/profile', authMiddleware, (req, res) => {
   if (!updatedUser) {
     return ResponseFormatter.notFound(res, 'Usuario');
   }
+
+  const ipAddress = auditMiddleware.getIpAddress(req);
+  const userAgent = auditMiddleware.getUserAgent(req);
+  auditMiddleware.logProfileUpdate(userId, ipAddress, userAgent, updates);
 
   return ResponseFormatter.success(res, {
     message: 'Perfil actualizado exitosamente',
@@ -420,6 +436,10 @@ router.patch('/password/:userId', authMiddleware, roleMiddleware.requireRole(['s
 
   User.setPasswordForUser(userId, newPassword);
 
+  const ipAddress = auditMiddleware.getIpAddress(req);
+  const userAgent = auditMiddleware.getUserAgent(req);
+  auditMiddleware.logPasswordChange(requesterId, userId, ipAddress, userAgent, true);
+
   return ResponseFormatter.success(res, {
     message: 'Contraseña del usuario actualizada exitosamente',
     userId: userId
@@ -445,6 +465,10 @@ router.patch('/change-password-temporary', authMiddleware, (req, res) => {
   if (!updatedUser) {
     return ResponseFormatter.notFound(res, 'Usuario');
   }
+
+  const ipAddress = auditMiddleware.getIpAddress(req);
+  const userAgent = auditMiddleware.getUserAgent(req);
+  auditMiddleware.logPasswordChange(userId, userId, ipAddress, userAgent, false);
 
   return ResponseFormatter.success(res, {
     message: 'Contraseña actualizada exitosamente',
