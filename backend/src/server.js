@@ -1,16 +1,19 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const authRoutes = require('./routes/auth');
 const usersRoutes = require('./routes/users');
+const uploadRoutes = require('./routes/upload');
 const TokenCleaner = require('./scripts/cleanExpiredTokens');
 const TokenManager = require('./utils/tokenManager');
 const ResponseFormatter = require('./utils/responseFormatter');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '../../datos')));
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -39,6 +42,7 @@ app.use((req, res, next) => {
 
 app.use('/auth', authRoutes);
 app.use('/users', usersRoutes);
+app.use('/upload', uploadRoutes);
 
 app.get('/health', (req, res) => {
   ResponseFormatter.success(res, {

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Modal, Spinner } from 'react-bootstrap';
+import { PhotoUpload } from '@/components/PhotoUpload';
 import { useAuthStore } from '@/lib/auth-store';
 import { authAPI } from '@/lib/api';
 import styles from './page.module.scss';
@@ -137,11 +138,21 @@ export default function ProfilePage() {
           <Card className={styles.card}>
             <Card.Body>
               <div className={styles.photoSection}>
-                <img
-                  src={formData.photo}
-                  alt="Foto de perfil"
-                  className={styles.profilePhoto}
-                />
+                {isEditing ? (
+                  <PhotoUpload
+                    currentPhoto={formData.photo}
+                    onPhotoChange={(photoUrl) =>
+                      setFormData(prev => ({ ...prev, photo: photoUrl }))
+                    }
+                    disabled={isLoading}
+                  />
+                ) : (
+                  <img
+                    src={formData.photo}
+                    alt="Foto de perfil"
+                    className={styles.profilePhoto}
+                  />
+                )}
               </div>
 
               <Form>
@@ -167,7 +178,7 @@ export default function ProfilePage() {
                   <small className="text-muted">El email no puede ser modificado</small>
                 </Form.Group>
 
-                <Form.Group className="mb-3">
+                <Form.Group className="mb-4">
                   <Form.Label>Rol</Form.Label>
                   <Form.Control
                     type="text"
@@ -175,19 +186,6 @@ export default function ProfilePage() {
                     disabled
                     className={styles.disabled}
                   />
-                </Form.Group>
-
-                <Form.Group className="mb-4">
-                  <Form.Label>URL de Foto de Perfil</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="photo"
-                    value={formData.photo}
-                    onChange={handleProfileChange}
-                    disabled={!isEditing || isLoading}
-                    placeholder="URL de imagen"
-                  />
-                  <small className="text-muted">Proporciona una URL válida de imagen</small>
                 </Form.Group>
 
                 {isEditing ? (
