@@ -26,8 +26,8 @@ const allowedOriginPatterns = [
   /^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/,
   /^https?:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/,
   /^https?:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+(:\d+)?$/,
-  /^https:\/\/[^.]+\.azurestaticapps\.net$/,
-  /^https:\/\/[^.]+\.azurewebsites\.net$/,
+  /^https:\/\/.+\.azurestaticapps\.net$/,
+  /^https:\/\/.+\.azurewebsites\.net$/,
 ];
 if (process.env.FRONTEND_URL) {
   allowedOriginPatterns.push(new RegExp(`^${process.env.FRONTEND_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`));
