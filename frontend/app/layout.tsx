@@ -6,8 +6,8 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '@/styles/globals.scss';
 
 export const metadata: Metadata = {
-  title: 'Auth System',
-  description: 'Sistema de autenticación seguro con roles y permisos'
+  title: 'Mi Valecito',
+  description: 'Gestiona los vales y fiados de tu tienda de barrio de forma digital, rápida y segura.'
 };
 
 export default function RootLayout({

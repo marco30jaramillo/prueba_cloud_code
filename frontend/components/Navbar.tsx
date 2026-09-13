@@ -109,8 +109,8 @@ export const Navbar: React.FC = () => {
       >
         <Container>
           <BSNavbar.Brand as={Link} href="/" className={styles.brand}>
-            <span className={styles.logo}>🔐</span>
-            Auth System
+            <span className={styles.logo}>🧾</span>
+            Mi Valecito
           </BSNavbar.Brand>
 
           {isAuthenticated && (
@@ -217,8 +217,8 @@ export const Navbar: React.FC = () => {
           <nav className={`${styles.sidebar} ${sidebarExpanded ? styles.sidebarExpanded : ''}`}>
             {/* Brand */}
             <Link href="/" className={styles.sidebarBrand} onClick={() => setSidebarExpanded(false)}>
-              <span className={styles.sidebarIcon}>🔐</span>
-              <span className={styles.sidebarLabel}>Auth System</span>
+              <span className={styles.sidebarIcon}>🧾</span>
+              <span className={styles.sidebarLabel}>Mi Valecito</span>
             </Link>
 
             {/* Nav items */}
