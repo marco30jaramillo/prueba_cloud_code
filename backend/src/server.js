@@ -13,7 +13,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../../datos')));
+app.use(express.static(path.join(process.cwd(), 'datos')));
 
 const corsOptions = {
   origin: (origin, callback) => {
