@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Navbar as BSNavbar, Nav, Container, Button, Dropdown } from 'react-bootstrap';
 import { useAuthStore } from '@/lib/auth-store';
@@ -14,17 +14,33 @@ export const Navbar: React.FC = () => {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setIsLoggingOut(false);
+    }
+  }, [isAuthenticated]);
+
   const handleLogoutClick = async () => {
     setIsLoggingOut(true);
-    await handleLogout();
-    router.push('/');
+    try {
+      await handleLogout();
+      router.push('/');
+    } catch (error) {
+      console.error('Error during logout:', error);
+      setIsLoggingOut(false);
+    }
   };
 
   const handleLogoutAllClick = async () => {
     setIsLoggingOut(true);
     if (confirm('⚠️ Esto cerrará tu sesión en TODOS tus dispositivos. ¿Continuar?')) {
-      await handleLogoutAll();
-      router.push('/');
+      try {
+        await handleLogoutAll();
+        router.push('/');
+      } catch (error) {
+        console.error('Error during logout-all:', error);
+        setIsLoggingOut(false);
+      }
     } else {
       setIsLoggingOut(false);
     }
@@ -54,6 +70,14 @@ export const Navbar: React.FC = () => {
                 <Nav.Link as={Link} href="/dashboard" className={styles.navLink}>
                   Panel
                 </Nav.Link>
+                <Nav.Link as={Link} href="/dashboard/profile" className={styles.navLink}>
+                  👤 Perfil
+                </Nav.Link>
+                {(user?.role === 'superuser' || user?.role === 'administrador') && (
+                  <Nav.Link as={Link} href="/dashboard/users" className={styles.navLink}>
+                    👥 Usuarios
+                  </Nav.Link>
+                )}
                 <span className={styles.userInfo}>
                   {user?.name} ({user?.role})
                 </span>

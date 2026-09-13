@@ -25,10 +25,10 @@ export const useAuth = () => {
     }
   }, [setAuth, setLoading]);
 
-  const handleRegister = useCallback(async (email: string, password: string, name: string) => {
+  const handleRegister = useCallback(async (email: string, password: string, name: string, photo?: string) => {
     setLoading(true);
     try {
-      const response = await authAPI.register(email, password, name);
+      const response = await authAPI.register(email, password, name, photo);
       if (response.user && response.token) {
         setAuth(response.user, response.token);
         saveAuthToStorage(response.user, response.token);

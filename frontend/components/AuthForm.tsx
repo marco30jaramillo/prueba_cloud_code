@@ -19,7 +19,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = 
 
   const fields = {
     login: ['email', 'password'],
-    register: ['email', 'password', 'confirmPassword', 'name'],
+    register: ['email', 'password', 'confirmPassword', 'name', 'photo'],
     'forgot-password': ['email'],
     'reset-password': ['token', 'newPassword', 'confirmPassword']
   };
@@ -29,6 +29,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = 
     password: 'Contraseña',
     confirmPassword: 'Confirmar Contraseña',
     name: 'Nombre Completo',
+    photo: 'Foto de Perfil (URL)',
     token: 'Token de Recuperación',
     newPassword: 'Nueva Contraseña'
   };

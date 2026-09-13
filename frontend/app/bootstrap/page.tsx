@@ -3,15 +3,11 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner, Accordion, Badge } from 'react-bootstrap';
-import { useAuthStore } from '@/lib/auth-store';
 import { authAPI } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
 import styles from './page.module.scss';
 
 export default function BootstrapPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
-  const { handleLogin } = useAuth();
 
   const [formData, setFormData] = useState({ email: '', password: '', name: '', confirmPassword: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -19,26 +15,6 @@ export default function BootstrapPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isSuperuserExists, setIsSuperuserExists] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.push('/dashboard');
-    }
-  }, [isAuthenticated, router]);
-
-  useEffect(() => {
-    checkSuperuserExists();
-  }, []);
-
-  const checkSuperuserExists = async () => {
-    try {
-      await authAPI.validate();
-      setIsSuperuserExists(true);
-    } catch (error) {
-      setIsSuperuserExists(false);
-    }
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -82,16 +58,14 @@ export default function BootstrapPage() {
     try {
       const response = await authAPI.bootstrapSuperuser(formData.email, formData.password, formData.name);
 
-      if (response.user && response.token) {
+      if (response.user) {
         setMessage({
           type: 'success',
-          text: '✅ Super Usuario creado exitosamente. Redirigiendo al dashboard...'
+          text: '✅ Super Usuario creado exitosamente. Redirigiendo a login...'
         });
+        setFormData({ email: '', password: '', name: '', confirmPassword: '' });
 
-        const loginResult = await handleLogin(formData.email, formData.password);
-        if (loginResult.success) {
-          setTimeout(() => router.push('/dashboard'), 1500);
-        }
+        setTimeout(() => router.push('/login'), 2000);
       }
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || 'Error al crear super usuario';
@@ -101,36 +75,6 @@ export default function BootstrapPage() {
     }
   };
 
-  if (isSuperuserExists === null) {
-    return (
-      <Container className={styles.container}>
-        <Row className="justify-content-center min-vh-100">
-          <Col lg={6} md={8} className="d-flex align-items-center justify-content-center">
-            <Spinner animation="border" />
-          </Col>
-        </Row>
-      </Container>
-    );
-  }
-
-  if (isSuperuserExists) {
-    return (
-      <Container className={styles.container}>
-        <Row className="justify-content-center min-vh-100">
-          <Col lg={6} md={8} className="d-flex align-items-center">
-            <Alert variant="warning" className="w-100">
-              <Alert.Heading>⚠ Superuser ya existe</Alert.Heading>
-              <p>Ya existe un superusuario en el sistema. Esta página no se puede usar nuevamente.</p>
-              <hr />
-              <p className="mb-0">
-                <a href="/login">Inicia sesión aquí</a>
-              </p>
-            </Alert>
-          </Col>
-        </Row>
-      </Container>
-    );
-  }
 
   return (
     <Container className={styles.container}>

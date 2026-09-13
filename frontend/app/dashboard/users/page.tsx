@@ -1,0 +1,351 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col, Card, Table, Button, Alert, Spinner, Modal, Form, Dropdown } from 'react-bootstrap';
+import { useAuthStore } from '@/lib/auth-store';
+import { usersAPI, authAPI } from '@/lib/api';
+import { useRouter } from 'next/navigation';
+import styles from './page.module.scss';
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  photo: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export default function UsersPage() {
+  const { user, isAuthenticated } = useAuthStore();
+  const router = useRouter();
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({ name: '', photo: '' });
+
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedPassword, setGeneratedPassword] = useState('');
+
+  useEffect(() => {
+    if (!isAuthenticated || (user?.role !== 'superuser' && user?.role !== 'administrador')) {
+      router.push('/dashboard');
+      return;
+    }
+    loadUsers();
+  }, [isAuthenticated, user?.role, router]);
+
+  const loadUsers = async () => {
+    setIsLoading(true);
+    try {
+      const response = await usersAPI.getAll();
+      setUsers(response.users);
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Error al cargar usuarios';
+      setMessage({ type: 'error', text: `⚠️ ${errorMsg}` });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGeneratePassword = async (userId: string) => {
+    setSelectedUserId(userId);
+    setIsGenerating(true);
+    try {
+      const response = await usersAPI.generatePassword(userId);
+      setGeneratedPassword(response.newPassword);
+      setShowPasswordModal(true);
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Error al generar contraseña';
+      setMessage({ type: 'error', text: `⚠️ ${errorMsg}` });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleEditUser = (selectedUser: User) => {
+    setEditingUser(selectedUser);
+    setEditFormData({ name: selectedUser.name, photo: selectedUser.photo });
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingUser || !editFormData.name.trim()) {
+      setMessage({ type: 'error', text: 'El nombre no puede estar vacío' });
+      return;
+    }
+
+    try {
+      await usersAPI.update(editingUser.id, editFormData);
+      setMessage({ type: 'success', text: '✅ Usuario actualizado exitosamente' });
+      setShowEditModal(false);
+      loadUsers();
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Error al actualizar usuario';
+      setMessage({ type: 'error', text: `⚠️ ${errorMsg}` });
+    }
+  };
+
+  const handleToggleStatus = async (userId: string, currentStatus: boolean) => {
+    try {
+      await usersAPI.toggleStatus(userId, !currentStatus);
+      setMessage({
+        type: 'success',
+        text: `✅ Usuario ${!currentStatus ? 'habilitado' : 'deshabilitado'} exitosamente`
+      });
+      loadUsers();
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Error al cambiar estado';
+      setMessage({ type: 'error', text: `⚠️ ${errorMsg}` });
+    }
+  };
+
+  const handleCopyPassword = () => {
+    navigator.clipboard.writeText(generatedPassword);
+    setMessage({ type: 'success', text: '✅ Contraseña copiada al portapapeles' });
+  };
+
+  if (isLoading) {
+    return (
+      <Container className={styles.container}>
+        <div className={styles.loadingCenter}>
+          <Spinner animation="border" />
+        </div>
+      </Container>
+    );
+  }
+
+  return (
+    <Container fluid className={styles.container}>
+      <Row className="mb-4">
+        <Col>
+          <div className={styles.header}>
+            <h1 className={styles.title}>👥 Gestión de Usuarios</h1>
+            <p className={styles.subtitle}>Administra todos los usuarios del sistema</p>
+          </div>
+        </Col>
+      </Row>
+
+      {message && (
+        <Row className="mb-4">
+          <Col>
+            <Alert
+              variant={message.type === 'success' ? 'success' : 'danger'}
+              onClose={() => setMessage(null)}
+              dismissible
+            >
+              {message.text}
+            </Alert>
+          </Col>
+        </Row>
+      )}
+
+      <Row>
+        <Col>
+          <Card className={styles.card}>
+            <Card.Body>
+              <div className={styles.tableWrapper}>
+                <Table hover responsive className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Foto</th>
+                      <th>Nombre</th>
+                      <th>Email</th>
+                      <th>Rol</th>
+                      <th>Estado</th>
+                      <th>Creado</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u.id} className={!u.isActive ? styles.inactiveRow : ''}>
+                        <td>
+                          <img src={u.photo} alt={u.name} className={styles.userPhoto} />
+                        </td>
+                        <td>{u.name}</td>
+                        <td>{u.email}</td>
+                        <td>
+                          <span className={styles.badge} data-role={u.role}>
+                            {u.role}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={u.isActive ? styles.active : styles.inactive}>
+                            {u.isActive ? '🟢 Activo' : '🔴 Inactivo'}
+                          </span>
+                        </td>
+                        <td className={styles.date}>
+                          {new Date(u.createdAt).toLocaleDateString('es-ES')}
+                        </td>
+                        <td>
+                          <Dropdown>
+                            <Dropdown.Toggle
+                              variant="sm"
+                              id={`dropdown-${u.id}`}
+                              className={styles.actionBtn}
+                            >
+                              ⚙️
+                            </Dropdown.Toggle>
+
+                            <Dropdown.Menu>
+                              <Dropdown.Item
+                                onClick={() => handleEditUser(u)}
+                                className={styles.editItem}
+                              >
+                                ✏️ Editar
+                              </Dropdown.Item>
+                              <Dropdown.Divider />
+                              <Dropdown.Item
+                                onClick={() => handleGeneratePassword(u.id)}
+                                disabled={isGenerating}
+                                className={styles.passwordItem}
+                              >
+                                🔑 Generar Contraseña
+                              </Dropdown.Item>
+                              <Dropdown.Divider />
+                              <Dropdown.Item
+                                onClick={() => handleToggleStatus(u.id, u.isActive)}
+                                className={u.isActive ? styles.disableItem : styles.enableItem}
+                              >
+                                {u.isActive ? '🔴 Deshabilitar' : '🟢 Habilitar'}
+                              </Dropdown.Item>
+                            </Dropdown.Menu>
+                          </Dropdown>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+
+              {users.length === 0 && (
+                <div className={styles.emptyState}>
+                  <p>No hay usuarios registrados</p>
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
+      <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>✏️ Editar Usuario</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {editingUser && (
+            <Form>
+              <Form.Group className="mb-3">
+                <Form.Label>Nombre</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={editFormData.name}
+                  onChange={(e) =>
+                    setEditFormData(prev => ({ ...prev, name: e.target.value }))
+                  }
+                  placeholder="Nombre completo"
+                />
+              </Form.Group>
+
+              <Form.Group className="mb-3">
+                <Form.Label>Email</Form.Label>
+                <Form.Control
+                  type="email"
+                  value={editingUser.email}
+                  disabled
+                  className={styles.disabled}
+                />
+                <small className="text-muted">El email no puede ser modificado</small>
+              </Form.Group>
+
+              <Form.Group className="mb-3">
+                <Form.Label>Foto de Perfil</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={editFormData.photo}
+                  onChange={(e) =>
+                    setEditFormData(prev => ({ ...prev, photo: e.target.value }))
+                  }
+                  placeholder="URL de imagen"
+                />
+              </Form.Group>
+
+              <Form.Group className="mb-3">
+                <Form.Label>Rol</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={editingUser.role}
+                  disabled
+                  className={styles.disabled}
+                />
+              </Form.Group>
+            </Form>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowEditModal(false)}>
+            Cancelar
+          </Button>
+          <Button variant="primary" onClick={handleSaveEdit}>
+            💾 Guardar
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal show={showPasswordModal} onHide={() => { setShowPasswordModal(false); setGeneratedPassword(''); }} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>🔑 Contraseña Generada</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Alert variant="info" className="mb-3">
+            <p className="mb-0">
+              ℹ️ Se generó una contraseña aleatoria. Comparte con el usuario de forma segura.
+            </p>
+          </Alert>
+
+          <Form.Group>
+            <Form.Label>Contraseña</Form.Label>
+            <div className="input-group">
+              <Form.Control
+                type={showPassword ? 'text' : 'password'}
+                value={generatedPassword}
+                readOnly
+                className={styles.passwordDisplay}
+              />
+              <Button
+                variant="outline-secondary"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? '👁️' : '👁️‍🗨️'}
+              </Button>
+            </div>
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="success"
+            onClick={handleCopyPassword}
+            className="me-2"
+          >
+            📋 Copiar
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => { setShowPasswordModal(false); setGeneratedPassword(''); }}
+          >
+            Cerrar
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </Container>
+  );
+}

@@ -35,11 +35,12 @@ apiClient.interceptors.response.use(
 );
 
 export const authAPI = {
-  register: async (email: string, password: string, name: string) => {
+  register: async (email: string, password: string, name: string, photo?: string) => {
     const { data } = await apiClient.post<AuthResponse>('/auth/register', {
       email,
       password,
-      name
+      name,
+      ...(photo && { photo })
     });
     return data;
   },
@@ -101,6 +102,57 @@ export const authAPI = {
 
   getUserSchema: async (roleType: string) => {
     const { data } = await apiClient.get(`/auth/user-schema/${roleType}`);
+    return data;
+  },
+
+  changePassword: async (currentPassword: string, newPassword: string, confirmPassword: string) => {
+    const { data } = await apiClient.patch('/auth/change-password', {
+      currentPassword,
+      newPassword,
+      confirmPassword
+    });
+    return data;
+  },
+
+  updateProfile: async (name: string, photo?: string) => {
+    const { data } = await apiClient.patch('/auth/profile', {
+      name,
+      ...(photo && { photo })
+    });
+    return data;
+  },
+
+  changeUserPassword: async (userId: string, newPassword: string) => {
+    const { data } = await apiClient.patch(`/auth/password/${userId}`, {
+      newPassword
+    });
+    return data;
+  }
+};
+
+export const usersAPI = {
+  getAll: async () => {
+    const { data } = await apiClient.get('/users');
+    return data;
+  },
+
+  getById: async (userId: string) => {
+    const { data } = await apiClient.get(`/users/${userId}`);
+    return data;
+  },
+
+  update: async (userId: string, updates: { name?: string; photo?: string }) => {
+    const { data } = await apiClient.patch(`/users/${userId}`, updates);
+    return data;
+  },
+
+  toggleStatus: async (userId: string, isActive: boolean) => {
+    const { data } = await apiClient.patch(`/users/${userId}/status`, { isActive });
+    return data;
+  },
+
+  generatePassword: async (userId: string) => {
+    const { data } = await apiClient.post(`/users/${userId}/generate-password`, {});
     return data;
   }
 };

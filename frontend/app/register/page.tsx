@@ -20,7 +20,7 @@ export default function RegisterPage() {
     if (data.password !== data.confirmPassword) {
       return { success: false, error: 'Las contraseñas no coinciden' };
     }
-    const result = await handleRegister(data.email, data.password, data.name);
+    const result = await handleRegister(data.email, data.password, data.name, data.photo);
     if (result.success) {
       router.push('/dashboard');
     }

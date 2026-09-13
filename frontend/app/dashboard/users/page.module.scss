@@ -1,0 +1,234 @@
+.container {
+  padding: 2rem 0;
+  min-height: 100vh;
+}
+
+.header {
+  margin-bottom: 2rem;
+  animation: slideIn 0.5s ease-out;
+}
+
+.title {
+  color: #1f2937;
+  font-weight: 800;
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, #3b82f6 0%, #10b981 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  color: #6b7280;
+  font-size: 1.1rem;
+}
+
+.card {
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  animation: fadeIn 0.4s ease-out;
+}
+
+.loadingCenter {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.table {
+  margin-bottom: 0;
+
+  thead {
+    background-color: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+
+    th {
+      padding: 1rem;
+      font-weight: 600;
+      color: #1f2937;
+      border: none;
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid #e5e7eb;
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background-color: #f3f4f6;
+      }
+
+      td {
+        padding: 1rem;
+        vertical-align: middle;
+      }
+
+      &.inactiveRow {
+        opacity: 0.6;
+      }
+    }
+  }
+}
+
+.userPhoto {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e5e7eb;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+
+  &[data-role='superuser'] {
+    background-color: #fee2e2;
+    color: #991b1b;
+  }
+
+  &[data-role='administrador'] {
+    background-color: #dbeafe;
+    color: #1e40af;
+  }
+
+  &[data-role='vendedor'] {
+    background-color: #fef3c7;
+    color: #92400e;
+  }
+
+  &[data-role='cliente'] {
+    background-color: #dcfce7;
+    color: #166534;
+  }
+}
+
+.active {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.inactive {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.date {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.actionBtn {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+.editItem,
+.passwordItem,
+.disableItem,
+.enableItem {
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: #f3f4f6;
+  }
+}
+
+.editItem:hover {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.passwordItem:hover {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.disableItem:hover {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.enableItem:hover {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.disabled {
+  background-color: #f3f4f6 !important;
+  cursor: not-allowed;
+}
+
+.passwordDisplay {
+  font-family: monospace;
+  letter-spacing: 2px;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #6b7280;
+
+  p {
+    margin-bottom: 0;
+    font-size: 1.1rem;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .table {
+    thead th {
+      padding: 0.75rem 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    tbody td {
+      padding: 0.75rem 0.5rem;
+      font-size: 0.9rem;
+    }
+  }
+
+  .userPhoto {
+    width: 32px;
+    height: 32px;
+  }
+}
