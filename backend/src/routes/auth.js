@@ -50,6 +50,10 @@ router.post('/register', (req, res) => {
   });
   tokenManager.addGrantedToken(tokenId, user.id, email, token, expiresAt);
 
+  const ipAddress = auditMiddleware.getIpAddress(req);
+  const userAgent = auditMiddleware.getUserAgent(req);
+  auditMiddleware.logUserCreation(user.id, user.id, email, 'cliente', ipAddress, userAgent);
+
   return ResponseFormatter.success(res, {
     message: 'Usuario registrado exitosamente',
     user: {
@@ -118,6 +122,22 @@ router.post('/forgot-password', (req, res) => {
   User.setResetToken(user.id, resetToken);
   Mailer.sendPasswordResetEmail(email, resetToken);
 
+  const ipAddress = auditMiddleware.getIpAddress(req);
+  const userAgent = auditMiddleware.getUserAgent(req);
+  const AuditLog = require('../models/AuditLog');
+  const auditLog = new AuditLog(
+    'password_reset_requested',
+    'unknown',
+    null,
+    ipAddress,
+    true,
+    null,
+    { email },
+    'web'
+  );
+  auditLog.userAgent = userAgent;
+  AuditLog.create(auditLog);
+
   return ResponseFormatter.success(res, {
     message: 'Se envió un enlace de recuperación a tu email',
     email,
@@ -149,6 +169,10 @@ router.post('/reset-password', (req, res) => {
   }
 
   User.resetPassword(user.id, newPassword);
+
+  const ipAddress = auditMiddleware.getIpAddress(req);
+  const userAgent = auditMiddleware.getUserAgent(req);
+  auditMiddleware.logPasswordChange(user.id, user.id, ipAddress, userAgent, false);
 
   return ResponseFormatter.success(res, {
     message: 'Contraseña restablecida exitosamente',
@@ -194,6 +218,22 @@ router.post('/bootstrap-superuser', (req, res) => {
     role: user.role
   });
   tokenManager.addGrantedToken(tokenId, user.id, email, token, expiresAt);
+
+  const ipAddress = auditMiddleware.getIpAddress(req);
+  const userAgent = auditMiddleware.getUserAgent(req);
+  const AuditLog = require('../models/AuditLog');
+  const auditLog = new AuditLog(
+    'superuser_created',
+    user.id,
+    user.id,
+    ipAddress,
+    true,
+    null,
+    { bootstrap: true },
+    'web'
+  );
+  auditLog.userAgent = userAgent;
+  AuditLog.create(auditLog);
 
   return ResponseFormatter.success(res, {
     message: 'Super usuario creado exitosamente',
