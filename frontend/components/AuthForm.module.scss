@@ -58,6 +58,40 @@
   display: block;
 }
 
+.toggleBtn {
+  border: 2px solid #e5e7eb !important;
+  border-left: none !important;
+  background-color: #f8fafb;
+  color: #6b7280;
+  transition: all 0.3s ease;
+  padding: 0.5rem 1rem;
+  font-size: 1.1rem;
+
+  &:hover:not(:disabled) {
+    background-color: #f3f4f6;
+    color: #1f2937;
+  }
+
+  &:focus {
+    box-shadow: none;
+    border-color: #10b981 !important;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+:global(.input-group) .input {
+  border-right: none;
+
+  &:focus {
+    border-right: none;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+  }
+}
+
 .submitBtn {
   padding: 0.75rem 1.5rem;
   font-weight: 600;

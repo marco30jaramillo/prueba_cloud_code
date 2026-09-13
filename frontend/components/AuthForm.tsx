@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Form, Button, Alert, Spinner } from 'react-bootstrap';
+import { Form, Button, Alert, Spinner, InputGroup } from 'react-bootstrap';
 import styles from './AuthForm.module.scss';
 
 interface AuthFormProps {
@@ -14,6 +14,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = 
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const fields = {
     login: ['email', 'password'],
@@ -31,6 +33,13 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = 
     newPassword: 'Nueva Contraseña'
   };
 
+  const requiredFields = {
+    login: ['email', 'password'],
+    register: ['email', 'password', 'confirmPassword', 'name'],
+    'forgot-password': ['email'],
+    'reset-password': ['token', 'newPassword', 'confirmPassword']
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -41,16 +50,35 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = 
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+    const currentFields = fields[type];
 
+    // Validar campos requeridos
+    currentFields.forEach(field => {
+      if (!formData[field] || formData[field].trim() === '') {
+        newErrors[field] = `${labels[field as keyof typeof labels]} es requerido`;
+      }
+    });
+
+    // Email validation
     if (formData.email && !formData.email.includes('@')) {
-      newErrors.email = 'Email inválido';
+      newErrors.email = 'Email inválido. Debe contener @';
     }
 
+    // Password validation
     if (formData.password && formData.password.length < 8) {
-      newErrors.password = 'La contraseña debe tener al menos 8 caracteres';
+      newErrors.password = 'Mínimo 8 caracteres';
     }
 
-    if (formData.confirmPassword && formData.password !== formData.confirmPassword) {
+    if (formData.newPassword && formData.newPassword.length < 8) {
+      newErrors.newPassword = 'Mínimo 8 caracteres';
+    }
+
+    // Confirm password validation
+    if (formData.confirmPassword && formData.password && formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Las contraseñas no coinciden';
+    }
+
+    if (formData.confirmPassword && formData.newPassword && formData.newPassword !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Las contraseñas no coinciden';
     }
 
@@ -62,14 +90,20 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = 
     e.preventDefault();
     if (!validateForm()) return;
 
+    setMessage(null);
     const response = await onSubmit(formData);
     if (response.success) {
       setMessage({ type: 'success', text: 'Operación completada con éxito' });
       setFormData({});
+      setShowPassword(false);
+      setShowConfirmPassword(false);
     } else {
-      setMessage({ type: 'error', text: response.error || 'Error desconocido' });
+      setMessage({ type: 'error', text: response.error || 'Error desconocido. Intenta nuevamente.' });
     }
   };
+
+  const isPasswordField = (field: string) => field === 'password' || field === 'newPassword';
+  const isConfirmPasswordField = (field: string) => field === 'confirmPassword';
 
   return (
     <div className={styles.formContainer}>
@@ -78,35 +112,72 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = 
           variant={message.type === 'success' ? 'success' : 'danger'}
           onClose={() => setMessage(null)}
           dismissible
-          className="mb-4 fade-in"
+          className={`mb-4 ${message.type === 'error' ? 'fade-in' : ''}`}
         >
-          {message.text}
+          <strong>{message.type === 'success' ? '✓ Éxito' : '⚠ Error'}:</strong> {message.text}
         </Alert>
       )}
 
       <Form onSubmit={handleSubmit} className={styles.form}>
-        {fields[type].map(field => (
-          <Form.Group key={field} className={`mb-3 ${styles.formGroup}`}>
-            <Form.Label className={styles.label}>
-              {labels[field as keyof typeof labels] || field}
-            </Form.Label>
-            <Form.Control
-              type={field.includes('password') ? 'password' : field === 'email' ? 'email' : 'text'}
-              name={field}
-              value={formData[field] || ''}
-              onChange={handleChange}
-              placeholder={`Ingresa tu ${labels[field as keyof typeof labels] || field}`}
-              className={`${styles.input} ${errors[field] ? styles.error : ''}`}
-              disabled={isLoading}
-              isInvalid={!!errors[field]}
-            />
-            {errors[field] && (
-              <Form.Control.Feedback type="invalid" className={styles.feedback}>
-                {errors[field]}
-              </Form.Control.Feedback>
-            )}
-          </Form.Group>
-        ))}
+        {fields[type].map(field => {
+          const isPassword = isPasswordField(field);
+          const isConfirmPass = isConfirmPasswordField(field);
+          const inputType = isPassword ? (showPassword ? 'text' : 'password') :
+                           isConfirmPass ? (showConfirmPassword ? 'text' : 'password') :
+                           field === 'email' ? 'email' : 'text';
+
+          return (
+            <Form.Group key={field} className={`mb-3 ${styles.formGroup}`}>
+              <Form.Label className={styles.label}>
+                {labels[field as keyof typeof labels] || field}
+              </Form.Label>
+
+              {isPassword || isConfirmPass ? (
+                <InputGroup>
+                  <Form.Control
+                    type={inputType}
+                    name={field}
+                    value={formData[field] || ''}
+                    onChange={handleChange}
+                    placeholder={`Ingresa tu ${labels[field as keyof typeof labels] || field}`}
+                    className={`${styles.input} ${errors[field] ? styles.error : ''}`}
+                    disabled={isLoading}
+                    isInvalid={!!errors[field]}
+                  />
+                  <Button
+                    variant="outline-secondary"
+                    onClick={() => {
+                      if (isPassword) setShowPassword(!showPassword);
+                      if (isConfirmPass) setShowConfirmPassword(!showConfirmPassword);
+                    }}
+                    className={styles.toggleBtn}
+                    disabled={isLoading}
+                  >
+                    {isPassword && (showPassword ? '👁️' : '👁️‍🗨️')}
+                    {isConfirmPass && (showConfirmPassword ? '👁️' : '👁️‍🗨️')}
+                  </Button>
+                </InputGroup>
+              ) : (
+                <Form.Control
+                  type={inputType}
+                  name={field}
+                  value={formData[field] || ''}
+                  onChange={handleChange}
+                  placeholder={`Ingresa tu ${labels[field as keyof typeof labels] || field}`}
+                  className={`${styles.input} ${errors[field] ? styles.error : ''}`}
+                  disabled={isLoading}
+                  isInvalid={!!errors[field]}
+                />
+              )}
+
+              {errors[field] && (
+                <Form.Control.Feedback type="invalid" className={styles.feedback}>
+                  {errors[field]}
+                </Form.Control.Feedback>
+              )}
+            </Form.Group>
+          );
+        })}
 
         <Button
           variant="success"

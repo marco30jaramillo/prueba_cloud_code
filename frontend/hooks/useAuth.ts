@@ -17,7 +17,9 @@ export const useAuth = () => {
       }
     } catch (error: any) {
       const err = error.response?.data as ApiError;
-      return { success: false, error: err?.message || 'Login failed' };
+      const errorMsg = err?.message || 'No se pudo iniciar sesión. Intenta nuevamente.';
+      console.error('[Login Error]', errorMsg, err);
+      return { success: false, error: errorMsg };
     } finally {
       setLoading(false);
     }
@@ -34,7 +36,9 @@ export const useAuth = () => {
       }
     } catch (error: any) {
       const err = error.response?.data as ApiError;
-      return { success: false, error: err?.message || 'Registration failed' };
+      const errorMsg = err?.message || 'No se pudo completar el registro. Intenta nuevamente.';
+      console.error('[Register Error]', errorMsg, err);
+      return { success: false, error: errorMsg };
     } finally {
       setLoading(false);
     }

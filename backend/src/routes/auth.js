@@ -68,7 +68,7 @@ router.post('/login', (req, res) => {
 
   const user = User.authenticate(email, password);
   if (!user) {
-    return ResponseFormatter.unauthorized(res, 'Email o contraseña incorrectos');
+    return ResponseFormatter.unauthorized(res, 'Email o contraseña incorrectos. Verifica tus datos e intenta nuevamente');
   }
 
   const { token, tokenId, expiresAt } = tokenUtils.generateTokenWithId({

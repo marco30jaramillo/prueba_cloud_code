@@ -26,14 +26,14 @@ const authMiddleware = (req, res, next) => {
 
   if (!token) {
     console.log('❌ Token no proporcionado');
-    return ResponseFormatter.unauthorized(res, 'Token no proporcionado en header Authorization');
+    return ResponseFormatter.unauthorized(res, 'Sesión no iniciada. Inicia sesión para continuar');
   }
 
   console.log('🔐 [1] Verificando firma JWT...');
   const payload = tokenUtils.verifyToken(token);
   if (!payload) {
     console.log('❌ [1] JWT inválido o expirado');
-    return ResponseFormatter.unauthorized(res, 'Token inválido o expirado (verifica que sea un JWT válido)');
+    return ResponseFormatter.unauthorized(res, 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente');
   }
   console.log('✅ [1] JWT válido:', payload);
 
@@ -48,12 +48,12 @@ const authMiddleware = (req, res, next) => {
 
   if (!inGranted) {
     console.log('❌ [2] Token no en lista de otorgados');
-    return ResponseFormatter.unauthorized(res, 'Token no válido (no está en lista de sesiones activas)');
+    return ResponseFormatter.unauthorized(res, 'Sesión no válida. Inicia sesión nuevamente');
   }
 
   if (inRevoked) {
     console.log('❌ [2] Token está revocado');
-    return ResponseFormatter.unauthorized(res, 'Token revocado (cerraste sesión con este token)');
+    return ResponseFormatter.unauthorized(res, 'Tu sesión se cerró. Inicia sesión nuevamente');
   }
 
   console.log('✅ [2] Token válido en lista de otorgados');
