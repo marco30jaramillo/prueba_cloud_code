@@ -26,7 +26,7 @@ export default function ResetPasswordPage() {
     );
   }
 
-  const onSubmit = async (data: Record<string, string>) => {
+  const onSubmit = async (data: Record<string, string | boolean>) => {
     try {
       const result = await authAPI.resetPassword(token, data.newPassword);
       if (result.status === 'success') {

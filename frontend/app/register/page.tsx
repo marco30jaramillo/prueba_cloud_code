@@ -16,7 +16,7 @@ export default function RegisterPage() {
     if (isAuthenticated) router.push('/dashboard');
   }, [isAuthenticated, router]);
 
-  const onSubmit = async (data: Record<string, string>) => {
+  const onSubmit = async (data: Record<string, string | boolean>) => {
     if (data.password !== data.confirmPassword) {
       return { success: false, error: 'Las contraseñas no coinciden' };
     }

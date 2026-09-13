@@ -8,7 +8,7 @@ import { authAPI } from '@/lib/api';
 import styles from './page.module.scss';
 
 export default function ForgotPasswordPage() {
-  const onSubmit = async (data: Record<string, string>) => {
+  const onSubmit = async (data: Record<string, string | boolean>) => {
     try {
       const result = await authAPI.forgotPassword(data.email);
       return { success: true, data: result };
