@@ -9,7 +9,7 @@ class User {
     this.password = PasswordUtils.hashPassword(password);
     this.name = name;
     this.role = role;
-    this.photo = photo || 'https://via.placeholder.com/40?text=👤';
+    this.photo = photo || '/datos/default/default-avatar.svg';
     this.isActive = true;
     this.createdAt = new Date().toISOString();
     this.resetToken = null;
