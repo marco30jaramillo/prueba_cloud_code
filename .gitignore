@@ -64,3 +64,9 @@ temp/
 # 🎯 Keep these files (examples/documentation)
 !.gitkeep
 !.env.example
+
+
+datos/
+
+# Audit logs (runtime data)
+backend/audit_logs
