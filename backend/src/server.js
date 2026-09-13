@@ -8,6 +8,8 @@ const uploadRoutes = require('./routes/upload');
 const auditRoutes = require('./routes/audit');
 const modulesRoutes     = require('./routes/modules');
 const rolesConfigRoutes = require('./routes/roles-config');
+const tiendasRoutes     = require('./routes/tiendas');
+const valesRoutes       = require('./routes/vales');
 const TokenCleaner = require('./scripts/cleanExpiredTokens');
 const TokenManager = require('./utils/tokenManager');
 const ResponseFormatter = require('./utils/responseFormatter');
@@ -56,6 +58,8 @@ app.use('/upload', uploadRoutes);
 app.use('/audit', auditRoutes);
 app.use('/modules', modulesRoutes);
 app.use('/roles-config', rolesConfigRoutes);
+app.use('/tiendas', tiendasRoutes);
+app.use('/vales', valesRoutes);
 
 app.get('/health', (req, res) => {
   ResponseFormatter.success(res, {

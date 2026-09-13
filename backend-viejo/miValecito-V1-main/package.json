@@ -1,0 +1,33 @@
+{
+  "name": "Mivalecito",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js --start",
+    "configuration": "node app.js --configuration"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^1.30.0",
+    "colors": "^1.4.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0",
+    "express": "^4.18.1",
+    "express-fileupload": "^1.4.0",
+    "express-validator": "^6.14.0",
+    "google-auth-library": "^8.0.2",
+    "inquirer": "^9.1.4",
+    "jsonwebtoken": "^8.5.1",
+    "mongoose": "^6.3.1",
+    "nanoid": "^3.3.4",
+    "nodemon": "^2.0.20",
+    "to": "^0.2.9",
+    "update": "^0.7.4",
+    "yargs": "^17.6.2"
+  }
+}
