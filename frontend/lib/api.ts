@@ -226,6 +226,18 @@ export const tiendasAPI = {
     const { data } = await apiClient.get('/tiendas/mis-tiendas');
     return data;
   },
+  getAll: async () => {
+    const { data } = await apiClient.get('/tiendas');
+    return data;
+  },
+  create: async (body: Record<string, unknown>) => {
+    const { data } = await apiClient.post('/tiendas', body);
+    return data;
+  },
+  toggleStatus: async (id: string) => {
+    const { data } = await apiClient.patch(`/tiendas/${id}/status`);
+    return data;
+  },
   getById: async (id: string) => {
     const { data } = await apiClient.get(`/tiendas/${id}`);
     return data;

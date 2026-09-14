@@ -73,7 +73,8 @@ function CarteraContent() {
 
   async function loadTiendas() {
     try {
-      const res = await tiendasAPI.getMisTiendas();
+      const isAdmin = user?.role === 'superuser' || user?.role === 'administrador';
+      const res = isAdmin ? await tiendasAPI.getAll() : await tiendasAPI.getMisTiendas();
       const list: Tienda[] = res.tiendas || [];
       setTiendas(list);
       if (list.length > 0) setTiendaId(list[0].id);
