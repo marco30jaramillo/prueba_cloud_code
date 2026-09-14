@@ -15,6 +15,8 @@ function ValeNuevoContent() {
   const { user } = useAuthStore();
   const router = useRouter();
 
+  const isAdmin = user?.role === 'superuser' || user?.role === 'administrador';
+
   const [tiendas, setTiendas] = useState<Tienda[]>([]);
   const [loadingTiendas, setLoadingTiendas] = useState(true);
 
@@ -47,7 +49,7 @@ function ValeNuevoContent() {
 
   async function loadTiendas() {
     try {
-      const res = await tiendasAPI.getMisTiendas();
+      const res = isAdmin ? await tiendasAPI.getAll() : await tiendasAPI.getMisTiendas();
       const list: Tienda[] = res.tiendas || [];
       setTiendas(list);
       if (list.length === 1) setForm(f => ({ ...f, tiendaId: list[0].id }));
@@ -122,7 +124,9 @@ function ValeNuevoContent() {
     return (
       <Container className={styles.container}>
         <Alert variant="warning">
-          No tienes tiendas asignadas. Contacta a tu administrador.
+          {isAdmin
+            ? 'No hay tiendas registradas en el sistema.'
+            : 'No tienes tiendas asignadas. Contacta a tu administrador.'}
         </Alert>
       </Container>
     );
