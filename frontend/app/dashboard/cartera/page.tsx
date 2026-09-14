@@ -11,6 +11,8 @@ import styles from './page.module.scss';
 interface Tienda { id: string; nombre: string; }
 interface Vale {
   id: string;
+  tiendaId?: string;
+  tiendaNombre?: string;
   clienteId: string;
   clienteNombre?: string;
   clienteEmail?: string;
@@ -76,6 +78,8 @@ function CarteraContent() {
   const [clienteResults, setClienteResults] = useState<ClienteResult[]>([]);
   const [clienteSeleccionado, setClienteSeleccionado] = useState<ClienteResult | null>(null);
   const [loadingClientes, setLoadingClientes] = useState(false);
+  const [todosValesCliente, setTodosValesCliente] = useState<Vale[]>([]); // sin filtro de tienda
+  const [tiendaFiltroCliente, setTiendaFiltroCliente] = useState('');    // '' = todas
 
   // Modal pago integral
   const [showPago, setShowPago] = useState(false);
@@ -86,8 +90,28 @@ function CarteraContent() {
   useEffect(() => { loadTiendas(); }, []);
   useEffect(() => { if (tiendaId && !modoCliente) loadCartera(); }, [tiendaId, filtroEstado]);
   useEffect(() => {
-    if (!modoCliente) { setClienteQuery(''); setClienteSeleccionado(null); setClienteResults([]); }
+    if (!modoCliente) {
+      setClienteQuery(''); setClienteSeleccionado(null); setClienteResults([]);
+      setTodosValesCliente([]); setTiendaFiltroCliente('');
+    }
   }, [modoCliente]);
+
+  // Re-filtra cuando cambia el selector de tienda en modo cliente
+  useEffect(() => {
+    if (!modoCliente || todosValesCliente.length === 0) return;
+    const filtrados = tiendaFiltroCliente
+      ? todosValesCliente.filter(v => v.tiendaId === tiendaFiltroCliente)
+      : todosValesCliente;
+    setVales(filtrados);
+    const pendiente = filtrados.filter(v => ['pendiente','parcial'].includes(v.estado))
+      .reduce((s, v) => s + parseFloat(String(v.saldoPendiente)), 0);
+    const mora = filtrados.filter(v =>
+      ['pendiente','parcial'].includes(v.estado) &&
+      v.fechaVencimiento && new Date(v.fechaVencimiento) < new Date()
+    ).length;
+    setTotalPendiente(pendiente);
+    setEnMora(mora);
+  }, [tiendaFiltroCliente]);
 
   async function buscarClientes(q: string) {
     setClienteQuery(q);
@@ -105,11 +129,14 @@ function CarteraContent() {
     setClienteSeleccionado(cliente);
     setClienteQuery(cliente.name);
     setClienteResults([]);
+    setTiendaFiltroCliente(''); // resetear filtro al cambiar de cliente
     setLoading(true);
     setError('');
     try {
       const res = await valesAPI.getByUsuario(cliente.id);
-      setVales(res.vales || []);
+      const todos: Vale[] = res.vales || [];
+      setTodosValesCliente(todos);
+      setVales(todos);
       setTotalPendiente(res.totalPendiente || 0);
       setEnMora(res.enMora || 0);
     } catch (err: any) {
@@ -196,14 +223,33 @@ function CarteraContent() {
     }
   }
 
-  function abrirPagoIntegral(clienteId: string, clienteNombre: string) {
-    const activos = vales.filter(v =>
-      v.clienteId === clienteId && ['pendiente', 'parcial'].includes(v.estado)
-    );
+  async function abrirPagoIntegral(clienteId: string, clienteNombre: string) {
+    const isAdmin = user?.role === 'superuser' || user?.role === 'administrador';
+    let activos: ValeActivo[];
+
+    // Admin en modo-tienda: cargar TODOS los créditos del cliente en todas las tiendas
+    if (isAdmin && !modoCliente) {
+      try {
+        const res = await valesAPI.getByUsuario(clienteId);
+        activos = (res.vales || []).filter((v: Vale) =>
+          ['pendiente', 'parcial'].includes(v.estado)
+        ) as ValeActivo[];
+      } catch {
+        activos = vales.filter(v =>
+          v.clienteId === clienteId && ['pendiente', 'parcial'].includes(v.estado)
+        ) as ValeActivo[];
+      }
+    } else {
+      // Tendero (solo su tienda) o modo-cliente (ya tiene todos)
+      activos = vales.filter(v =>
+        v.clienteId === clienteId && ['pendiente', 'parcial'].includes(v.estado)
+      ) as ValeActivo[];
+    }
+
     if (activos.length === 0) return setError('El cliente no tiene créditos activos.');
     setPagoClienteId(clienteId);
     setPagoClienteNombre(clienteNombre);
-    setPagoVales(activos as ValeActivo[]);
+    setPagoVales(activos);
     setShowPago(true);
   }
 
@@ -331,12 +377,31 @@ function CarteraContent() {
                         <span
                           className="text-success"
                           style={{ cursor: 'pointer', textDecoration: 'underline' }}
-                          onClick={() => { setClienteSeleccionado(null); setClienteQuery(''); setVales([]); }}
+                          onClick={() => { setClienteSeleccionado(null); setClienteQuery(''); setVales([]); setTodosValesCliente([]); setTiendaFiltroCliente(''); }}
                         >
                           limpiar
                         </span>
                       </span>
-                      {vales.some(v => ['pendiente', 'parcial'].includes(v.estado)) && (
+                      {/* Filtro por tienda — solo si el cliente tiene vales en más de una */}
+                      {(user?.role === 'superuser' || user?.role === 'administrador') && (() => {
+                        const tiendasEnVales = Array.from(new Set(todosValesCliente.map(v => v.tiendaId).filter(Boolean)));
+                        if (tiendasEnVales.length <= 1) return null;
+                        return (
+                          <Form.Select
+                            size="sm"
+                            value={tiendaFiltroCliente}
+                            onChange={e => setTiendaFiltroCliente(e.target.value)}
+                            style={{ width: 'auto', minWidth: 180 }}
+                          >
+                            <option value="">Todas las tiendas</option>
+                            {Array.from(new Map(todosValesCliente.filter(v => v.tiendaId).map(v => [v.tiendaId, v.tiendaNombre])))
+                              .map(([id, nombre]) => (
+                                <option key={id} value={id!}>{nombre || id}</option>
+                              ))}
+                          </Form.Select>
+                        );
+                      })()}
+                      {todosValesCliente.some(v => ['pendiente', 'parcial'].includes(v.estado)) && (
                         <Button
                           size="sm"
                           variant="success"
@@ -401,6 +466,7 @@ function CarteraContent() {
                   <thead>
                     <tr>
                       <th>Cliente</th>
+                      {modoCliente && <th>Tienda</th>}
                       <th>Descripción</th>
                       <th>Total</th>
                       <th>Pendiente</th>
@@ -420,6 +486,7 @@ function CarteraContent() {
                             <strong>{v.clienteNombre || '—'}</strong>
                             {v.clienteEmail && <div className={styles.email}>{v.clienteEmail}</div>}
                           </td>
+                          {modoCliente && <td className={styles.date}>{v.tiendaNombre || '—'}</td>}
                           <td>{v.descripcion}</td>
                           <td className={styles.monto}>{fmt(v.montoTotal)}</td>
                           <td className={styles.monto}>{v.estado === 'pagado' ? <span className={styles.pagado}>✓</span> : fmt(v.saldoPendiente)}</td>

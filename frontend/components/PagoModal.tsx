@@ -6,6 +6,7 @@ import { valesAPI } from '@/lib/api';
 
 export interface ValeActivo {
   id: string;
+  tiendaNombre?: string;
   descripcion: string;
   montoTotal: number;
   saldoPendiente: number;
@@ -41,7 +42,17 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
   );
 
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
-  const [monto, setMonto] = useState('');
+  const [monto, setMonto] = useState('');   // valor numérico crudo (sin formato)
+
+  // Convierte "$ 20.000" → "20000" al escribir
+  function handleMontoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value.replace(/[^\d]/g, '');
+    setMonto(raw);
+  }
+
+  const montoFormatted = monto
+    ? '$ ' + parseInt(monto, 10).toLocaleString('es-CO')
+    : '';
   const [notas, setNotas] = useState('');
   const [registrando, setRegistrando] = useState(false);
   const [error, setError] = useState('');
@@ -151,7 +162,7 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
                     <tr key={v.id} onClick={() => toggleVale(v.id)} style={{ cursor: 'pointer' }}>
                       <td><Form.Check checked={seleccionados.has(v.id)} onChange={() => toggleVale(v.id)} onClick={e => e.stopPropagation()} /></td>
                       <td>
-                        <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>#{i + 1} · {fmtDate(v.fechaVale)}</span>
+                        <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>#{i + 1} · {fmtDate(v.fechaVale)}{v.tiendaNombre ? ` · ${v.tiendaNombre}` : ''}</span>
                         <div>{v.descripcion}</div>
                       </td>
                       <td className="text-end fw-bold">{fmt(parseFloat(String(v.saldoPendiente)))}</td>
@@ -185,6 +196,7 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
                 size="sm" variant="outline-secondary"
                 onClick={() => setMonto(String(Math.round(minSugerido)))}
                 disabled={minSugerido <= 0}
+
                 title="Saldo del crédito más antiguo"
               >
                 Mínimo {minSugerido > 0 ? `(${fmt(minSugerido)})` : ''}
@@ -198,12 +210,11 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
               </Button>
             </div>
             <Form.Control
-              type="number"
-              min="1"
-              step="100"
-              placeholder="Ingresa el valor del pago"
-              value={monto}
-              onChange={e => setMonto(e.target.value)}
+              type="text"
+              inputMode="numeric"
+              placeholder="$ 0"
+              value={montoFormatted}
+              onChange={handleMontoChange}
               required
               className="mb-3"
               style={{ fontSize: '1.1rem', fontWeight: 600 }}
