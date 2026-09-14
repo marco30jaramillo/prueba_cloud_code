@@ -1,201 +1,77 @@
-# Sistema de Autenticación Seguro
+# Mi Valecito
 
-## 🚀 Inicio Rápido
+Sistema de crédito local — gestión de vales al fiado, tiendas y clientes.
 
-```bash
-npm start          # Servidor en http://localhost:3000
-npm run dev        # Modo desarrollo
-```
+## Stack
 
-## 📚 Endpoints Disponibles
+| Componente | Tecnología | Puerto / URL |
+|-----------|-----------|-------------|
+| **Backend** | Express.js + Node.js | `:3001` / Azure App Service |
+| **Frontend** | Next.js 14 + TypeScript | `:3000` / Azure App Service |
+| **Mobile** | Expo SDK 57 (React Native) | iOS / Android |
+| **Base de datos** | Dual-mode: CSV (dev) / Azure SQL (prod) | — |
 
-### 1. **Registro de Usuario**
-```
-POST /auth/register
-```
-**Request:**
-```json
-{
-  "email": "user@example.com",
-  "password": "password123",
-  "name": "Juan Pérez"
-}
-```
-**Response:**
-```json
-{
-  "message": "Usuario registrado exitosamente",
-  "user": { "id": "...", "email": "user@example.com", "name": "Juan Pérez" },
-  "token": "eyJ..."
-}
-```
-
----
-
-### 2. **Login**
-```
-POST /auth/login
-```
-**Request:**
-```json
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-```
-**Response:**
-```json
-{
-  "message": "Sesión iniciada exitosamente",
-  "user": { "id": "...", "email": "user@example.com", "name": "Juan Pérez" },
-  "token": "eyJ..."
-}
-```
-
----
-
-### 3. **Validar Sesión (Protegido)**
-```
-GET /auth/validate
-Headers: Authorization: Bearer {token}
-```
-**Response:**
-```json
-{
-  "message": "Sesión válida",
-  "user": { "id": "...", "email": "user@example.com", "name": "Juan Pérez" }
-}
-```
-
----
-
-### 4. **Olvidaste tu Contraseña**
-```
-POST /auth/forgot-password
-```
-**Request:**
-```json
-{
-  "email": "user@example.com"
-}
-```
-**Response:**
-```json
-{
-  "message": "Se envió un enlace de recuperación a tu email"
-}
-```
-*Nota: El token se imprime en consola (desarrollo)*
-
----
-
-### 5. **Restablecer Contraseña**
-```
-POST /auth/reset-password
-```
-**Request:**
-```json
-{
-  "token": "token_recibido_en_email",
-  "newPassword": "newpassword123"
-}
-```
-**Response:**
-```json
-{
-  "message": "Contraseña restablecida exitosamente"
-}
-```
-
----
-
-### 6. **Logout**
-```
-POST /auth/logout
-```
-**Response:**
-```json
-{
-  "message": "Sesión cerrada exitosamente"
-}
-```
-
----
-
-### 7. **Health Check**
-```
-GET /health
-```
-**Response:**
-```json
-{
-  "status": "ok"
-}
-```
-
----
-
-## 🔐 Seguridad
-
-| Feature | Implementación |
-|---------|-----------------|
-| **Contraseñas** | PBKDF2 - 100k iteraciones + salt aleatorio |
-| **Tokens** | JWT - Expiran en 24 horas |
-| **Reset Password** | Token de una sola vez - Válido 1 hora |
-| **Validación** | Mínimo 8 caracteres en contraseña |
-
-## 📁 Archivos Importantes
-
-- `src/server.js` - Servidor Express
-- `src/models/User.js` - Lógica de usuario
-- `src/routes/auth.js` - **Todos los endpoints aquí** ⬅️
-- `users.csv` - Base de datos (se crea automáticamente)
-
-## 🧪 Pruebas Rápidas
+## Inicio rápido
 
 ```bash
-# Terminal 1: Inicia el servidor
-npm start
+# Backend
+cd backend && npm install && npm run dev
 
-# Terminal 2: Pruebas
-# Registrar
-curl -X POST http://localhost:3000/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@test.com","password":"Pass1234","name":"Test"}'
+# Frontend (nueva terminal)
+cd frontend && npm install && npm run dev
 
-# Copiar el token recibido y usarlo aquí:
-curl -X GET http://localhost:3000/auth/validate \
-  -H "Authorization: Bearer PEGA_TOKEN_AQUI"
+# Mobile (nueva terminal)
+cd mobile && npm install && npx expo start --lan
 ```
 
-## 🗂️ Estructura del Proyecto
+## Estructura
 
 ```
-proyecto_prueba_claude_code/
-├── src/
-│   ├── server.js              # Entrada principal
-│   ├── models/
-│   │   └── User.js            # Modelo Usuario
-│   ├── routes/
-│   │   └── auth.js            # ENDPOINTS (lee este archivo)
-│   ├── middleware/
-│   │   └── auth.js            # Validación JWT
-│   └── utils/
-│       ├── passwordUtils.js   # Cifrado PBKDF2
-│       ├── tokenUtils.js      # JWT
-│       ├── csvDatabase.js     # CSV storage
-│       └── mailer.js          # Emails
-├── users.csv                  # Base de datos (auto-creada)
-├── package.json
-├── .env                       # Variables de entorno
-├── README.md                  # Este archivo
-└── CLAUDE.md                  # Documentación técnica
+prueba_cloud_code/
+├── backend/          # Express.js API — ver backend/README.md
+├── frontend/         # Next.js dashboard — ver frontend/README.md
+├── mobile/           # Expo app iOS/Android — ver mobile/README.md
+└── docs/
+    └── diagrams/
+        ├── architecture.md      # Diagrama de arquitectura (Mermaid)
+        ├── er-diagram.md        # Diagrama ER de base de datos (Mermaid)
+        └── mobile-screens.md    # Flujo de pantallas mobile (Mermaid)
 ```
 
-## 📖 Ver Todos los Endpoints
+## URLs de producción (Azure)
 
-**Opción 1:** Lee `src/routes/auth.js` (líneas 6-100)
+| Servicio | URL |
+|---------|-----|
+| Backend API | `https://app-backend-mivalencito-b3hycrgxaef2bjhn.brazilsouth-01.azurewebsites.net` |
+| Frontend | `https://app-frontend-mivalencito-gkf5bncwcpbkascb.brazilsouth-01.azurewebsites.net/dashboard` |
+| Docs API | `https://app-backend-mivalencito-b3hycrgxaef2bjhn.brazilsouth-01.azurewebsites.net/docs` |
 
-**Opción 2:** Levanta el servidor y consulta `/health` para verificar que está activo
+## Documentación de la API
 
-**Opción 3:** Usa `test-api.sh` para probar todos los endpoints automáticamente
+La API expone documentación interactiva en JSON:
+
+- `GET /docs` — panorama general, módulos y estructura de respuestas
+- `GET /docs/auth` — autenticación y sesión
+- `GET /docs/users` — gestión de usuarios
+- `GET /docs/tiendas` — tiendas y equipo
+- `GET /docs/vales` — vales al fiado y abonos
+- `GET /docs/modules` — módulos del dashboard
+- `GET /docs/roles` — roles y permisos
+- `GET /docs/audit` — registros de auditoría
+
+## Roles del sistema
+
+| Rol | Descripción |
+|-----|-------------|
+| `superuser` | Acceso total — comodín `system:full-access` |
+| `administrador` | Gestiona usuarios, roles, cartera, auditoría |
+| `tendero` | Administra su tienda, crea vales, ve cartera |
+| `vendedor` | Crea vales en su tienda asignada |
+| `cliente` | Ve y sigue sus propios vales |
+
+## Diagramas
+
+Ver [`docs/diagrams/`](docs/diagrams/) para:
+- Arquitectura del sistema
+- Entidades de la base de datos
+- Flujo de navegación mobile

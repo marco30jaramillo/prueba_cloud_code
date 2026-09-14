@@ -83,7 +83,7 @@ export default function ValeNuevoScreen() {
       if (fechaVencimiento.trim()) body.fechaVencimiento = fechaVencimiento.trim();
 
       const res = await valesAPI.crear(body);
-      if (res?.success) {
+      if (res?.status == 'success') {
         Alert.alert('¡Vale creado!', `Vale registrado por $${montoNum.toLocaleString('es-CO')}`, [
           { text: 'OK', onPress: () => router.back() },
         ]);

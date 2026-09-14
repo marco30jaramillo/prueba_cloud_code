@@ -26,7 +26,7 @@ export default function PerfilScreen() {
     setSavingName(true);
     try {
       const res = await authAPI.updateProfile(newName.trim());
-      if (res?.success) {
+      if (res?.status == 'success') {
         setUser({ ...user!, name: newName.trim() });
         setEditingName(false);
         Alert.alert('Listo', 'Nombre actualizado.');
@@ -52,7 +52,7 @@ export default function PerfilScreen() {
     setSavingPwd(true);
     try {
       const res = await authAPI.changePassword(pwdForm.current, pwdForm.next, pwdForm.confirm);
-      if (res?.success) {
+      if (res?.status == 'success') {
         setChangingPwd(false);
         setPwdForm({ current: '', next: '', confirm: '' });
         Alert.alert('Listo', 'Contraseña actualizada.');

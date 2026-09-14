@@ -23,8 +23,8 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const res = await authAPI.login(trimmedEmail, password);
-      if (res?.success && res.data?.token) {
-        await setAuth(res.data.token, res.data.user);
+      if (res?.status == 'success' && res?.token) {
+        await setAuth(res.token, res.user);
         router.replace('/(tabs)');
       } else {
         Alert.alert('Error', res?.message || 'Credenciales incorrectas.');

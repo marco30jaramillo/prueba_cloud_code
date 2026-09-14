@@ -99,7 +99,7 @@ export default function ValeDetailScreen() {
     setSavingAbono(true);
     try {
       const res = await valesAPI.registrarAbono(id!, monto, abonoNotas.trim() || undefined);
-      if (res?.success !== false) {
+      if (res?.status == 'success') {
         setShowAbonoForm(false);
         setAbonoMonto('');
         setAbonoNotas('');

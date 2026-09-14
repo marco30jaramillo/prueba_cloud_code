@@ -1,18 +1,24 @@
-# CLAUDE.md - Sistema de Autenticación Moderno
+# CLAUDE.md - Mi Valecito
 
-Proyecto fullstack de autenticación con **Express.js (Backend)** + **Next.js (Frontend)**.
+Sistema de crédito local — gestión de vales al fiado, tiendas y clientes.
 
 ## 📋 Resumen Ejecutivo
 
-Plataforma segura y escalable para gestionar usuarios con autenticación JWT, roles/permisos granulares e interfaz UX profesional responsive.
+Plataforma fullstack con autenticación JWT, roles/permisos granulares, sistema de vales al fiado y app mobile.
 
 **Stack:**
-- Backend: Express.js + Node.js
-- Frontend: Next.js 14 + React 18 + TypeScript
-- Base de datos: CSV (migrará a PostgreSQL/MongoDB)
+- Backend: Express.js + Node.js (Azure App Service)
+- Frontend: Next.js 14 + React 18 + TypeScript (Azure App Service)
+- Mobile: Expo SDK 57 + React Native + TypeScript (iOS/Android)
+- Base de datos: Dual-mode CSV (dev) / Azure SQL (prod)
 - Estilos: SCSS + React Bootstrap
 - Estado: Zustand
 - HTTP: Axios
+
+**URLs de producción:**
+- Backend: `https://app-backend-mivalencito-b3hycrgxaef2bjhn.brazilsouth-01.azurewebsites.net`
+- Frontend: `https://app-frontend-mivalencito-gkf5bncwcpbkascb.brazilsouth-01.azurewebsites.net/dashboard`
+- Docs API: `{backend}/docs`
 
 ---
 
@@ -41,6 +47,10 @@ Plataforma segura y escalable para gestionar usuarios con autenticación JWT, ro
 - ✅ Tiers de permisos por módulo: `read`, `write`, `full`
 - ✅ API de configuración de roles (`/roles-config`)
 - ✅ Middleware `requirePermission()` — acceso basado en permisos, no roles hardcodeados
+- ✅ Sistema de vales al fiado (`/vales`) — crear, abonar, anular, pago integral
+- ✅ Gestión de tiendas (`/tiendas`) — CRUD, equipo de tenderos/vendedores
+- ✅ Búsqueda de clientes (`/users/clientes/buscar`)
+- ✅ Documentación interactiva JSON (`/docs` + `/docs/:module`)
 
 ### Frontend (Next.js)
 - ✅ Home sin sesión (características, información, CTA)
@@ -64,6 +74,22 @@ Plataforma segura y escalable para gestionar usuarios con autenticación JWT, ro
   - Crear nuevo rol con modal
 - ✅ Diseño responsive (móvil, tablet, desktop)
 - ✅ `ProtectedRoute` — solo requiere autenticación; el backend controla los permisos
+- ✅ Módulo Mis Vales (`/dashboard/mis-vales`) — cliente ve sus créditos con stats
+- ✅ Módulo Nueva Venta (`/dashboard/vale-nuevo`) — crear vale con búsqueda de cliente
+- ✅ Módulo Cartera (`/dashboard/cartera`) — gestión de cartera con filtros y pago integral
+- ✅ Módulo Mi Tienda (`/dashboard/tienda`) — info de tienda y gestión del equipo
+
+### Mobile (Expo SDK 57)
+- ✅ Login con JWT (Bearer token, no cookies)
+- ✅ Almacenamiento seguro del token (`expo-secure-store`)
+- ✅ Panel de inicio — tarjetas de módulos con identidad visual verde→azul
+- ✅ Pantalla de Vales (mis-vales o cartera según rol)
+- ✅ Pantalla de Cartera — KPIs de cartera (admin/tendero)
+- ✅ Pantalla de Equipo — gestión de usuarios (admin/tendero)
+- ✅ Perfil — editar nombre, cambiar contraseña, abrir versión web
+- ✅ Modal Nuevo Vale — selector de tienda, búsqueda de cliente, monto, notas
+- ✅ Detalle de Vale — historial de abonos, registrar abono, anular
+- ✅ Tabs ocultas por rol (`href: null` para cartera/equipo si no es admin)
 
 ---
 
@@ -86,6 +112,9 @@ Plataforma segura y escalable para gestionar usuarios con autenticación JWT, ro
 │   │   │   ├── users.js         # /manageable-roles → superuser ve todos los roles
 │   │   │   ├── modules.js       # GET /modules (por rol), GET /modules/all
 │   │   │   ├── roles-config.js  # GET/POST/PATCH /roles-config
+│   │   │   ├── tiendas.js       # CRUD tiendas + equipo
+│   │   │   ├── vales.js         # Vales + abonos + pago-integral
+│   │   │   ├── docs.js          # GET /docs + /docs/:module (sin auth)
 │   │   │   └── audit.js         # Protegido por requirePermission('admin:view-audit')
 │   │   ├── middleware/
 │   │   │   ├── auth.js

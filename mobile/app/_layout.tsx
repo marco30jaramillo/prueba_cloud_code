@@ -1,9 +1,6 @@
 import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '@/lib/store';
-
-SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const { user, isLoaded, init } = useAuthStore();
@@ -16,14 +13,13 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    SplashScreen.hideAsync();
     const inAuth = segments[0] === 'login';
     if (!user && !inAuth) {
       router.replace('/login');
     } else if (user && inAuth) {
       router.replace('/(tabs)');
     }
-  }, [user, isLoaded]);
+  }, [user, isLoaded, segments]);
 
   return (
     <Stack>
