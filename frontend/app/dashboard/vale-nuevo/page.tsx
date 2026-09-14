@@ -24,7 +24,11 @@ function ValeNuevoContent() {
     clienteNombre: '',
     descripcion: '',
     montoTotal: '',
-    fechaVencimiento: '',
+    fechaVencimiento: (() => {
+      const d = new Date();
+      d.setMonth(d.getMonth() + 1);
+      return d.toISOString().split('T')[0];
+    })(),
     notas: '',
   });
 
@@ -62,14 +66,8 @@ function ValeNuevoContent() {
     searchTimeout.current = setTimeout(async () => {
       setSearchingCliente(true);
       try {
-        const res = await usersAPI.getAll();
-        const all: UserResult[] = res.users || [];
-        const lower = q.toLowerCase();
-        setClienteResults(
-          all.filter(u => u.role === 'cliente' &&
-            (u.name.toLowerCase().includes(lower) || u.email.toLowerCase().includes(lower))
-          ).slice(0, 8)
-        );
+        const res = await usersAPI.buscarClientes(q);
+        setClienteResults(res.clientes || []);
       } catch { setClienteResults([]); }
       finally { setSearchingCliente(false); }
     }, 350);

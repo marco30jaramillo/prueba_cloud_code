@@ -86,3 +86,46 @@
 }
 
 .selected { background: #dcfce7; }
+
+/* ── Analytics panel ─────────────────────────────── */
+
+.kpiCard {
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: box-shadow .2s;
+  &:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.1); }
+}
+.kpiWarning { border-color: #fde68a; }
+.kpiDanger  { border-color: #fca5a5; }
+.kpiGood    { border-color: #6ee7b7; }
+
+.kpiIcon  { font-size: 1.5rem; margin-bottom: 0.25rem; }
+.kpiValue { font-size: 1.25rem; font-weight: 800; color: #111827; line-height: 1.2; }
+.kpiLabel { font-size: 0.78rem; color: #6b7280; margin-top: 0.2rem; }
+
+.kpiBar {
+  height: 5px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+  overflow: hidden;
+}
+.kpiBarFill { height: 100%; border-radius: 4px; transition: width .6s ease; }
+
+.mora { color: #dc2626; font-weight: 700; }
+
+.distRow { margin-bottom: 0.75rem; }
+.distLabel {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.distBar {
+  height: 8px;
+  background: #f3f4f6;
+  border-radius: 4px;
+  overflow: hidden;
+}

@@ -218,6 +218,11 @@ export const usersAPI = {
   getManageableRoles: async () => {
     const { data } = await apiClient.get('/users/manageable-roles');
     return data;
+  },
+
+  buscarClientes: async (q: string) => {
+    const { data } = await apiClient.get('/users/clientes/buscar', { params: { q } });
+    return data;
   }
 };
 

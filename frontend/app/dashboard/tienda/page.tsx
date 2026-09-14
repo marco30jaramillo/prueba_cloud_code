@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner, Table, Badge, Modal } from 'react-bootstrap';
 import { useAuthStore } from '@/lib/auth-store';
-import { tiendasAPI, usersAPI } from '@/lib/api';
+import { tiendasAPI, usersAPI, valesAPI } from '@/lib/api';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import styles from './page.module.scss';
 
@@ -47,6 +47,7 @@ function TiendaContent() {
 
   const [tienda, setTienda] = useState<Tienda | null>(null);
   const [usuarios, setUsuarios] = useState<TiendaUsuario[]>([]);
+  const [vales, setVales] = useState<any[]>([]);
   const [loadingDetalle, setLoadingDetalle] = useState(false);
   const [saving, setSaving] = useState(false);
   const [detailError, setDetailError] = useState('');
@@ -91,9 +92,10 @@ function TiendaContent() {
     setDetailError('');
     setDetailSuccess('');
     try {
-      const [tRes, uRes] = await Promise.all([
+      const [tRes, uRes, vRes] = await Promise.all([
         tiendasAPI.getById(id),
         tiendasAPI.getUsuarios(id),
+        valesAPI.getCartera(id),
       ]);
       const t = tRes.tienda;
       setTienda(t);
@@ -105,6 +107,7 @@ function TiendaContent() {
         telefono: t.telefono || '',
       });
       setUsuarios(uRes.usuarios || []);
+      setVales(vRes.vales || []);
     } catch {
       setDetailError('Error al cargar la tienda.');
     } finally {
@@ -116,6 +119,7 @@ function TiendaContent() {
     setVistaDetalle(null);
     setTienda(null);
     setUsuarios([]);
+    setVales([]);
     setDetailError('');
     setDetailSuccess('');
   }
@@ -351,6 +355,7 @@ function TiendaContent() {
       {loadingDetalle ? (
         <div className={styles.loadingCenter}><Spinner animation="border" variant="success" /></div>
       ) : (
+        <>
         <Row className="g-4">
           {/* Información de la tienda */}
           <Col md={6}>
@@ -445,6 +450,181 @@ function TiendaContent() {
             </Card>
           </Col>
         </Row>
+
+        {/* ── PANEL DE ANALYTICS ──────────────────────────────────── */}
+        {(() => {
+          const hoy = new Date();
+          const activos = vales.filter(v => ['pendiente', 'parcial'].includes(v.estado));
+          const clientesSet = new Set(activos.map((v: any) => v.clienteId));
+          const totalPorRecaudar = activos.reduce((s: number, v: any) => s + parseFloat(v.saldoPendiente || 0), 0);
+          const mora = activos.filter((v: any) => v.fechaVencimiento && new Date(v.fechaVencimiento) < hoy);
+          const montoMora = mora.reduce((s: number, v: any) => s + parseFloat(v.saldoPendiente || 0), 0);
+          const totalPrestado = vales
+            .filter((v: any) => v.estado !== 'anulado')
+            .reduce((s: number, v: any) => s + parseFloat(v.montoTotal || 0), 0);
+          const recuperado = totalPrestado - totalPorRecaudar;
+          const tasaRec = totalPrestado > 0 ? Math.round((recuperado / totalPrestado) * 100) : 0;
+
+          // Distribución por estado
+          const byEstado: Record<string, number> = {};
+          for (const v of vales) byEstado[v.estado] = (byEstado[v.estado] || 0) + 1;
+          const totalVales = vales.length;
+
+          // Top deudores
+          const deudoresMapa: Record<string, { nombre: string; email: string; totalDeuda: number; enMora: number; cantVales: number }> = {};
+          for (const v of activos) {
+            const cid = v.clienteId;
+            if (!deudoresMapa[cid]) deudoresMapa[cid] = {
+              nombre: v.clienteNombre || '—', email: v.clienteEmail || '',
+              totalDeuda: 0, enMora: 0, cantVales: 0,
+            };
+            deudoresMapa[cid].totalDeuda += parseFloat(v.saldoPendiente || 0);
+            deudoresMapa[cid].cantVales++;
+            if (v.fechaVencimiento && new Date(v.fechaVencimiento) < hoy)
+              deudoresMapa[cid].enMora += parseFloat(v.saldoPendiente || 0);
+          }
+          const topDeudores = Object.values(deudoresMapa)
+            .sort((a, b) => b.totalDeuda - a.totalDeuda)
+            .slice(0, 10);
+
+          const fmt = (n: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+
+          if (vales.length === 0) return null;
+
+          return (
+            <>
+              {/* KPI cards */}
+              <Row className="g-3 mt-2">
+                <Col xs={6} md={3}>
+                  <Card className={styles.kpiCard}>
+                    <Card.Body className="text-center">
+                      <div className={styles.kpiIcon}>👥</div>
+                      <div className={styles.kpiValue}>{clientesSet.size}</div>
+                      <div className={styles.kpiLabel}>Clientes con crédito activo</div>
+                    </Card.Body>
+                  </Card>
+                </Col>
+                <Col xs={6} md={3}>
+                  <Card className={`${styles.kpiCard} ${styles.kpiWarning}`}>
+                    <Card.Body className="text-center">
+                      <div className={styles.kpiIcon}>💵</div>
+                      <div className={styles.kpiValue}>{fmt(totalPorRecaudar)}</div>
+                      <div className={styles.kpiLabel}>Total por recaudar</div>
+                    </Card.Body>
+                  </Card>
+                </Col>
+                <Col xs={6} md={3}>
+                  <Card className={`${styles.kpiCard} ${montoMora > 0 ? styles.kpiDanger : ''}`}>
+                    <Card.Body className="text-center">
+                      <div className={styles.kpiIcon}>⚠️</div>
+                      <div className={styles.kpiValue}>{fmt(montoMora)}</div>
+                      <div className={styles.kpiLabel}>En mora ({mora.length} vale{mora.length !== 1 ? 's' : ''})</div>
+                    </Card.Body>
+                  </Card>
+                </Col>
+                <Col xs={6} md={3}>
+                  <Card className={`${styles.kpiCard} ${tasaRec >= 70 ? styles.kpiGood : ''}`}>
+                    <Card.Body className="text-center">
+                      <div className={styles.kpiIcon}>📈</div>
+                      <div className={styles.kpiValue}>{tasaRec}%</div>
+                      <div className={styles.kpiLabel}>Tasa de recuperación</div>
+                      <div className={styles.kpiBar}>
+                        <div className={styles.kpiBarFill} style={{ width: `${tasaRec}%`, background: tasaRec >= 70 ? '#059669' : tasaRec >= 40 ? '#d97706' : '#dc2626' }} />
+                      </div>
+                    </Card.Body>
+                  </Card>
+                </Col>
+              </Row>
+
+              {/* Top deudores + distribución */}
+              <Row className="g-3 mt-1">
+                {/* Top deudores */}
+                <Col md={8}>
+                  <Card className={styles.card}>
+                    <Card.Header className={styles.cardHeader}>
+                      <strong>Top deudores</strong>
+                      <span className={`${styles.muted} ms-2`}>de mayor a menor deuda activa</span>
+                    </Card.Header>
+                    <Card.Body className="p-0">
+                      {topDeudores.length === 0 ? (
+                        <p className={styles.emptySmall}>No hay deudas activas.</p>
+                      ) : (
+                        <div className={styles.tableWrapper}>
+                          <Table className={styles.table} hover size="sm">
+                            <thead>
+                              <tr>
+                                <th>#</th>
+                                <th>Cliente</th>
+                                <th className="text-center">Vales</th>
+                                <th className="text-end">Total debe</th>
+                                <th className="text-end">En mora</th>
+                                <th className="text-center">Estado</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {topDeudores.map((d, i) => (
+                                <tr key={d.email || i}>
+                                  <td className={styles.muted}>{i + 1}</td>
+                                  <td>
+                                    <strong>{d.nombre}</strong>
+                                    <div className={styles.muted}>{d.email}</div>
+                                  </td>
+                                  <td className="text-center"><Badge bg="light" text="dark">{d.cantVales}</Badge></td>
+                                  <td className="text-end"><strong>{fmt(d.totalDeuda)}</strong></td>
+                                  <td className={`text-end ${d.enMora > 0 ? styles.mora : styles.muted}`}>
+                                    {d.enMora > 0 ? fmt(d.enMora) : '—'}
+                                  </td>
+                                  <td className="text-center">
+                                    <Badge bg={d.enMora > 0 ? 'danger' : 'success'}>
+                                      {d.enMora > 0 ? 'En mora' : 'Al día'}
+                                    </Badge>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </Table>
+                        </div>
+                      )}
+                    </Card.Body>
+                  </Card>
+                </Col>
+
+                {/* Distribución por estado */}
+                <Col md={4}>
+                  <Card className={styles.card}>
+                    <Card.Header className={styles.cardHeader}><strong>Distribución de vales</strong></Card.Header>
+                    <Card.Body>
+                      {[
+                        { key: 'pendiente', label: 'Pendientes', color: '#f59e0b' },
+                        { key: 'parcial',   label: 'Abonados parcial', color: '#3b82f6' },
+                        { key: 'pagado',    label: 'Pagados',   color: '#059669' },
+                        { key: 'anulado',   label: 'Anulados',  color: '#9ca3af' },
+                      ].map(({ key, label, color }) => {
+                        const count = byEstado[key] || 0;
+                        const pct = totalVales > 0 ? Math.round((count / totalVales) * 100) : 0;
+                        return (
+                          <div key={key} className={styles.distRow}>
+                            <div className={styles.distLabel}>
+                              <span style={{ color }}>{label}</span>
+                              <span className={styles.muted}>{count} ({pct}%)</span>
+                            </div>
+                            <div className={styles.distBar}>
+                              <div style={{ width: `${pct}%`, background: color, height: '100%', borderRadius: 4, transition: 'width .4s' }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div className={`${styles.muted} mt-3`} style={{ fontSize: '0.8rem' }}>
+                        Total: {totalVales} vale{totalVales !== 1 ? 's' : ''} registrado{totalVales !== 1 ? 's' : ''}
+                      </div>
+                    </Card.Body>
+                  </Card>
+                </Col>
+              </Row>
+            </>
+          );
+        })()}
+        </>
       )}
 
       {/* Modal agregar usuario */}

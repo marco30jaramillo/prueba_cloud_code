@@ -44,6 +44,21 @@ router.get('/', authMiddleware, roleMiddleware.requireRole('superuser', 'adminis
   });
 });
 
+// GET /users/clientes/buscar?q= — busca clientes para registrar vales; requiere solo vale:crear
+router.get('/clientes/buscar', authMiddleware, roleMiddleware.requirePermission('vale:crear'), async (req, res) => {
+  const q = (req.query.q || '').toLowerCase().trim();
+  if (q.length < 2) return ResponseFormatter.success(res, { clientes: [] });
+  try {
+    const allUsers = await User.getAll();
+    const clientes = allUsers
+      .filter(u => u.role === 'cliente' && (u.isActive === true || u.isActive === 'true'))
+      .filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+      .slice(0, 10)
+      .map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role }));
+    return ResponseFormatter.success(res, { clientes });
+  } catch { return ResponseFormatter.internalError(res, 'Error al buscar clientes'); }
+});
+
 router.get('/:userId', authMiddleware, async (req, res) => {
   const { userId } = req.params;
   const requesterId = req.user.userId;
