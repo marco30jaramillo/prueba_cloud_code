@@ -222,42 +222,56 @@ PRINT '✅ Nuevos permisos insertados';
 -- id 7 — Cartera      → tendero gestiona toda la cartera de su tienda
 -- id 8 — Mi Tienda    → tendero administra la info de su tienda
 
+-- IMPORTANTE: usar prefijo N'...' en todos los literales con emoji o acentos.
+-- Sin N, SQL Server trata el literal como VARCHAR y corrompe los emoji (muestra ?? o ?).
+
 INSERT INTO dbo.modules (id, name, description, buttonLabel, href, icon, showInNav, permRead, permWrite, permFull)
 SELECT v.id, v.name, v.description, v.buttonLabel, v.href, v.icon, v.showInNav, v.permRead, v.permWrite, v.permFull
 FROM (VALUES
-    (5, 'Mis Vales',
-        'Consulta tus vales y deudas pendientes',
-        'Ver mis vales', '/dashboard/mis-vales', '🧾', 1,
-        'vale:ver-propio',
-        'vale:ver-propio',
-        'vale:ver-propio'),
+    (5, N'Mis Vales',
+        N'Consulta tus vales y deudas pendientes',
+        N'Ver mis vales', N'/dashboard/mis-vales', N'🧾', 1,
+        N'vale:ver-propio',
+        N'vale:ver-propio',
+        N'vale:ver-propio'),
 
-    (6, 'Nueva Venta',
-        'Registrar una compra al fiado para un cliente',
-        'Registrar vale', '/dashboard/vale-nuevo', '➕', 1,
-        'vale:crear',
-        'vale:crear|abono:crear',
-        'vale:crear|abono:crear|vale:anular'),
+    (6, N'Nueva Venta',
+        N'Registrar una compra al fiado para un cliente',
+        N'Registrar vale', N'/dashboard/vale-nuevo', N'➕', 1,
+        N'vale:crear',
+        N'vale:crear|abono:crear',
+        N'vale:crear|abono:crear|vale:anular'),
 
-    (7, 'Cartera',
-        'Cartera activa: vales pendientes y cobros de la tienda',
-        'Ver cartera', '/dashboard/cartera', '💼', 1,
-        'vale:ver-tienda|abono:ver',
-        'vale:ver-tienda|abono:ver|abono:crear',
-        'vale:ver-tienda|abono:ver|abono:crear|vale:anular|abono:anular|cartera:reportes'),
+    (7, N'Cartera',
+        N'Cartera activa: vales pendientes y cobros de la tienda',
+        N'Ver cartera', N'/dashboard/cartera', N'💼', 1,
+        N'vale:ver-tienda|abono:ver',
+        N'vale:ver-tienda|abono:ver|abono:crear',
+        N'vale:ver-tienda|abono:ver|abono:crear|vale:anular|abono:anular|cartera:reportes'),
 
-    (8, 'Mi Tienda',
-        'Gestionar la información y el equipo de la tienda',
-        'Mi tienda', '/dashboard/tienda', '🏪', 1,
-        'tienda:ver',
-        'tienda:ver',
-        'tienda:ver|tienda:administrar')
+    (8, N'Mi Tienda',
+        N'Gestionar la información y el equipo de la tienda',
+        N'Mi tienda', N'/dashboard/tienda', N'🏪', 1,
+        N'tienda:ver',
+        N'tienda:ver',
+        N'tienda:ver|tienda:administrar')
 ) AS v(id, name, description, buttonLabel, href, icon, showInNav, permRead, permWrite, permFull)
 WHERE NOT EXISTS (
     SELECT 1 FROM dbo.modules m WHERE m.id = v.id
 );
 
 PRINT '✅ Nuevos módulos insertados';
+
+-- ── 7b. REPARAR ICONOS CORRUPTOS (si la migración ya corrió sin prefijo N) ───
+-- Si los módulos 5-8 ya existen pero sus iconos muestran ?? o ?, ejecutar esto.
+-- Es seguro correrlo múltiples veces: solo actualiza si el icono no es el esperado.
+
+UPDATE dbo.modules SET icon = N'🧾' WHERE id = 5 AND icon <> N'🧾';
+UPDATE dbo.modules SET icon = N'➕' WHERE id = 6 AND icon <> N'➕';
+UPDATE dbo.modules SET icon = N'💼' WHERE id = 7 AND icon <> N'💼';
+UPDATE dbo.modules SET icon = N'🏪' WHERE id = 8 AND icon <> N'🏪';
+
+PRINT '✅ Iconos de módulos verificados/reparados';
 
 -- ── 8. ACTUALIZAR ROLES ──────────────────────────────────────────────────────
 -- Asignar los nuevos módulos y permisos a cada rol.
