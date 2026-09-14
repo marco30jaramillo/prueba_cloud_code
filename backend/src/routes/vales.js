@@ -32,6 +32,61 @@ router.post('/', authMiddleware, requirePermission('vale:crear'), async (req, re
   } catch { return ResponseFormatter.internalError(res, 'Error al registrar el vale'); }
 });
 
+// POST /vales/pago-integral — distribuye un pago entre varios vales (más viejo primero)
+router.post('/pago-integral', authMiddleware, requirePermission('abono:crear'), async (req, res) => {
+  const { clienteId, monto, valeIds } = req.body;
+  const montoNum = parseFloat(monto);
+  if (!clienteId || !montoNum || montoNum <= 0 || !Array.isArray(valeIds) || valeIds.length === 0)
+    return ResponseFormatter.badRequest(res, 'clienteId, monto y al menos un valeId son requeridos');
+
+  try {
+    // Carga y valida cada vale
+    const valesValidos = [];
+    for (const vid of valeIds) {
+      const v = await Vale.findById(vid);
+      if (!v) continue;
+      if (v.clienteId !== clienteId) continue;
+      if (!['pendiente', 'parcial'].includes(v.estado)) continue;
+      if (!await tiendaAcceso(req.user.userId, req.user.role, v.tiendaId)) continue;
+      valesValidos.push(v);
+    }
+    if (valesValidos.length === 0)
+      return ResponseFormatter.badRequest(res, 'No hay créditos válidos accesibles');
+
+    // Más viejo primero
+    valesValidos.sort((a, b) => new Date(a.fechaVale) - new Date(b.fechaVale));
+
+    let restante = montoNum;
+    const abonosCreados = [];
+    const valesActualizados = [];
+
+    for (const vale of valesValidos) {
+      if (restante <= 0) break;
+      const saldo = parseFloat(vale.saldoPendiente);
+      if (saldo <= 0) continue;
+      const abonoMonto = Math.min(restante, saldo);
+      const result = await Abono.create(
+        { valeId: vale.id, monto: abonoMonto, notas: 'Pago integral' },
+        req.user.userId
+      );
+      abonosCreados.push(result.abono);
+      valesActualizados.push(result.vale);
+      restante -= abonoMonto;
+    }
+
+    return ResponseFormatter.success(res, {
+      abonos: abonosCreados,
+      vales: valesActualizados,
+      montoAplicado: montoNum - restante,
+      montoNoAplicado: restante,
+      message: `Pago de $${montoNum.toLocaleString()} aplicado a ${abonosCreados.length} vale(s)`,
+    }, 201);
+  } catch (err) {
+    console.error(err);
+    return ResponseFormatter.internalError(res, 'Error al registrar el pago integral');
+  }
+});
+
 // GET /vales/mis-vales — cliente: sus propios vales
 router.get('/mis-vales', authMiddleware, requirePermission('vale:ver-propio'), async (req, res) => {
   try {

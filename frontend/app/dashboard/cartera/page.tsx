@@ -5,6 +5,7 @@ import { Container, Row, Col, Card, Table, Badge, Button, Alert, Spinner, Modal,
 import { useAuthStore } from '@/lib/auth-store';
 import { tiendasAPI, valesAPI, usersAPI } from '@/lib/api';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import PagoModal, { ValeActivo } from '@/components/PagoModal';
 import styles from './page.module.scss';
 
 interface Tienda { id: string; nombre: string; }
@@ -76,6 +77,12 @@ function CarteraContent() {
   const [clienteSeleccionado, setClienteSeleccionado] = useState<ClienteResult | null>(null);
   const [loadingClientes, setLoadingClientes] = useState(false);
 
+  // Modal pago integral
+  const [showPago, setShowPago] = useState(false);
+  const [pagoClienteId, setPagoClienteId] = useState('');
+  const [pagoClienteNombre, setPagoClienteNombre] = useState('');
+  const [pagoVales, setPagoVales] = useState<ValeActivo[]>([]);
+
   useEffect(() => { loadTiendas(); }, []);
   useEffect(() => { if (tiendaId && !modoCliente) loadCartera(); }, [tiendaId, filtroEstado]);
   useEffect(() => {
@@ -88,14 +95,8 @@ function CarteraContent() {
     if (q.trim().length < 2) { setClienteResults([]); return; }
     setLoadingClientes(true);
     try {
-      const res = await usersAPI.getAll();
-      const lower = q.toLowerCase();
-      setClienteResults(
-        (res.users || []).filter((u: any) =>
-          u.role === 'cliente' &&
-          (u.name.toLowerCase().includes(lower) || u.email.toLowerCase().includes(lower))
-        ).slice(0, 6)
-      );
+      const res = await usersAPI.buscarClientes(q);
+      setClienteResults(res.clientes || []);
     } catch { setClienteResults([]); }
     finally { setLoadingClientes(false); }
   }
@@ -195,6 +196,31 @@ function CarteraContent() {
     }
   }
 
+  function abrirPagoIntegral(clienteId: string, clienteNombre: string) {
+    const activos = vales.filter(v =>
+      v.clienteId === clienteId && ['pendiente', 'parcial'].includes(v.estado)
+    );
+    if (activos.length === 0) return setError('El cliente no tiene créditos activos.');
+    setPagoClienteId(clienteId);
+    setPagoClienteNombre(clienteNombre);
+    setPagoVales(activos as ValeActivo[]);
+    setShowPago(true);
+  }
+
+  function onPagoCorrecto(valesActualizados: any[]) {
+    // Actualiza los vales locales con los que cambiaron
+    const mapa: Record<string, any> = {};
+    for (const v of valesActualizados) mapa[v.id] = v;
+    setVales(prev => prev.map(v => mapa[v.id] ? { ...v, ...mapa[v.id] } : v));
+    // Recarga cartera para actualizar totales
+    if (modoCliente && clienteSeleccionado) {
+      cargarValesCliente(clienteSeleccionado);
+    } else {
+      loadCartera();
+    }
+    setSuccess('Pago integral registrado correctamente.');
+  }
+
   async function handleAnularAbono(abonoId: string) {
     if (!selectedVale) return;
     if (!confirm('¿Anular este abono? Se recalculará el saldo del vale.')) return;
@@ -223,6 +249,9 @@ function CarteraContent() {
       )}
       {error && tiendas.length > 0 && (
         <Alert variant="danger" onClose={() => setError('')} dismissible>{error}</Alert>
+      )}
+      {success && tiendas.length > 0 && (
+        <Alert variant="success" onClose={() => setSuccess('')} dismissible>{success}</Alert>
       )}
 
       {tiendas.length > 0 && (
@@ -295,16 +324,27 @@ function CarteraContent() {
                     )}
                   </div>
                   {clienteSeleccionado && (
-                    <div className="mt-2 text-muted" style={{ fontSize: '0.85rem' }}>
-                      Mostrando vales de <strong>{clienteSeleccionado.name}</strong>
-                      {' '}—{' '}
-                      <span
-                        className="text-success"
-                        style={{ cursor: 'pointer', textDecoration: 'underline' }}
-                        onClick={() => { setClienteSeleccionado(null); setClienteQuery(''); setVales([]); }}
-                      >
-                        limpiar
+                    <div className="mt-2 d-flex align-items-center gap-3 flex-wrap">
+                      <span className="text-muted" style={{ fontSize: '0.85rem' }}>
+                        Vales de <strong>{clienteSeleccionado.name}</strong>
+                        {' '}—{' '}
+                        <span
+                          className="text-success"
+                          style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                          onClick={() => { setClienteSeleccionado(null); setClienteQuery(''); setVales([]); }}
+                        >
+                          limpiar
+                        </span>
                       </span>
+                      {vales.some(v => ['pendiente', 'parcial'].includes(v.estado)) && (
+                        <Button
+                          size="sm"
+                          variant="success"
+                          onClick={() => abrirPagoIntegral(clienteSeleccionado.id, clienteSeleccionado.name)}
+                        >
+                          💳 Registrar pago
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -389,10 +429,20 @@ function CarteraContent() {
                           </td>
                           <td className={styles.date}>{fmtDate(v.fechaVale)}</td>
                           <td className={styles.date}>{fmtDate(v.fechaVencimiento)}</td>
-                          <td>
+                          <td className="d-flex gap-1 flex-wrap">
                             <Button size="sm" variant="outline-success" onClick={() => openDetalle(v)}>
                               Gestionar
                             </Button>
+                            {['pendiente', 'parcial'].includes(v.estado) && v.clienteId && (
+                              <Button
+                                size="sm"
+                                variant="success"
+                                onClick={() => abrirPagoIntegral(v.clienteId, v.clienteNombre || '—')}
+                                title="Pago integral del cliente"
+                              >
+                                💳
+                              </Button>
+                            )}
                           </td>
                         </tr>
                       );
@@ -404,6 +454,16 @@ function CarteraContent() {
           )}
         </>
       )}
+
+      {/* Modal pago integral */}
+      <PagoModal
+        show={showPago}
+        onHide={() => setShowPago(false)}
+        clienteId={pagoClienteId}
+        clienteNombre={pagoClienteNombre}
+        vales={pagoVales}
+        onPagoCorrecto={onPagoCorrecto}
+      />
 
       {/* Modal gestión */}
       <Modal show={showModal} onHide={() => { setShowModal(false); setSuccess(''); setError(''); }} size="lg">

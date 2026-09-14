@@ -301,6 +301,11 @@ export const valesAPI = {
   anularAbono: async (valeId: string, abonoId: string) => {
     const { data } = await apiClient.patch(`/vales/${valeId}/abonos/${abonoId}/anular`);
     return data;
+  },
+
+  pagoIntegral: async (body: { clienteId: string; monto: number; valeIds: string[] }) => {
+    const { data } = await apiClient.post('/vales/pago-integral', body);
+    return data;
   }
 };
 
