@@ -16,10 +16,10 @@ async function checkAcceso(req, res, tiendaId) {
   return ok;
 }
 
-// GET /tiendas — todas (admin/superuser)
+// GET /tiendas — todas (admin/superuser), con resumen de equipo
 router.get('/', authMiddleware, requirePermission('tienda:administrar'), async (req, res) => {
   try {
-    return ResponseFormatter.success(res, { tiendas: await Tienda.getAll() });
+    return ResponseFormatter.success(res, { tiendas: await Tienda.getAllWithSummary() });
   } catch { return ResponseFormatter.internalError(res, 'Error al obtener tiendas'); }
 });
 

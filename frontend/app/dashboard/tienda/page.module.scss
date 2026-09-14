@@ -47,7 +47,25 @@
 
 .email { color: #9ca3af; font-size: 0.82rem; }
 
+.muted { color: #9ca3af; font-size: 0.82rem; }
+
 .emptySmall { text-align: center; padding: 2rem 1rem; color: #9ca3af; font-size: 0.95rem; }
+
+.backBtn {
+  background: none;
+  border: none;
+  color: #059669;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  &:hover { color: #047857; text-decoration: underline; }
+}
+
+.tableWrapper { overflow-x: auto; }
+
+.searchWrapper { position: relative; }
 
 .searchDropdown {
   border: 1px solid #d1d5db;

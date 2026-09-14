@@ -53,6 +53,44 @@ class Tienda {
     return r.recordset.map(fromSql);
   }
 
+  // Devuelve tiendas con resumen de equipo para la vista de lista admin.
+  static async getAllWithSummary() {
+    if (!usingSql()) {
+      const tiendas = tdb().readAll();
+      const usuarios = tudb().readAll();
+      return tiendas.map(t => {
+        const equipo = usuarios.filter(u => u.tiendaId === t.id);
+        const propietario = equipo.find(u => u.esPropietario === true || u.esPropietario === 'true');
+        return {
+          ...t,
+          totalAsignados:   equipo.length,
+          totalPropietarios: equipo.filter(u => u.esPropietario === true || u.esPropietario === 'true').length,
+          propietarioNombre: propietario?.userName || propietario?.name || null,
+          propietarioEmail:  propietario?.userEmail || propietario?.email || null,
+        };
+      }).sort((a, b) => a.nombre.localeCompare(b.nombre));
+    }
+    const r = await (await request()).query(`
+      SELECT
+        t.id, t.nombre, t.descripcion, t.ciudad, t.telefono, t.isActive, t.createdAt,
+        COUNT(tu.id)                                                AS totalAsignados,
+        SUM(CASE WHEN tu.esPropietario = 1 THEN 1 ELSE 0 END)     AS totalPropietarios,
+        MAX(CASE WHEN tu.esPropietario = 1 THEN u.name  END)       AS propietarioNombre,
+        MAX(CASE WHEN tu.esPropietario = 1 THEN u.email END)       AS propietarioEmail
+      FROM dbo.tiendas t
+      LEFT JOIN dbo.tienda_usuarios tu ON tu.tiendaId = t.id
+      LEFT JOIN dbo.users u ON u.id = tu.userId
+      GROUP BY t.id, t.nombre, t.descripcion, t.ciudad, t.telefono, t.isActive, t.createdAt
+      ORDER BY t.nombre`);
+    return r.recordset.map(row => ({
+      ...fromSql(row),
+      totalAsignados:    Number(row.totalAsignados),
+      totalPropietarios: Number(row.totalPropietarios),
+      propietarioNombre: row.propietarioNombre || null,
+      propietarioEmail:  row.propietarioEmail  || null,
+    }));
+  }
+
   static async update(id, data) {
     const allowed = ['nombre','descripcion','direccion','ciudad','telefono','logo'];
     const patch = Object.fromEntries(Object.entries(data).filter(([k]) => allowed.includes(k)));
