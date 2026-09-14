@@ -56,7 +56,7 @@ export default function Home() {
               <div className={styles.ctaButtons}>
                 <Link href="/register">
                   <Button variant="success" size="lg" className={styles.btnPrimary}>
-                    Registra tu Tienda
+                    Crear mi cuenta de cliente
                   </Button>
                 </Link>
                 <Link href="/login">
@@ -65,6 +65,17 @@ export default function Home() {
                   </Button>
                 </Link>
               </div>
+              <p className={styles.tenderoHint}>
+                ¿Eres tendero y quieres registrar tu tienda?{' '}
+                <a
+                  href="https://wa.me/573000000000?text=Hola%2C%20quiero%20registrar%20mi%20tienda%20en%20Mi%20Valecito"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.tenderoLink}
+                >
+                  Contáctanos →
+                </a>
+              </p>
             </Col>
             <Col lg={6} className={styles.heroIllustration}>
               <div className={styles.illustrationBlock}>
@@ -177,14 +188,45 @@ export default function Home() {
 
       {/* CTA Section */}
       <section className={styles.cta}>
-        <Container className="text-center">
-          <h2 className={styles.ctaTitle}>Tu tienda merece cuentas claras</h2>
-          <p className={styles.ctaSubtitle}>Empieza gratis hoy. Sin papeles, sin cuadernos, sin discusiones.</p>
-          <Link href="/register">
-            <Button variant="light" size="lg" className={styles.ctaBtn}>
-              Registra tu Tienda Ahora
-            </Button>
-          </Link>
+        <Container>
+          <div className="text-center mb-5">
+            <h2 className={styles.ctaTitle}>¿Cómo quieres empezar?</h2>
+            <p className={styles.ctaSubtitle}>Elige según tu rol en el negocio</p>
+          </div>
+          <Row className="g-4 justify-content-center">
+            <Col lg={5} md={6}>
+              <div className={styles.ctaCard}>
+                <div className={styles.ctaCardIcon}>👤</div>
+                <h3 className={styles.ctaCardTitle}>Soy cliente de una tienda</h3>
+                <p className={styles.ctaCardText}>
+                  Crea tu cuenta gratis y consulta tus vales pendientes, historial de pagos y saldo en cualquier tienda que use Mi Valecito.
+                </p>
+                <Link href="/register">
+                  <Button variant="light" size="lg" className={styles.ctaBtn}>
+                    Crear mi cuenta
+                  </Button>
+                </Link>
+              </div>
+            </Col>
+            <Col lg={5} md={6}>
+              <div className={`${styles.ctaCard} ${styles.ctaCardDark}`}>
+                <div className={styles.ctaCardIcon}>🏪</div>
+                <h3 className={styles.ctaCardTitle}>Tengo una tienda</h3>
+                <p className={styles.ctaCardText}>
+                  Registra tu tienda con nuestra ayuda. Te configuramos el sistema, tus vendedores y tus clientes en minutos.
+                </p>
+                <a
+                  href="https://wa.me/573000000000?text=Hola%2C%20quiero%20registrar%20mi%20tienda%20en%20Mi%20Valecito"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button variant="outline-light" size="lg" className={styles.ctaBtnOutline}>
+                    Contáctanos por WhatsApp
+                  </Button>
+                </a>
+              </div>
+            </Col>
+          </Row>
         </Container>
       </section>
     </div>

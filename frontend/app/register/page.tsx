@@ -32,8 +32,8 @@ export default function RegisterPage() {
       <Row className="justify-content-center min-vh-50">
         <Col lg={5} md={8}>
           <div className={styles.header}>
-            <h1 className={styles.title}>Crear Cuenta</h1>
-            <p className={styles.subtitle}>Únete a nuestra comunidad</p>
+            <h1 className={styles.title}>Crear cuenta de cliente</h1>
+            <p className={styles.subtitle}>Consulta tus vales y saldo en cualquier tienda</p>
           </div>
 
           <AuthForm type="register" onSubmit={onSubmit} isLoading={isLoading} />
