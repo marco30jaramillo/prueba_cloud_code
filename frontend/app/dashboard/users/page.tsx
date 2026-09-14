@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Container, Row, Col, Card, Table, Button, Alert, Spinner, Modal, Form, Dropdown } from 'react-bootstrap';
 import { PhotoUpload } from '@/components/PhotoUpload';
 import { useAuthStore } from '@/lib/auth-store';
@@ -27,10 +27,33 @@ function UsersPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // ── Filtros ──────────────────────────────────────────────────
+  const [filterText, setFilterText]     = useState('');
+  const [filterRole, setFilterRole]     = useState('');
+  const [filterStatus, setFilterStatus] = useState('');  // '' | 'active' | 'inactive'
+
+  const isAdmin = user?.role === 'superuser' || user?.role === 'administrador';
+
+  const filteredUsers = useMemo(() => {
+    const q = filterText.toLowerCase().trim();
+    return users.filter(u => {
+      if (q && !u.name.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false;
+      if (filterRole && u.role !== filterRole) return false;
+      if (filterStatus === 'active' && !u.isActive) return false;
+      if (filterStatus === 'inactive' && u.isActive) return false;
+      return true;
+    });
+  }, [users, filterText, filterRole, filterStatus]);
+
+  const uniqueRoles = useMemo(() => [...new Set(users.map(u => u.role))].sort(), [users]);
+  const hasFilters = filterText || filterRole || filterStatus;
+
+  // ── Edit modal ───────────────────────────────────────────────
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editFormData, setEditFormData] = useState({ name: '', photo: '' });
+  const [editFormData, setEditFormData] = useState({ name: '', photo: '', role: '' });
 
+  // ── Password modal ───────────────────────────────────────────
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -38,6 +61,7 @@ function UsersPageContent() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState('');
 
+  // ── Create user modal ────────────────────────────────────────
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [creatableRoles, setCreatableRoles] = useState<string[]>(['cliente']);
   const [createFormData, setCreateFormData] = useState({ email: '', password: '', name: '', role: 'cliente' });
@@ -89,7 +113,7 @@ function UsersPageContent() {
 
   const handleEditUser = (selectedUser: User) => {
     setEditingUser(selectedUser);
-    setEditFormData({ name: selectedUser.name, photo: selectedUser.photo });
+    setEditFormData({ name: selectedUser.name, photo: selectedUser.photo, role: selectedUser.role });
     setShowEditModal(true);
   };
 
@@ -99,8 +123,16 @@ function UsersPageContent() {
       return;
     }
 
+    const updates: { name: string; photo: string; role?: string } = {
+      name: editFormData.name,
+      photo: editFormData.photo,
+    };
+    if (editFormData.role && editFormData.role !== editingUser.role) {
+      updates.role = editFormData.role;
+    }
+
     try {
-      await usersAPI.update(editingUser.id, editFormData);
+      await usersAPI.update(editingUser.id, updates);
       setMessage({ type: 'success', text: '✅ Usuario actualizado exitosamente' });
       setShowEditModal(false);
       loadUsers();
@@ -160,6 +192,14 @@ function UsersPageContent() {
     }
   };
 
+  // Roles que se pueden asignar al editar: los que el actor puede gestionar,
+  // siempre incluyendo el rol actual del usuario editado.
+  const editableRoles = useMemo(() => {
+    if (!editingUser) return creatableRoles;
+    const set = new Set([...creatableRoles, editingUser.role]);
+    return [...set];
+  }, [creatableRoles, editingUser]);
+
   if (isLoading) {
     return (
       <Container className={styles.container}>
@@ -197,7 +237,7 @@ function UsersPageContent() {
       </Row>
 
       {message && (
-        <Row className="mb-4">
+        <Row className="mb-3">
           <Col>
             <Alert
               variant={message.type === 'success' ? 'success' : 'danger'}
@@ -209,6 +249,81 @@ function UsersPageContent() {
           </Col>
         </Row>
       )}
+
+      {/* ── Panel de filtros ─────────────────────────────────── */}
+      <Row className="mb-3">
+        <Col>
+          <div className={styles.filterPanel}>
+            <div className={styles.filterRow}>
+              {/* Búsqueda texto */}
+              <div className={styles.searchBox}>
+                <span className={styles.searchIcon}>🔍</span>
+                <input
+                  className={styles.searchInput}
+                  type="text"
+                  placeholder="Buscar por nombre o email..."
+                  value={filterText}
+                  onChange={e => setFilterText(e.target.value)}
+                />
+                {filterText && (
+                  <button className={styles.clearX} onClick={() => setFilterText('')}>✕</button>
+                )}
+              </div>
+
+              {/* Filtro de rol */}
+              <select
+                className={styles.filterSelect}
+                value={filterRole}
+                onChange={e => setFilterRole(e.target.value)}
+              >
+                <option value="">Todos los roles</option>
+                {uniqueRoles.map(r => (
+                  <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
+                ))}
+              </select>
+
+              {/* Filtro de estado */}
+              <div className={styles.statusGroup}>
+                <button
+                  className={`${styles.statusBtn} ${filterStatus === '' ? styles.statusActive : ''}`}
+                  onClick={() => setFilterStatus('')}
+                >
+                  Todos
+                </button>
+                <button
+                  className={`${styles.statusBtn} ${styles.statusOk} ${filterStatus === 'active' ? styles.statusActive : ''}`}
+                  onClick={() => setFilterStatus(filterStatus === 'active' ? '' : 'active')}
+                >
+                  🟢 Activos
+                </button>
+                <button
+                  className={`${styles.statusBtn} ${styles.statusFail} ${filterStatus === 'inactive' ? styles.statusActive : ''}`}
+                  onClick={() => setFilterStatus(filterStatus === 'inactive' ? '' : 'inactive')}
+                >
+                  🔴 Inactivos
+                </button>
+              </div>
+
+              {hasFilters && (
+                <button
+                  className={styles.clearAll}
+                  onClick={() => { setFilterText(''); setFilterRole(''); setFilterStatus(''); }}
+                >
+                  Limpiar filtros
+                </button>
+              )}
+            </div>
+
+            {/* Contador */}
+            <div className={styles.filterFooter}>
+              {hasFilters
+                ? <span>Mostrando <strong>{filteredUsers.length}</strong> de {users.length} usuarios</span>
+                : <span><strong>{users.length}</strong> usuario{users.length !== 1 ? 's' : ''} en total</span>
+              }
+            </div>
+          </div>
+        </Col>
+      </Row>
 
       <Row>
         <Col>
@@ -228,7 +343,7 @@ function UsersPageContent() {
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((u) => (
+                    {filteredUsers.map((u) => (
                       <tr key={u.id} className={!u.isActive ? styles.inactiveRow : ''}>
                         <td>
                           <img
@@ -300,9 +415,14 @@ function UsersPageContent() {
                 </Table>
               </div>
 
-              {users.length === 0 && (
+              {filteredUsers.length === 0 && (
                 <div className={styles.emptyState}>
-                  <p>No hay usuarios registrados</p>
+                  <p>{hasFilters ? 'Ningún usuario coincide con los filtros.' : 'No hay usuarios registrados'}</p>
+                  {hasFilters && (
+                    <button className={styles.clearAll} onClick={() => { setFilterText(''); setFilterRole(''); setFilterStatus(''); }}>
+                      Limpiar filtros
+                    </button>
+                  )}
                 </div>
               )}
             </Card.Body>
@@ -310,6 +430,7 @@ function UsersPageContent() {
         </Col>
       </Row>
 
+      {/* ── Modal editar usuario ─────────────────────────────── */}
       <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title>✏️ Editar Usuario</Modal.Title>
@@ -352,12 +473,36 @@ function UsersPageContent() {
 
               <Form.Group className="mb-3">
                 <Form.Label>Rol</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={editingUser.role}
-                  disabled
-                  className={styles.disabled}
-                />
+                {/* Superuser y administrador pueden cambiar el rol */}
+                {isAdmin && editingUser.role !== 'superuser' ? (
+                  <>
+                    <Form.Select
+                      value={editFormData.role}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, role: e.target.value }))}
+                    >
+                      {editableRoles.map(r => (
+                        <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
+                      ))}
+                    </Form.Select>
+                    {editFormData.role !== editingUser.role && (
+                      <small className="text-warning">
+                        ⚠️ Cambiará de <strong>{editingUser.role}</strong> a <strong>{editFormData.role}</strong>
+                      </small>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Form.Control
+                      type="text"
+                      value={editingUser.role}
+                      disabled
+                      className={styles.disabled}
+                    />
+                    {editingUser.role === 'superuser' && (
+                      <small className="text-muted">El rol de superuser no puede ser cambiado</small>
+                    )}
+                  </>
+                )}
               </Form.Group>
             </Form>
           )}
@@ -372,6 +517,7 @@ function UsersPageContent() {
         </Modal.Footer>
       </Modal>
 
+      {/* ── Modal contraseña generada ────────────────────────── */}
       <Modal show={showPasswordModal} onHide={() => { setShowPasswordModal(false); setGeneratedPassword(''); }} centered>
         <Modal.Header closeButton>
           <Modal.Title>🔑 Contraseña Generada</Modal.Title>
@@ -418,6 +564,7 @@ function UsersPageContent() {
         </Modal.Footer>
       </Modal>
 
+      {/* ── Modal crear usuario ──────────────────────────────── */}
       <Modal show={showCreateUser} onHide={() => setShowCreateUser(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title>➕ Crear Nuevo Usuario</Modal.Title>

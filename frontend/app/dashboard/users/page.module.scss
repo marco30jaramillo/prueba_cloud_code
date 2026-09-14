@@ -24,6 +24,118 @@
   font-size: 1.1rem;
 }
 
+// ── Panel de filtros ──────────────────────────────────────────────────────────
+.filterPanel {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  padding: 0.9rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.filterRow {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.searchBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 200px;
+}
+.searchIcon {
+  position: absolute;
+  left: 0.65rem;
+  font-size: 0.85rem;
+  pointer-events: none;
+  opacity: 0.45;
+}
+.searchInput {
+  width: 100%;
+  padding: 0.42rem 2rem 0.42rem 2rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s;
+  background: #fafafa;
+  &:focus { border-color: #3b82f6; background: #fff; }
+}
+.clearX {
+  position: absolute;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 0.78rem;
+  padding: 0 0.2rem;
+  &:hover { color: #374151; }
+}
+
+.filterSelect {
+  padding: 0.42rem 0.75rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  outline: none;
+  background: #fafafa;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  min-width: 150px;
+  &:focus { border-color: #3b82f6; }
+}
+
+.statusGroup {
+  display: flex;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.375rem;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.statusBtn {
+  padding: 0.4rem 0.85rem;
+  background: none;
+  border: none;
+  border-right: 1px solid #e5e7eb;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: #6b7280;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+  &:last-child { border-right: none; }
+  &:hover:not(.statusActive) { background: #f3f4f6; }
+}
+.statusActive { background: #f3f4f6; color: #111827; font-weight: 600; }
+.statusOk.statusActive  { background: #d1fae5; color: #065f46; }
+.statusFail.statusActive{ background: #fee2e2; color: #991b1b; }
+
+.clearAll {
+  padding: 0.4rem 0.85rem;
+  background: none;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: #6b7280;
+  white-space: nowrap;
+  transition: all 0.2s;
+  &:hover { border-color: #ef4444; color: #ef4444; background: #fef2f2; }
+}
+
+.filterFooter {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  strong { color: #6b7280; }
+}
+
 .card {
   border: 2px solid #e5e7eb;
   border-radius: 12px;

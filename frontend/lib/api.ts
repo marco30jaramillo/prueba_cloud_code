@@ -200,7 +200,7 @@ export const usersAPI = {
     return data;
   },
 
-  update: async (userId: string, updates: { name?: string; photo?: string }) => {
+  update: async (userId: string, updates: { name?: string; photo?: string; role?: string }) => {
     const { data } = await apiClient.patch(`/users/${userId}`, updates);
     return data;
   },
