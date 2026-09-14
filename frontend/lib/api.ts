@@ -269,6 +269,10 @@ export const valesAPI = {
     const { data } = await apiClient.get('/vales/mis-vales');
     return data;
   },
+  getByUsuario: async (userId: string) => {
+    const { data } = await apiClient.get(`/vales/usuario/${userId}`);
+    return data;
+  },
   getCartera: async (tiendaId: string, estado?: string) => {
     const { data } = await apiClient.get(`/vales/tienda/${tiendaId}`, { params: estado ? { estado } : {} });
     return data;

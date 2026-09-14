@@ -43,6 +43,35 @@ router.get('/mis-vales', authMiddleware, requirePermission('vale:ver-propio'), a
   } catch { return ResponseFormatter.internalError(res, 'Error al obtener tus vales'); }
 });
 
+// GET /vales/usuario/:userId — admin/tendero ve los vales de un cliente específico
+// Tendero: solo ve los que pertenecen a sus tiendas.
+// Admin/superuser: ve todos.
+router.get('/usuario/:userId', authMiddleware, requirePermission('vale:ver-tienda'), async (req, res) => {
+  try {
+    const { userId, role } = req.user;
+    const targetId = req.params.userId;
+
+    let tiendaIds;
+    if (!isAdmin(role)) {
+      const Tienda = require('../models/Tienda');
+      const misTiendas = await Tienda.getTiendasByUsuario(userId);
+      tiendaIds = misTiendas.map(t => t.id);
+      if (tiendaIds.length === 0)
+        return ResponseFormatter.success(res, { vales: [], totalPendiente: 0, enMora: 0 });
+    }
+
+    const vales = await Vale.getByClienteVista(targetId, { tiendaIds });
+    const totalPendiente = vales
+      .filter(v => ['pendiente', 'parcial'].includes(v.estado))
+      .reduce((s, v) => s + parseFloat(v.saldoPendiente || 0), 0);
+    const enMora = vales.filter(v =>
+      ['pendiente', 'parcial'].includes(v.estado) &&
+      v.fechaVencimiento && new Date(v.fechaVencimiento) < new Date()
+    ).length;
+    return ResponseFormatter.success(res, { vales, totalPendiente, enMora });
+  } catch { return ResponseFormatter.internalError(res, 'Error al obtener vales del usuario'); }
+});
+
 // GET /vales/tienda/:tiendaId — cartera de la tienda
 router.get('/tienda/:tiendaId', authMiddleware, requirePermission('vale:ver-tienda'), async (req, res) => {
   try {

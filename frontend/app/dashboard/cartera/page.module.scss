@@ -55,3 +55,38 @@
 .anulado { opacity: 0.5; }
 
 .emptyState { text-align: center; padding: 3rem 1rem; color: #6b7280; font-size: 1.05rem; }
+
+.clienteSearch { position: relative; }
+
+.searchWrapper { position: relative; }
+
+.searchSpinner {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.searchDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 100;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.searchItem {
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  font-size: 0.92rem;
+  border-bottom: 1px solid #f3f4f6;
+
+  &:last-child { border-bottom: none; }
+  &:hover { background: #f0fdf4; }
+}

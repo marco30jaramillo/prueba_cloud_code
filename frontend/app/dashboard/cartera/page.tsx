@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Table, Badge, Button, Alert, Spinner, Modal, Form } from 'react-bootstrap';
 import { useAuthStore } from '@/lib/auth-store';
-import { tiendasAPI, valesAPI } from '@/lib/api';
+import { tiendasAPI, valesAPI, usersAPI } from '@/lib/api';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import styles from './page.module.scss';
 
@@ -68,8 +68,55 @@ function CarteraContent() {
   const [notasAbono, setNotasAbono] = useState('');
   const [registrando, setRegistrando] = useState(false);
 
+  // Búsqueda por cliente
+  interface ClienteResult { id: string; name: string; email: string; }
+  const [modoCliente, setModoCliente] = useState(false);
+  const [clienteQuery, setClienteQuery] = useState('');
+  const [clienteResults, setClienteResults] = useState<ClienteResult[]>([]);
+  const [clienteSeleccionado, setClienteSeleccionado] = useState<ClienteResult | null>(null);
+  const [loadingClientes, setLoadingClientes] = useState(false);
+
   useEffect(() => { loadTiendas(); }, []);
-  useEffect(() => { if (tiendaId) loadCartera(); }, [tiendaId, filtroEstado]);
+  useEffect(() => { if (tiendaId && !modoCliente) loadCartera(); }, [tiendaId, filtroEstado]);
+  useEffect(() => {
+    if (!modoCliente) { setClienteQuery(''); setClienteSeleccionado(null); setClienteResults([]); }
+  }, [modoCliente]);
+
+  async function buscarClientes(q: string) {
+    setClienteQuery(q);
+    setClienteSeleccionado(null);
+    if (q.trim().length < 2) { setClienteResults([]); return; }
+    setLoadingClientes(true);
+    try {
+      const res = await usersAPI.getAll();
+      const lower = q.toLowerCase();
+      setClienteResults(
+        (res.users || []).filter((u: any) =>
+          u.role === 'cliente' &&
+          (u.name.toLowerCase().includes(lower) || u.email.toLowerCase().includes(lower))
+        ).slice(0, 6)
+      );
+    } catch { setClienteResults([]); }
+    finally { setLoadingClientes(false); }
+  }
+
+  async function cargarValesCliente(cliente: ClienteResult) {
+    setClienteSeleccionado(cliente);
+    setClienteQuery(cliente.name);
+    setClienteResults([]);
+    setLoading(true);
+    setError('');
+    try {
+      const res = await valesAPI.getByUsuario(cliente.id);
+      setVales(res.vales || []);
+      setTotalPendiente(res.totalPendiente || 0);
+      setEnMora(res.enMora || 0);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Error al cargar vales del cliente.');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function loadTiendas() {
     try {
@@ -183,29 +230,85 @@ function CarteraContent() {
           {/* Filtros */}
           <Card className={styles.filterCard}>
             <Card.Body>
-              <Row className="g-2 align-items-end">
-                <Col md={5}>
-                  <Form.Label className={styles.label}>Tienda</Form.Label>
-                  <Form.Select value={tiendaId} onChange={e => setTiendaId(e.target.value)}>
-                    {tiendas.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
-                  </Form.Select>
-                </Col>
-                <Col md={4}>
-                  <Form.Label className={styles.label}>Estado</Form.Label>
-                  <Form.Select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
-                    <option value="">Todos</option>
-                    <option value="pendiente">Pendiente</option>
-                    <option value="parcial">Parcial</option>
-                    <option value="pagado">Pagado</option>
-                    <option value="anulado">Anulado</option>
-                  </Form.Select>
-                </Col>
-                <Col md={3}>
-                  <Button variant="outline-success" onClick={loadCartera} className="w-100">
-                    Actualizar
-                  </Button>
-                </Col>
-              </Row>
+              {/* Toggle modo */}
+              <div className="d-flex gap-2 mb-3">
+                <Button
+                  size="sm"
+                  variant={!modoCliente ? 'success' : 'outline-success'}
+                  onClick={() => setModoCliente(false)}
+                >
+                  Por tienda
+                </Button>
+                <Button
+                  size="sm"
+                  variant={modoCliente ? 'success' : 'outline-success'}
+                  onClick={() => setModoCliente(true)}
+                >
+                  Buscar por cliente
+                </Button>
+              </div>
+
+              {!modoCliente ? (
+                <Row className="g-2 align-items-end">
+                  <Col md={5}>
+                    <Form.Label className={styles.label}>Tienda</Form.Label>
+                    <Form.Select value={tiendaId} onChange={e => setTiendaId(e.target.value)}>
+                      {tiendas.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+                    </Form.Select>
+                  </Col>
+                  <Col md={4}>
+                    <Form.Label className={styles.label}>Estado</Form.Label>
+                    <Form.Select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
+                      <option value="">Todos</option>
+                      <option value="pendiente">Pendiente</option>
+                      <option value="parcial">Parcial</option>
+                      <option value="pagado">Pagado</option>
+                      <option value="anulado">Anulado</option>
+                    </Form.Select>
+                  </Col>
+                  <Col md={3}>
+                    <Button variant="outline-success" onClick={loadCartera} className="w-100">
+                      Actualizar
+                    </Button>
+                  </Col>
+                </Row>
+              ) : (
+                <div className={styles.clienteSearch}>
+                  <Form.Label className={styles.label}>Buscar cliente por nombre o email</Form.Label>
+                  <div className={styles.searchWrapper}>
+                    <Form.Control
+                      placeholder="Escribe al menos 2 caracteres..."
+                      value={clienteQuery}
+                      onChange={e => buscarClientes(e.target.value)}
+                      autoComplete="off"
+                    />
+                    {loadingClientes && <Spinner size="sm" className={styles.searchSpinner} />}
+                    {clienteResults.length > 0 && (
+                      <div className={styles.searchDropdown}>
+                        {clienteResults.map(c => (
+                          <div key={c.id} className={styles.searchItem} onClick={() => cargarValesCliente(c)}>
+                            <strong>{c.name}</strong>
+                            <span className="text-muted ms-2">{c.email}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {clienteSeleccionado && (
+                    <div className="mt-2 text-muted" style={{ fontSize: '0.85rem' }}>
+                      Mostrando vales de <strong>{clienteSeleccionado.name}</strong>
+                      {' '}—{' '}
+                      <span
+                        className="text-success"
+                        style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                        onClick={() => { setClienteSeleccionado(null); setClienteQuery(''); setVales([]); }}
+                      >
+                        limpiar
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </Card.Body>
           </Card>
 

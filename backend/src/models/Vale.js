@@ -85,6 +85,34 @@ class Vale {
     return r.recordset.map(fromSql);
   }
 
+  // Vista de soporte/admin: vales de un cliente filtrados opcionalmente por tiendas.
+  // tiendaIds = undefined → sin restricción (admin); array → solo esas tiendas (tendero).
+  static async getByClienteVista(clienteId, { tiendaIds } = {}) {
+    if (!usingSql()) {
+      let rows = db().filter(r => r.clienteId === clienteId);
+      if (tiendaIds) rows = rows.filter(r => tiendaIds.includes(r.tiendaId));
+      return rows.sort((a, b) => new Date(b.fechaVale) - new Date(a.fechaVale));
+    }
+    const r = await request();
+    r.input('clienteId', sql.UniqueIdentifier, clienteId);
+    let tiendaClause = '';
+    if (tiendaIds && tiendaIds.length > 0) {
+      // mssql no soporta array params nativos, usamos lista literal de UUIDs validados
+      const safe = tiendaIds
+        .filter(id => /^[0-9a-f-]{36}$/i.test(id))
+        .map(id => `'${id}'`).join(',');
+      tiendaClause = safe ? ` AND v.tiendaId IN (${safe})` : ' AND 1=0';
+    }
+    const result = await r.query(`
+      SELECT v.*, t.nombre AS tiendaNombre, u.name AS clienteNombre, u.email AS clienteEmail
+      FROM dbo.vales v
+      JOIN dbo.tiendas t ON t.id = v.tiendaId
+      JOIN dbo.users   u ON u.id = v.clienteId
+      WHERE v.clienteId = @clienteId${tiendaClause}
+      ORDER BY v.fechaVale DESC`);
+    return result.recordset.map(fromSql);
+  }
+
   // Recalcula saldoPendiente y estado a partir de los abonos activos.
   // Llamar después de cada create/anular de Abono.
   static async recalcularSaldo(valeId) {
