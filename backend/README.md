@@ -117,7 +117,7 @@ Todos los scripts SQL del proyecto están en `database/scripts_sql/`, en cuatro 
 | Carpeta | Contenido | Quién lo ejecuta |
 |---|---|---|
 | `esquemas/` | Scripts principales de creación, idempotentes: `00_crear_base_y_usuario.sql` (base y cuenta locales), `01_esquema_inicial.sql` (usuarios, roles, permisos, módulos, tokens, auditoría) y `02_esquema_vales.sql` (tiendas, vales, abonos) | El `00_*`, una persona con `sqlcmd -E`; el resto, `npm run db:setup` |
-| `alters/` | Cambios sobre una base que ya existe, numerados (`001_...`) | A mano, sobre bases ya creadas |
+| `alters/` | Cambios sobre una base que ya existe, numerados (`001_...`) | En QA y producción, el ejecutor de migraciones desde el workflow de despliegue ([`scripts/db-migrate.md`](scripts/db-migrate.md)). En local, a mano; `npm run db:setup` aplica solo esquemas e inserts |
 | `inserts/` | Catálogos de fábrica: permisos, roles y módulos; idempotentes | `npm run db:setup` |
 | `consultas/` | Consultas de solo lectura para verificar, como `conciliar_saldos.sql` | A mano |
 
