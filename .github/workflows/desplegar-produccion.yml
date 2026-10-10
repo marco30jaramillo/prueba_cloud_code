@@ -1,0 +1,314 @@
+name: Desplegar produccion
+
+# Despliegue a PRODUCCION: validar -> desplegar (base de datos, backend y frontend en UN
+# solo job, para que haya una sola aprobacion manual del ambiente produccion).
+#
+# IMPORTANTE - requisitos previos:
+#   - SOLO funciona si el ambiente 'produccion' existe en GitHub y tiene los 9 secretos:
+#     DEPLOY_DB_SERVER, DEPLOY_DB_DATABASE, DEPLOY_DB_USER, DEPLOY_DB_PASSWORD,
+#     AZURE_BACKEND_APP_NAME, AZURE_BACKEND_PUBLISH_PROFILE,
+#     AZURE_FRONTEND_APP_NAME, AZURE_FRONTEND_PUBLISH_PROFILE y NEXT_PUBLIC_API_URL.
+#     Si FIREWALL_MODO = 'regla-temporal' (variable del ambiente), exige ademas los cinco
+#     secretos de firewall: AZURE_SQL_RESOURCE_GROUP, AZURE_SQL_SUBSCRIPTION_ID,
+#     AZURE_FIREWALL_TENANT_ID, AZURE_FIREWALL_CLIENT_ID y AZURE_FIREWALL_CLIENT_SECRET.
+#   - El ambiente debe crearse (con revisores requeridos y rama main como unica rama
+#     permitida) ANTES de fusionar a main: un job que nombra un ambiente inexistente lo
+#     crea SIN proteccion y desplegaria sin aprobacion.
+#
+# Orden de la primera vez (base de produccion vacia):
+#   1. Disparo manual sobre main con modo-base = inicializar y confirmar-base = nombre exacto
+#      de la base (queda visible en claro en un repositorio publico).
+#   2. Despues, modo aplicar (el push a main lo ejecuta siempre en modo aplicar).
+#
+# Modo efectivo: en push es siempre 'aplicar'. En disparo manual, dry-run e inicializar
+# terminan tras la base de datos (sin backend ni frontend). No existe baseline en produccion.
+#
+# Version: en push no hay rama release. Se usa el ultimo tag v* alcanzable, o
+# v0.0.0-main-<sha corto> si no hay. El ejecutor de base exige el formato estricto vX.Y.Z,
+# asi que se le pasa el nucleo X.Y.Z del tag (o v0.0.0 si no hay tag).
+#
+# Node 22: el runtime del App Service debe coincidir (Node 22 o superior).
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      modo-base:
+        description: "Modo de base de datos"
+        type: choice
+        options:
+          - aplicar
+          - dry-run
+          - inicializar
+        default: aplicar
+      confirmar-base:
+        description: "Solo inicializar: escribir el nombre exacto de la base"
+        type: string
+        required: false
+        default: ''
+
+concurrency:
+  group: desplegar-produccion
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  validar:
+    name: validar
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      modo: ${{ steps.modo.outputs.modo }}
+    steps:
+      # Sin checkout y sin secretos: solo se comprueban la referencia y el modo.
+      - name: Validar rama y modo
+        id: modo
+        env:
+          REFERENCIA: ${{ github.ref }}
+          MODO_ENTRADA: ${{ inputs.modo-base || 'aplicar' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! [[ "$REFERENCIA" =~ ^refs/heads/main$ ]]; then
+            echo "::error::Solo se despliega a produccion desde main."
+            exit 1
+          fi
+          modo="$MODO_ENTRADA"
+          if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then modo="aplicar"; fi
+          if ! [[ "$modo" =~ ^(aplicar|dry-run|inicializar)$ ]]; then
+            echo "::error::Modo de base de datos invalido."
+            exit 1
+          fi
+          echo "modo=$modo" >> "$GITHUB_OUTPUT"
+
+  desplegar:
+    name: desplegar
+    needs: validar
+    runs-on: ubuntu-latest
+    environment: produccion
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      FIREWALL_REGLA: gha-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Verificar secretos del ambiente
+        env:
+          MODO: ${{ needs.validar.outputs.modo }}
+          DEPLOY_DB_SERVER: ${{ secrets.DEPLOY_DB_SERVER }}
+          DEPLOY_DB_DATABASE: ${{ secrets.DEPLOY_DB_DATABASE }}
+          DEPLOY_DB_USER: ${{ secrets.DEPLOY_DB_USER }}
+          DEPLOY_DB_PASSWORD: ${{ secrets.DEPLOY_DB_PASSWORD }}
+          AZURE_BACKEND_APP_NAME: ${{ secrets.AZURE_BACKEND_APP_NAME }}
+          AZURE_BACKEND_PUBLISH_PROFILE: ${{ secrets.AZURE_BACKEND_PUBLISH_PROFILE }}
+          AZURE_FRONTEND_APP_NAME: ${{ secrets.AZURE_FRONTEND_APP_NAME }}
+          AZURE_FRONTEND_PUBLISH_PROFILE: ${{ secrets.AZURE_FRONTEND_PUBLISH_PROFILE }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+        shell: bash
+        run: |
+          nombres="DEPLOY_DB_SERVER DEPLOY_DB_DATABASE DEPLOY_DB_USER DEPLOY_DB_PASSWORD"
+          if [ "$MODO" = "aplicar" ]; then
+            nombres="$nombres AZURE_BACKEND_APP_NAME AZURE_BACKEND_PUBLISH_PROFILE AZURE_FRONTEND_APP_NAME AZURE_FRONTEND_PUBLISH_PROFILE NEXT_PUBLIC_API_URL"
+          fi
+          faltan=0
+          for nombre in $nombres; do
+            if [ -z "${!nombre}" ]; then
+              echo "::error::El secreto $nombre llego vacio al job desplegar (ambiente produccion)."
+              faltan=1
+            fi
+          done
+          if [ "$faltan" -ne 0 ]; then exit 1; fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+
+      - name: Enmascarar valores derivados
+        env:
+          DB_SERVER: ${{ secrets.DEPLOY_DB_SERVER }}
+          DB_DATABASE: ${{ secrets.DEPLOY_DB_DATABASE }}
+          DB_USER: ${{ secrets.DEPLOY_DB_USER }}
+        shell: bash
+        run: |
+          for v in "$DB_SERVER" "$DB_DATABASE" "$DB_USER" "${DB_SERVER%%.*}"; do
+            if [ -n "$v" ]; then echo "::add-mask::$v"; fi
+          done
+
+      - name: Derivar version
+        id: version
+        env:
+          SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Solo se usa un tag v* real del repositorio; nunca el nombre de la rama
+          # ni texto del mensaje del commit.
+          if tag="$(git describe --tags --abbrev=0 --match 'v*' HEAD 2>/dev/null)"; then
+            :
+          else
+            tag="v0.0.0-main-${SHA:0:7}"
+          fi
+          if ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-+][A-Za-z0-9._-]+)?$ ]]; then
+            echo "::error::La version derivada no tiene un formato valido."
+            exit 1
+          fi
+          # El ejecutor de base exige vX.Y.Z estricto: se pasa el nucleo del tag.
+          if [[ "$tag" =~ ^(v[0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            ejecutor="${BASH_REMATCH[1]}"
+          else
+            ejecutor="v0.0.0"
+          fi
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+          echo "version-ejecutor=$ejecutor" >> "$GITHUB_OUTPUT"
+
+      - name: Install backend dependencies
+        shell: bash
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            echo "::error::Falta package-lock.json en backend: producción exige dependencias fijadas."
+            exit 1
+          fi
+
+      # La regla se abre despues de instalar dependencias de terceros, para que los
+      # scripts de instalacion no corran con el firewall abierto.
+      - name: Abrir regla temporal de firewall
+        if: ${{ vars.FIREWALL_MODO == 'regla-temporal' }}
+        uses: ./.github/actions/firewall-azure-sql
+        with:
+          accion: abrir
+          nombre-regla: ${{ env.FIREWALL_REGLA }}
+          servidor: ${{ secrets.DEPLOY_DB_SERVER }}
+          grupo-recursos: ${{ secrets.AZURE_SQL_RESOURCE_GROUP }}
+          suscripcion: ${{ secrets.AZURE_SQL_SUBSCRIPTION_ID }}
+          tenant: ${{ secrets.AZURE_FIREWALL_TENANT_ID }}
+          cliente: ${{ secrets.AZURE_FIREWALL_CLIENT_ID }}
+          secreto: ${{ secrets.AZURE_FIREWALL_CLIENT_SECRET }}
+
+      - name: Migrar base de datos
+        working-directory: backend
+        shell: bash
+        env:
+          DEPLOY_DB_SERVER: ${{ secrets.DEPLOY_DB_SERVER }}
+          DEPLOY_DB_DATABASE: ${{ secrets.DEPLOY_DB_DATABASE }}
+          DEPLOY_DB_USER: ${{ secrets.DEPLOY_DB_USER }}
+          DEPLOY_DB_PASSWORD: ${{ secrets.DEPLOY_DB_PASSWORD }}
+          MODO: ${{ needs.validar.outputs.modo }}
+          CONFIRMAR_BASE: ${{ inputs.confirmar-base }}
+          VERSION: ${{ steps.version.outputs.version-ejecutor }}
+          VERSION_ORIGEN: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$MODO" =~ ^(aplicar|dry-run|inicializar)$ ]]; then
+            echo "::error::Modo de base de datos invalido."
+            exit 1
+          fi
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version invalida."
+            exit 1
+          fi
+          argumentos=(--modo "$MODO" --version "$VERSION")
+          if [ "$MODO" = "inicializar" ]; then
+            argumentos+=(--confirmar-base "$CONFIRMAR_BASE")
+          fi
+          salida="$RUNNER_TEMP/db-migrate.log"
+          node scripts/db-migrate.js "${argumentos[@]}" 2>&1 | tee "$salida"
+          punto="$(grep -E '^PUNTO_RESTAURACION_UTC=' "$salida" | tail -n 1 || true)"
+          if [ -z "$punto" ]; then
+            echo "::error::El ejecutor no informo PUNTO_RESTAURACION_UTC; el despliegue se detiene."
+            exit 1
+          fi
+          {
+            echo "### Base de datos de produccion (modo: $MODO, version: $VERSION_ORIGEN, ejecutor: $VERSION)"
+            echo ""
+            echo "$punto"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Resumen de modo sin despliegue
+        if: ${{ needs.validar.outputs.modo != 'aplicar' }}
+        env:
+          MODO: ${{ needs.validar.outputs.modo }}
+        shell: bash
+        run: |
+          {
+            echo ""
+            echo "**Modo $MODO: el flujo termina tras la base de datos.** No se despliega backend ni frontend."
+            echo "Solo el modo 'aplicar' completa el despliegue."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Cerrar regla temporal de firewall
+        if: ${{ always() && vars.FIREWALL_MODO == 'regla-temporal' }}
+        uses: ./.github/actions/firewall-azure-sql
+        with:
+          accion: cerrar
+          nombre-regla: ${{ env.FIREWALL_REGLA }}
+          servidor: ${{ secrets.DEPLOY_DB_SERVER }}
+          grupo-recursos: ${{ secrets.AZURE_SQL_RESOURCE_GROUP }}
+          suscripcion: ${{ secrets.AZURE_SQL_SUBSCRIPTION_ID }}
+          tenant: ${{ secrets.AZURE_FIREWALL_TENANT_ID }}
+          cliente: ${{ secrets.AZURE_FIREWALL_CLIENT_ID }}
+          secreto: ${{ secrets.AZURE_FIREWALL_CLIENT_SECRET }}
+
+      # Backend: se reinstalan solo las dependencias de produccion antes de empaquetar.
+      - name: Install backend dependencies (produccion)
+        if: ${{ needs.validar.outputs.modo == 'aplicar' }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then
+            npm ci --omit=dev
+          else
+            echo "::error::Falta package-lock.json en backend: producción exige dependencias fijadas."
+            exit 1
+          fi
+
+      - name: Deploy backend to Azure App Service
+        if: ${{ needs.validar.outputs.modo == 'aplicar' }}
+        uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3
+        with:
+          app-name: ${{ secrets.AZURE_BACKEND_APP_NAME }}
+          publish-profile: ${{ secrets.AZURE_BACKEND_PUBLISH_PROFILE }}
+          package: backend
+
+      - name: Install frontend dependencies
+        if: ${{ needs.validar.outputs.modo == 'aplicar' }}
+        shell: bash
+        working-directory: frontend
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            echo "::error::Falta package-lock.json en frontend: producción exige dependencias fijadas."
+            exit 1
+          fi
+
+      - name: Build frontend
+        if: ${{ needs.validar.outputs.modo == 'aplicar' }}
+        run: npm run build
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+
+      - name: Deploy frontend to Azure App Service
+        if: ${{ needs.validar.outputs.modo == 'aplicar' }}
+        uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3
+        with:
+          app-name: ${{ secrets.AZURE_FRONTEND_APP_NAME }}
+          publish-profile: ${{ secrets.AZURE_FRONTEND_PUBLISH_PROFILE }}
+          package: frontend
