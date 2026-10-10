@@ -1,8 +1,32 @@
 const crypto = require('crypto');
 
+const MIN_SECRET_LENGTH = 32;
+
+class JwtSecretError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'JwtSecretError';
+    this.code = 'JWT_SECRET_INVALID';
+  }
+}
+
 class TokenUtils {
-  constructor(secret = process.env.JWT_SECRET || 'your-secret-key') {
+  // Sin valor por defecto: el secreto solo entra por JWT_SECRET (o por parámetro explícito).
+  constructor(secret = process.env.JWT_SECRET) {
+    TokenUtils.assertSecret(secret);
     this.secret = secret;
+  }
+
+  /**
+   * Lanza si el secreto falta o es demasiado corto. El mensaje nunca incluye el valor.
+   */
+  static assertSecret(secret) {
+    if (typeof secret !== 'string' || secret === '') {
+      throw new JwtSecretError('JWT_SECRET no está definido. El backend no arranca sin un secreto de sesión.');
+    }
+    if (secret.length < MIN_SECRET_LENGTH) {
+      throw new JwtSecretError(`JWT_SECRET es demasiado corto: debe tener al menos ${MIN_SECRET_LENGTH} caracteres.`);
+    }
   }
 
   generateTokenWithId(payload, expiresIn = 86400) {
@@ -67,5 +91,8 @@ class TokenUtils {
     return Buffer.from(str.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString();
   }
 }
+
+TokenUtils.JwtSecretError = JwtSecretError;
+TokenUtils.MIN_SECRET_LENGTH = MIN_SECRET_LENGTH;
 
 module.exports = TokenUtils;

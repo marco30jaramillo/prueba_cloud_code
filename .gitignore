@@ -1,6 +1,5 @@
 # 📦 Dependencies
 node_modules/
-package-lock.json
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -73,3 +72,7 @@ backend/audit_logs
 backend/audit_logs.csv
 backend/audit_logs.bak
 backend/audit_logs.bak2
+
+# Datos locales: los CSV del modo antiguo y las fotos subidas no se versionan (H-2)
+backend/*.csv
+datos/uploads/

@@ -4,21 +4,33 @@
  * Crea: 3 tiendas, tenderos/empleados asignados, 12 clientes, ~18 vales
  *
  * Uso:
- *   node scripts/seed.js          → agrega datos (puede crear duplicados)
- *   node scripts/seed.js --clean  → borra TODO primero (¡solo en desarrollo!)
+ *   npm run db:seed               → agrega datos (puede crear duplicados)
+ *   npm run db:seed -- --clean    → borra primero lo que el propio seed creó (sus correos y
+ *                                   sus tiendas exactos; no el resto de los datos de prueba)
  *
- * Requiere que el backend esté configurado (.env con DATA_PROVIDER y, si es sql, DB_*)
+ * Solo corre contra la base local: exige la familia DB_* completa en .env y un DB_SERVER de
+ * bucle local. Con AZURE_SQL_* o AZURE_SQL_CONNECTION_STRING se niega antes de conectar (H-4).
  */
 
-require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
+// La guarda va antes de cargar los modelos y el pool: nada se conecta si no es local.
+const { cargarEnv, assertEntornoLocal } = require('./lib/entornoLocal');
+cargarEnv();
+try {
+  const destino = assertEntornoLocal(process.env, { exigirConexion: true, nombre: 'El seed' });
+  console.log(`Destino: configuración ${destino.family}, host ${destino.host}`);
+} catch (error) {
+  console.error(`\n❌ ${error.message}`);
+  process.exit(1);
+}
 
 const User   = require('../src/models/User');
 const Tienda = require('../src/models/Tienda');
 const Vale   = require('../src/models/Vale');
-const { usingSql, request, sql } = require('../src/database/sqlPool');
+const { getPool, sql } = require('../src/database/sqlPool');
 
 const CLEAN  = process.argv.includes('--clean');
 const PWD    = 'Seed123!';   // contraseña válida para todos los usuarios creados
+const SEED_BOT_EMAIL = 'seed-bot@valecito.dev';   // superusuario que el seed crea si no hay ninguno
 
 // ── Helpers de fechas ─────────────────────────────────────────
 const dias = n => {
@@ -101,22 +113,46 @@ const VALES_SPEC = [
   [8,  2, 'Snacks y galletas mes',                             21000, null],
 ];
 
-// ── Helpers limpieza (solo SQL) ────────────────────────────────
+// ── Helpers limpieza ───────────────────────────────────────────
+// Borra solo lo que este seed crea: los usuarios de su lista exacta de correos (no todo el
+// dominio @valecito.dev / @cliente.dev, que también usan las pruebas manuales) y las tiendas
+// de su lista de nombres, con lo que cuelga de ellos: vales de esos clientes o de esas tiendas,
+// sus abonos, las asignaciones de equipo y las sesiones de esos usuarios.
+// Va en una transacción: si una llave foránea lo impide (por ejemplo, un usuario del seed
+// registró algo fuera de las tiendas del seed), no se borra nada.
 async function cleanSql() {
-  console.log('🗑  Limpiando datos de prueba SQL...');
-  const r = await request();
-  // Borra en orden por FK
-  await r.query(`DELETE FROM dbo.abonos  WHERE valeId   IN (SELECT id FROM dbo.vales  WHERE descripcion LIKE '% — %' OR descripcion LIKE '% - %' OR 1=1) AND 1=1`);
-  await r.query(`DELETE FROM dbo.vales   WHERE clienteId IN (SELECT id FROM dbo.users WHERE email LIKE '%@cliente.dev' OR email LIKE '%@valecito.dev')`);
-  await r.query(`DELETE FROM dbo.tienda_usuarios WHERE userId IN (SELECT id FROM dbo.users WHERE email LIKE '%@valecito.dev')`);
-  await r.query(`DELETE FROM dbo.tiendas WHERE nombre IN ('Tienda La Esquina','Mercado El Progreso','Minimarket San José')`);
-  await r.query(`DELETE FROM dbo.users   WHERE email LIKE '%@cliente.dev' OR email LIKE '%@valecito.dev'`);
-  console.log('   Limpieza completa.\n');
-}
+  console.log('🗑  Limpiando datos de prueba...');
+  const emails  = [SEED_BOT_EMAIL, ...TENDEROS.flat().map(u => u.email), ...CLIENTES.map(u => u.email)];
+  const nombres = TIENDAS.map(t => t.nombre);
+  const inEmails  = emails.map((_, i) => `@e${i}`).join(',');
+  const inNombres = nombres.map((_, i) => `@n${i}`).join(',');
+  const U = `(SELECT id FROM dbo.users WHERE email IN (${inEmails}))`;
+  const T = `(SELECT id FROM dbo.tiendas WHERE nombre IN (${inNombres}))`;
 
-async function cleanCsv() {
-  // Para CSV simplemente avisamos; borrado manual es más seguro
-  console.warn('⚠  --clean en modo CSV: borra manualmente los archivos CSV para empezar desde cero.');
+  const tx = new sql.Transaction(await getPool());
+  await tx.begin();
+  const run = async (tabla, where) => {
+    const r = new sql.Request(tx);
+    emails.forEach((e, i) => r.input(`e${i}`, sql.NVarChar(320), e));
+    nombres.forEach((n, i) => r.input(`n${i}`, sql.NVarChar(200), n));
+    const result = await r.query(`DELETE FROM dbo.${tabla} WHERE ${where}`);
+    console.log(`   ${tabla.padEnd(16)} ${result.rowsAffected[0]} filas`);
+  };
+  try {
+    // Orden por llaves foráneas: abonos → vales → equipo → tiendas → sesiones → usuarios.
+    await run('abonos',          `valeId IN (SELECT id FROM dbo.vales WHERE clienteId IN ${U} OR tiendaId IN ${T})`);
+    await run('vales',           `clienteId IN ${U} OR tiendaId IN ${T}`);
+    await run('tienda_usuarios', `userId IN ${U} OR tiendaId IN ${T}`);
+    await run('tiendas',         `nombre IN (${inNombres})`);
+    await run('tokens_granted',  `userId IN ${U}`);
+    await run('tokens_revoked',  `userId IN ${U}`);
+    await run('users',           `email IN (${inEmails})`);
+    await tx.commit();
+  } catch (error) {
+    await tx.rollback().catch(() => {});
+    throw new Error(`la limpieza se deshizo completa, no se borró nada — ${error.message}`);
+  }
+  console.log('   Limpieza completa.\n');
 }
 
 // ── Main ─────────────────────────────────────────────────────
@@ -124,10 +160,10 @@ async function seed() {
   console.log('╔════════════════════════════════════════╗');
   console.log('║  Seed — Mi Valecito  (datos de prueba) ║');
   console.log('╚════════════════════════════════════════╝');
-  console.log(`Modo: ${usingSql() ? 'SQL' : 'CSV'}${CLEAN ? '  [--clean]' : ''}\n`);
+  console.log(`Base de datos: SQL Server${CLEAN ? '  [--clean]' : ''}\n`);
 
   if (CLEAN) {
-    usingSql() ? await cleanSql() : await cleanCsv();
+    await cleanSql();
   }
 
   // ── 1. Superuser de referencia ───────────────────────────────

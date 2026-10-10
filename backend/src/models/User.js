@@ -1,8 +1,7 @@
 const crypto = require('crypto');
 const PasswordUtils = require('../utils/passwordUtils');
-const CSVDatabase = require('../utils/csvDatabase');
 const DataNormalizer = require('../utils/dataNormalizer');
-const { sql, usingSql, request } = require('../database/sqlPool');
+const { sql, request, isGuid } = require('../database/sqlPool');
 
 function fromSql(row) {
   return row ? {
@@ -32,7 +31,6 @@ class User {
 
   static async create(email, password, name, role = 'cliente', photo = null) {
     const user = new User(email, password, name, role, photo);
-    if (!usingSql()) return new CSVDatabase().create(user);
     const db = await request();
     await db.input('id', sql.UniqueIdentifier, user.id).input('email', sql.NVarChar(320), user.email)
       .input('password', sql.NVarChar(512), user.password).input('name', sql.NVarChar(300), user.name)
@@ -45,14 +43,13 @@ class User {
   }
 
   static async findByEmail(email) {
-    if (!usingSql()) return new CSVDatabase().findByEmail(email);
     const result = await (await request()).input('email', sql.NVarChar(320), email)
       .query('SELECT TOP 1 * FROM dbo.users WHERE email = @email');
     return fromSql(result.recordset[0]);
   }
 
   static async findById(id) {
-    if (!usingSql()) return new CSVDatabase().findById(id);
+    if (!isGuid(id)) return null;
     const result = await (await request()).input('id', sql.UniqueIdentifier, id)
       .query('SELECT TOP 1 * FROM dbo.users WHERE id = @id');
     return fromSql(result.recordset[0]);
@@ -68,7 +65,6 @@ class User {
   static generatePasswordResetToken() { return crypto.randomBytes(32).toString('hex'); }
 
   static async update(userId, updates) {
-    if (!usingSql()) return new CSVDatabase().update(userId, updates);
     const allowed = ['password', 'name', 'photo', 'isActive', 'mustChangePassword', 'resetToken', 'resetTokenExpiry'];
     const fields = Object.entries(updates).filter(([key]) => allowed.includes(key));
     if (!fields.length) return User.findById(userId);
@@ -87,23 +83,17 @@ class User {
 
   static async setResetToken(userId, resetToken) { return User.update(userId, { resetToken, resetTokenExpiry: new Date(Date.now() + 3600000) }); }
   static async findByResetToken(token) {
-    if (!usingSql()) {
-      const user = (await User.getAll()).find((item) => item.resetToken === token);
-      return user && user.resetTokenExpiry && new Date(user.resetTokenExpiry) >= new Date() ? user : null;
-    }
     const result = await (await request()).input('token', sql.NVarChar(128), token)
       .query('SELECT TOP 1 * FROM dbo.users WHERE resetToken = @token AND resetTokenExpiry >= SYSUTCDATETIME()');
     return fromSql(result.recordset[0]);
   }
   static async resetPassword(userId, newPassword) { return User.update(userId, { password: PasswordUtils.hashPassword(newPassword), resetToken: null, resetTokenExpiry: null }); }
   static async countByRole(role) {
-    if (!usingSql()) return (await User.getAll()).filter((user) => user.role === role).length;
     const result = await (await request()).input('role', sql.NVarChar(100), role).query('SELECT COUNT(*) AS total FROM dbo.users WHERE role = @role');
     return result.recordset[0].total;
   }
   static async isSuperuserExists() { return (await User.countByRole('superuser')) > 0; }
   static async getAll() {
-    if (!usingSql()) return new CSVDatabase().readAll();
     const result = await (await request()).query('SELECT * FROM dbo.users ORDER BY createdAt');
     return result.recordset.map(fromSql);
   }

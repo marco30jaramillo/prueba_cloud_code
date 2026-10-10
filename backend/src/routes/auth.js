@@ -16,8 +16,6 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 const router = express.Router();
 
-Role.initializeRoles();
-Permission.initializePermissions();
 
 router.post('/register', async (req, res) => {
   const { email, password, name, photo } = req.body;

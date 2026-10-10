@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "db:import": "node src/scripts/importCsvToAzureSql.js"
+    "db:setup": "node scripts/db-setup.js",
+    "db:seed": "node scripts/seed.js"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "license": "ISC",
   "type": "commonjs",

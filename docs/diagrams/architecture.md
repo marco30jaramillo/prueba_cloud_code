@@ -13,20 +13,27 @@ graph TB
         API["⚡ Express.js API\n:3001"]
         MW["Middleware\n• JWT Auth\n• requirePermission()\n• Audit Logger\n• Rate Limiter"]
         ROUTES["Rutas\n/auth  /users  /vales\n/tiendas  /modules\n/roles-config  /docs"]
+
+        MODELS["Modelos\nSQL parametrizado"]
+        POOL["sqlPool.js\núnico punto de conexión"]
     end
 
-    subgraph Storage["Almacenamiento"]
-        CSV["📄 CSV Files\nusers.csv  roles.csv\nmodules.csv\ntokens_granted.csv"]
-        SQL["☁️ Azure SQL\ndbo.tiendas\ndbo.tienda_usuarios\ndbo.vales\ndbo.abonos"]
+    subgraph Storage["Almacenamiento — SQL Server"]
+        SQL["🗄️ SQL Server local (desarrollo)\nAzure SQL (producción)\n\ndbo.users  dbo.roles  dbo.permissions\ndbo.modules  dbo.tokens_granted\ndbo.tokens_revoked  dbo.audit_logs\ndbo.tiendas  dbo.tienda_usuarios\ndbo.vales  dbo.abonos"]
     end
 
     WEB  -->|"HTTPS · Bearer JWT"| API
     MOB  -->|"HTTPS · Bearer JWT"| API
     API  --> MW
     MW   --> ROUTES
-    ROUTES -->|"DATA_PROVIDER=csv"| CSV
-    ROUTES -->|"DATA_PROVIDER=sql"| SQL
+    ROUTES --> MODELS
+    MODELS --> POOL
+    POOL -->|"DB_* (local) o AZURE_SQL_* (producción)"| SQL
 ```
+
+El almacenamiento es el mismo esquema en los dos ambientes; solo cambia la forma de conexión,
+que se valida al arrancar (una sola forma presente). Las fotos van a la carpeta local
+`datos/uploads/` o a Azure Blob Storage si está configurado.
 
 ## Flujo de Autenticación
 
@@ -35,19 +42,19 @@ sequenceDiagram
     participant C as Cliente (Web/Mobile)
     participant API as Express API
     participant TM as Token Manager
-    participant DB as CSV / Azure SQL
+    participant DB as SQL Server / Azure SQL
 
     C->>API: POST /auth/login { email, password }
     API->>DB: User.findByEmail()
     DB-->>API: user record
     API->>API: verifyPassword(PBKDF2)
     API->>TM: generateTokenWithId() → JWT
-    TM->>CSV: tokens_granted.csv.append(tokenId)
+    TM->>DB: INSERT dbo.tokens_granted (tokenId)
     API-->>C: { status:"success", token, user }
     
     C->>API: GET /vales/mis-vales\nAuthorization: Bearer <token>
     API->>TM: validateToken(tokenId)
-    TM->>CSV: check tokens_granted / revoked
+    TM->>DB: consulta dbo.tokens_granted
     API->>API: requirePermission("vale:ver-propio")
     API->>DB: Vale.getByCliente(userId)
     DB-->>API: vales[]
@@ -75,8 +82,8 @@ flowchart LR
 |------|-----------|-------|
 | Mobile | Expo SDK 57 + React Native | Zustand + SecureStore |
 | Frontend | Next.js 14 App Router | SCSS + React Bootstrap |
-| API | Express.js + Node.js | Dual-mode CSV/SQL |
-| Auth | JWT + PBKDF2 | 24h / 30d (rememberMe) |
-| DB dev | CSV files | Sin setup adicional |
-| DB prod | Azure SQL | Requiere migración SQL |
+| API | Express.js + Node.js | SQL en los modelos, vía `sqlPool.js` |
+| Auth | JWT + PBKDF2 | 24h / 7d (rememberMe) |
+| DB dev | SQL Server local (Developer o Express) | Base `MiValecito_Dev`; se prepara con `npm run db:setup` |
+| DB prod | Azure SQL | Mismo esquema: `database/scripts_sql/` |
 | Hosting | Azure App Service | Brazil South |

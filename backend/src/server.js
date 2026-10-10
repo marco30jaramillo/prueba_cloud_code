@@ -1,4 +1,10 @@
 require('dotenv').config();
+
+// Validación de configuración al arrancar: antes de cargar rutas y fuera del try/catch de
+// la conexión. Termina el proceso si falta JWT_SECRET o si la configuración de base de
+// datos mezcla familias o viola la guarda de TLS.
+require('./config/startupChecks').enforceStartupConfig(process.env);
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -253,36 +259,21 @@ app.listen(PORT, '0.0.0.0', async () => {
     console.log(`   Red: http://${ip}:${PORT}`);
   });
 
-  const { usingSql, getPool } = require('./database/sqlPool');
-  if (usingSql()) {
-    try {
-      await getPool();
-      console.log(`🗄️  Base de datos: Azure SQL (conectado)`);
-    } catch (err) {
-      console.error(`❌ Azure SQL: error de conexión`);
-      console.error(`   Mensaje : ${err.message}`);
-      if (err.code)   console.error(`   Código  : ${err.code}`);
-      if (err.number) console.error(`   Número  : ${err.number}`);
-      if (err.state)  console.error(`   Estado  : ${err.state}`);
-      // Diagnóstico según tipo de error
-      const msg = err.message || '';
-      if (msg.includes('in 15000ms') || msg.includes('ETIMEOUT') || msg.includes('ECONNREFUSED')) {
-        console.error(`   Causa probable: Firewall de Azure no permite tu IP.`);
-        console.error(`   → Portal Azure > SQL Server > Redes > Agregar IP de cliente`);
-        console.error(`   → O activa "Permitir servicios y recursos de Azure"`);
-      } else if (msg.toLowerCase().includes('login failed') || msg.includes('18456')) {
-        console.error(`   Causa probable: Credenciales incorrectas (usuario/contraseña).`);
-      } else if (msg.toLowerCase().includes('cannot open database') || msg.includes('4060')) {
-        console.error(`   Causa probable: El nombre de la base de datos no existe o no tienes acceso.`);
-      } else if (msg.toLowerCase().includes('server name') || msg.includes('ENOTFOUND')) {
-        console.error(`   Causa probable: Nombre del servidor incorrecto o no resuelve DNS.`);
-      }
-      console.error(`   Servidor : ${process.env.AZURE_SQL_SERVER || '(no definido)'}`);
-      console.error(`   Base     : ${process.env.AZURE_SQL_DATABASE || '(no definido)'}`);
-      console.error(`   Usuario  : ${process.env.AZURE_SQL_USER || '(no definido)'}`);
-    }
-  } else {
-    console.log(`📝 Base de datos: CSV (modo local)`);
+  // La configuración ya se validó al arrancar (startupChecks). Aquí solo se usan la
+  // familia y el host para los mensajes: nunca la contraseña ni la cadena de conexión.
+  const { getPool, resolveDbConfig } = require('./database/sqlPool');
+  const { describeConnection, diagnoseConnectionError } = require('./database/dbDiagnostics');
+  const destino = resolveDbConfig(process.env);
+  try {
+    await getPool();
+    console.log(`🗄️  Base de datos: SQL Server (conectado) — ${describeConnection(destino)}`);
+  } catch (err) {
+    console.error(`❌ SQL Server: error de conexión — ${describeConnection(destino)}`);
+    console.error(`   Mensaje : ${err.message}`);
+    if (err.code)   console.error(`   Código  : ${err.code}`);
+    if (err.number) console.error(`   Número  : ${err.number}`);
+    if (err.state)  console.error(`   Estado  : ${err.state}`);
+    diagnoseConnectionError(err, destino).forEach(line => console.error(`   ${line}`));
   }
 
   console.log(`📚 Documentación: http://localhost:${PORT}/docs`);

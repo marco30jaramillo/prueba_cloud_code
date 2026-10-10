@@ -1,11 +1,5 @@
 const crypto = require('crypto');
-const { sql, usingSql, request } = require('../database/sqlPool');
-const CsvTable = require('../utils/csvTable');
-
-const CSV_FIELDS = ['id','tiendaId','clienteId','registradoPor','descripcion','montoTotal',
-  'saldoPendiente','estado','fechaVale','fechaVencimiento','notas','anuladoPor','anuladoAt','createdAt','updatedAt'];
-
-const db = () => new CsvTable('vales.csv', CSV_FIELDS);
+const { sql, request, isGuid } = require('../database/sqlPool');
 
 function fromSql(row) {
   if (!row) return null;
@@ -32,7 +26,6 @@ class Vale {
       fechaVencimiento: data.fechaVencimiento || '', notas: data.notas || '',
       anuladoPor: '', anuladoAt: '', createdAt: now, updatedAt: now
     };
-    if (!usingSql()) return db().create(vale);
     const r = await request();
     await r.input('id', sql.UniqueIdentifier, vale.id)
       .input('tiendaId', sql.UniqueIdentifier, vale.tiendaId)
@@ -50,18 +43,14 @@ class Vale {
   }
 
   static async findById(id) {
-    if (!usingSql()) return db().findById(id);
+    if (!isGuid(id)) return null;
     const r = await (await request()).input('id', sql.UniqueIdentifier, id)
       .query('SELECT TOP 1 * FROM dbo.vales WHERE id=@id');
     return fromSql(r.recordset[0]);
   }
 
   static async getByTienda(tiendaId, { estado } = {}) {
-    if (!usingSql()) {
-      let rows = db().filter(r => r.tiendaId === tiendaId);
-      if (estado) rows = rows.filter(r => r.estado === estado);
-      return rows.sort((a, b) => new Date(b.fechaVale) - new Date(a.fechaVale));
-    }
+    if (!isGuid(tiendaId)) return [];
     const r = await request();
     r.input('tiendaId', sql.UniqueIdentifier, tiendaId);
     const whereEstado = estado ? ' AND v.estado=@estado' : '';
@@ -74,10 +63,7 @@ class Vale {
   }
 
   static async getByCliente(clienteId) {
-    if (!usingSql()) {
-      return db().filter(r => r.clienteId === clienteId)
-        .sort((a, b) => new Date(b.fechaVale) - new Date(a.fechaVale));
-    }
+    if (!isGuid(clienteId)) return [];
     const r = await (await request()).input('clienteId', sql.UniqueIdentifier, clienteId)
       .query(`SELECT v.*, t.nombre AS tiendaNombre FROM dbo.vales v
               JOIN dbo.tiendas t ON t.id=v.tiendaId
@@ -88,11 +74,7 @@ class Vale {
   // Vista de soporte/admin: vales de un cliente filtrados opcionalmente por tiendas.
   // tiendaIds = undefined → sin restricción (admin); array → solo esas tiendas (tendero).
   static async getByClienteVista(clienteId, { tiendaIds } = {}) {
-    if (!usingSql()) {
-      let rows = db().filter(r => r.clienteId === clienteId);
-      if (tiendaIds) rows = rows.filter(r => tiendaIds.includes(r.tiendaId));
-      return rows.sort((a, b) => new Date(b.fechaVale) - new Date(a.fechaVale));
-    }
+    if (!isGuid(clienteId)) return [];
     const r = await request();
     r.input('clienteId', sql.UniqueIdentifier, clienteId);
     let tiendaClause = '';
@@ -130,7 +112,6 @@ class Vale {
       : saldoPendiente < montoTotal ? 'parcial'
       : 'pendiente';
     const now = new Date().toISOString();
-    if (!usingSql()) return db().update(valeId, { saldoPendiente, estado, updatedAt: now });
     const r = await (await request()).input('id', sql.UniqueIdentifier, valeId)
       .input('saldo', sql.Decimal(12, 2), saldoPendiente)
       .input('estado', sql.NVarChar(20), estado)
@@ -142,7 +123,6 @@ class Vale {
 
   static async anular(id, anuladoPor) {
     const now = new Date().toISOString();
-    if (!usingSql()) return db().update(id, { estado: 'anulado', anuladoPor, anuladoAt: now, updatedAt: now });
     const r = await (await request()).input('id', sql.UniqueIdentifier, id)
       .input('anuladoPor', sql.UniqueIdentifier, anuladoPor)
       .input('now', sql.DateTime2, new Date())
