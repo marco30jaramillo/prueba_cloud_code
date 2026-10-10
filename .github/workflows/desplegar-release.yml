@@ -11,6 +11,14 @@ name: Desplegar release
 # Solo se dispara con push a release/** y con disparo manual. El despliegue a produccion
 # (rama main, ambiente produccion) se agrega aparte, cuando ese ambiente exista.
 #
+# Firewall de Azure SQL: lo controla la variable de ambiente FIREWALL_MODO (vars, no secreto).
+#   - Vacia o sin definir (por defecto): no se usa regla temporal; la base se migra directo.
+#     Asume que el servidor SQL tiene activada la opcion "Permitir servicios de Azure".
+#   - 'regla-temporal': antes de migrar se abre una regla con la IP del ejecutor y al final
+#     se cierra (siempre). Exige cinco secretos del ambiente: AZURE_SQL_RESOURCE_GROUP,
+#     AZURE_SQL_SUBSCRIPTION_ID, AZURE_FIREWALL_TENANT_ID, AZURE_FIREWALL_CLIENT_ID y
+#     AZURE_FIREWALL_CLIENT_SECRET.
+#
 # Aviso: el nombre de la base escrito en la entrada confirmar-base es visible en claro en un
 # repositorio publico (entradas del disparo manual y registro de ejecuciones).
 on:
@@ -115,6 +123,7 @@ jobs:
           done
 
       - name: Abrir regla temporal de firewall
+        if: ${{ vars.FIREWALL_MODO == 'regla-temporal' }}
         uses: ./.github/actions/firewall-azure-sql
         with:
           accion: abrir
@@ -180,7 +189,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Cerrar regla temporal de firewall
-        if: ${{ always() }}
+        if: ${{ always() && vars.FIREWALL_MODO == 'regla-temporal' }}
         uses: ./.github/actions/firewall-azure-sql
         with:
           accion: cerrar

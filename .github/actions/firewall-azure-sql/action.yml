@@ -3,6 +3,13 @@ description: >
   Abre o cierra una regla temporal de firewall en Azure SQL con la IP publica del ejecutor.
   Usa una credencial propia (service principal) con permiso solo sobre el firewall del servidor.
   Los valores llegan como entradas desde un job con environment; este archivo no lee secretos.
+  Solo se invoca cuando la variable de ambiente FIREWALL_MODO vale 'regla-temporal'
+  (el orquestador desplegar-release.yml lo condiciona). Modos:
+  vacio o sin definir (por defecto) = no se usa esta accion; se asume que el servidor tiene
+  activada la opcion "Permitir servicios de Azure".
+  regla-temporal = esta accion abre y cierra una regla con la IP del ejecutor; exige los cinco
+  secretos AZURE_SQL_RESOURCE_GROUP, AZURE_SQL_SUBSCRIPTION_ID, AZURE_FIREWALL_TENANT_ID,
+  AZURE_FIREWALL_CLIENT_ID y AZURE_FIREWALL_CLIENT_SECRET.
 
 inputs:
   accion:
