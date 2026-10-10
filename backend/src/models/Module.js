@@ -1,61 +1,4 @@
-const fs = require('fs');
-const path = require('path');
-const { sql, usingSql, request } = require('../database/sqlPool');
-
-const MODULES_PATH = path.join(__dirname, '../../modules.csv');
-
-function parseField(raw) {
-  const t = raw.trim();
-  if (t.startsWith('"') && t.endsWith('"')) return t.slice(1, -1).replace(/""/g, '"');
-  return t;
-}
-
-function parseLine(line) {
-  const fields = [];
-  let current = '';
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
-      else inQuotes = !inQuotes;
-    } else if (ch === ',' && !inQuotes) {
-      fields.push(parseField(current));
-      current = '';
-    } else {
-      current += ch;
-    }
-  }
-  fields.push(parseField(current));
-  return fields;
-}
-
-function readAllFromCsv() {
-  if (!fs.existsSync(MODULES_PATH)) return [];
-  const lines = fs.readFileSync(MODULES_PATH, 'utf8').trim().split('\n');
-  const headers = parseLine(lines[0]);
-  const modules = [];
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    const values = parseLine(line);
-    const row = {};
-    headers.forEach((h, idx) => { row[h] = values[idx] ?? ''; });
-    modules.push(new Module({
-      id:          row.id,
-      name:        row.name,
-      description: row.description,
-      buttonLabel: row.buttonLabel,
-      href:        row.href,
-      icon:        row.icon,
-      showInNav:   row.showInNav,
-      permRead:    (row.permRead  || '').split('|').filter(Boolean),
-      permWrite:   (row.permWrite || '').split('|').filter(Boolean),
-      permFull:    (row.permFull  || '').split('|').filter(Boolean),
-    }));
-  }
-  return modules;
-}
+const { request } = require('../database/sqlPool');
 
 class Module {
   constructor({ id, name, description, buttonLabel, href, icon, showInNav, permRead, permWrite, permFull }) {
@@ -81,7 +24,6 @@ class Module {
   }
 
   static async getAll() {
-    if (!usingSql()) return readAllFromCsv();
     const result = await (await request()).query('SELECT * FROM dbo.modules ORDER BY id');
     return result.recordset.map(row => new Module({
       id:          String(row.id),

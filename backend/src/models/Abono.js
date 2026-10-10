@@ -1,9 +1,5 @@
 const crypto = require('crypto');
-const { sql, usingSql, request } = require('../database/sqlPool');
-const CsvTable = require('../utils/csvTable');
-
-const CSV_FIELDS = ['id','valeId','monto','registradoPor','notas','anulado','anuladoPor','anuladoAt','fechaAbono','createdAt'];
-const db = () => new CsvTable('abonos.csv', CSV_FIELDS);
+const { sql, request, isGuid } = require('../database/sqlPool');
 
 function fromSql(row) {
   if (!row) return null;
@@ -25,32 +21,28 @@ class Abono {
       notas: data.notas || '', anulado: false,
       anuladoPor: '', anuladoAt: '', fechaAbono: now, createdAt: now
     };
-    if (!usingSql()) {
-      db().create(abono);
-    } else {
-      const r = await request();
-      await r.input('id', sql.UniqueIdentifier, abono.id)
-        .input('valeId', sql.UniqueIdentifier, abono.valeId)
-        .input('monto', sql.Decimal(12, 2), abono.monto)
-        .input('registradoPor', sql.UniqueIdentifier, abono.registradoPor)
-        .input('notas', sql.NVarChar(500), abono.notas || null)
-        .query(`INSERT INTO dbo.abonos (id,valeId,monto,registradoPor,notas)
-                VALUES (@id,@valeId,@monto,@registradoPor,@notas)`);
-    }
+    const r = await request();
+    await r.input('id', sql.UniqueIdentifier, abono.id)
+      .input('valeId', sql.UniqueIdentifier, abono.valeId)
+      .input('monto', sql.Decimal(12, 2), abono.monto)
+      .input('registradoPor', sql.UniqueIdentifier, abono.registradoPor)
+      .input('notas', sql.NVarChar(500), abono.notas || null)
+      .query(`INSERT INTO dbo.abonos (id,valeId,monto,registradoPor,notas)
+              VALUES (@id,@valeId,@monto,@registradoPor,@notas)`);
     const Vale = require('./Vale');
     const vale = await Vale.recalcularSaldo(abono.valeId);
     return { abono, vale };
   }
 
   static async findById(id) {
-    if (!usingSql()) return db().findById(id);
+    if (!isGuid(id)) return null;
     const r = await (await request()).input('id', sql.UniqueIdentifier, id)
       .query('SELECT TOP 1 * FROM dbo.abonos WHERE id=@id');
     return fromSql(r.recordset[0]);
   }
 
   static async getByVale(valeId) {
-    if (!usingSql()) return db().filter(r => r.valeId === valeId);
+    if (!isGuid(valeId)) return [];
     const r = await (await request()).input('valeId', sql.UniqueIdentifier, valeId)
       .query(`SELECT a.*, u.name AS registradoPorNombre FROM dbo.abonos a
               JOIN dbo.users u ON u.id=a.registradoPor
@@ -62,8 +54,8 @@ class Abono {
   static async anular(id, anuladoPor) {
     const now = new Date().toISOString();
     let abono;
-    if (!usingSql()) {
-      abono = db().update(id, { anulado: true, anuladoPor, anuladoAt: now });
+    if (!isGuid(id)) {
+      abono = null;
     } else {
       const r = await (await request()).input('id', sql.UniqueIdentifier, id)
         .input('anuladoPor', sql.UniqueIdentifier, anuladoPor)

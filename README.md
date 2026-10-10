@@ -9,12 +9,16 @@ Sistema de crédito local — gestión de vales al fiado, tiendas y clientes.
 | **Backend** | Express.js + Node.js | `:3001` / Azure App Service |
 | **Frontend** | Next.js 14 + TypeScript | `:3000` / Azure App Service |
 | **Mobile** | Expo SDK 57 (React Native) | iOS / Android |
-| **Base de datos** | Dual-mode: CSV (dev) / Azure SQL (prod) | — |
+| **Base de datos** | SQL Server: instancia local (dev) / Azure SQL (prod) | `localhost:1433` / Azure SQL |
 
 ## Inicio rápido
 
+El backend necesita una base SQL Server local y un archivo `backend/.env`. La primera vez,
+sigue el inicio rápido de [`backend/README.md`](backend/README.md): crear la base y la cuenta,
+`npm run db:setup` y copiar `env.example` como `.env`.
+
 ```bash
-# Backend
+# Backend (con la base local y backend/.env ya preparados)
 cd backend && npm install && npm run dev
 
 # Frontend (nueva terminal)
@@ -31,6 +35,12 @@ prueba_cloud_code/
 ├── backend/          # Express.js API — ver backend/README.md
 ├── frontend/         # Next.js dashboard — ver frontend/README.md
 ├── mobile/           # Expo app iOS/Android — ver mobile/README.md
+├── database/
+│   └── scripts_sql/  # Todos los scripts SQL — ver backend/README.md
+│       ├── esquemas/     # Creación de base, cuenta y tablas (idempotentes)
+│       ├── alters/       # Cambios sobre bases ya creadas
+│       ├── inserts/      # Catálogos: permisos, roles y módulos
+│       └── consultas/    # Consultas de verificación (solo lectura)
 └── docs/
     └── diagrams/
         ├── architecture.md      # Diagrama de arquitectura (Mermaid)

@@ -2,11 +2,14 @@
 
 ## 📋 Arquitectura
 
-El sistema ahora mantiene **dos listas de tokens** para un control seguro:
+El sistema mantiene **dos listas de tokens** para un control seguro. Son dos tablas de SQL
+Server, `dbo.tokens_granted` y `dbo.tokens_revoked`, definidas en
+`database/scripts_sql/esquemas/01_esquema_inicial.sql` y manejadas por
+`src/utils/tokenManager.js`:
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│         TOKENS OTORGADOS (tokens_granted.csv)       │
+│         TOKENS OTORGADOS (dbo.tokens_granted)       │
 ├─────────────────────────────────────────────────────┤
 │ tokenId | userId | email | token | issuedAt | ...  │
 ├─────────────────────────────────────────────────────┤
@@ -15,7 +18,7 @@ El sistema ahora mantiene **dos listas de tokens** para un control seguro:
 └─────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────┐
-│        TOKENS REVOCADOS (tokens_revoked.csv)        │
+│        TOKENS REVOCADOS (dbo.tokens_revoked)        │
 ├─────────────────────────────────────────────────────┤
 │ tokenId | userId | email | token | revokedAt | ... │
 ├─────────────────────────────────────────────────────┤
@@ -28,7 +31,7 @@ El sistema ahora mantiene **dos listas de tokens** para un control seguro:
 ```
 1. LOGIN/REGISTER
    ├─ Generar JWT + tokenId único
-   ├─ Guardar en tokens_granted.csv ✅
+   ├─ Guardar en dbo.tokens_granted ✅
    └─ Devolver token al cliente
 
 2. VALIDAR SESIÓN (GET /auth/validate)
@@ -40,15 +43,14 @@ El sistema ahora mantiene **dos listas de tokens** para un control seguro:
 
 3. LOGOUT (POST /auth/logout)
    ├─ Recibir token autenticado
-   ├─ Buscar en tokens_granted.csv
-   ├─ Mover a tokens_revoked.csv
-   ├─ Eliminar de tokens_granted.csv
+   ├─ Buscar en dbo.tokens_granted
+   ├─ Insertar en dbo.tokens_revoked
+   ├─ Eliminar de dbo.tokens_granted
    └─ Token inválido para futuros usos
 
 4. LIMPIEZA AUTOMÁTICA (2 AM diariamente)
-   ├─ Leer tokens_revoked.csv
-   ├─ Buscar tokens con expiresAt < now
-   ├─ Eliminar del archivo
+   ├─ Buscar en dbo.tokens_revoked los tokens con expiresAt < ahora
+   ├─ Eliminar esas filas
    └─ Liberar espacio en BD
 ```
 
@@ -101,16 +103,18 @@ El middleware `authMiddleware` valida:
 1. ✅ Token presente en Authorization header
 2. ✅ Firma JWT válida (no modificado)
 3. ✅ JWT no expirado
-4. ✅ Token en lista de otorgados (tokens_granted.csv)
-5. ❌ Token NO en lista de revocados (tokens_revoked.csv)
+4. ✅ Token en lista de otorgados (dbo.tokens_granted)
+5. ❌ Token NO en lista de revocados (dbo.tokens_revoked)
 ```
 
 Si falla cualquiera de estos checks → **401 Unauthorized**
 
-## 📁 Archivos de Control
+## 📁 Tablas de Control
 
-- `tokens_granted.csv` - Tokens activos y válidos
-- `tokens_revoked.csv` - Tokens invalidados (pendientes de limpieza)
+- `dbo.tokens_granted` - Tokens activos y válidos
+- `dbo.tokens_revoked` - Tokens invalidados (pendientes de limpieza)
+
+Ambas tienen `tokenId` como clave y `userId` como referencia a `dbo.users`.
 
 ## 💡 Ejemplo Completo en Postman
 
@@ -126,7 +130,7 @@ POST /auth/register
 Response:
 {
   "message": "Usuario registrado exitosamente",
-  "token": "eyJ..."  ← Guardado en tokens_granted.csv
+  "token": "eyJ..."  ← Guardado en dbo.tokens_granted
 }
 ```
 
