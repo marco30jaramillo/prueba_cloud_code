@@ -1,0 +1,44 @@
+name: Validar rama
+
+# Valida el nombre de la rama de origen de cada pull request.
+# - Usa pull_request (nunca la variante con permisos de escritura): no hay secretos ni permisos de escritura.
+# - No descarga el codigo del PR: no hay checkout.
+# - El nombre de la rama llega por env y se usa entre comillas dobles; jamas se interpola en run.
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+      - 'release/**'
+
+permissions:
+  contents: read
+
+jobs:
+  validar-nombre-rama:
+    name: validar-nombre-rama
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validar nombre de la rama de origen
+        env:
+          RAMA_ORIGEN: ${{ github.head_ref }}
+          RAMA_DESTINO: ${{ github.base_ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          patron='^(req|bugfix|hotfix)/[a-z0-9-]+\(KAN-[0-9]+\)$|^release/v[0-9]+\.[0-9]+\.[0-9]+$|^(main|develop)$'
+
+          if ! [[ "$RAMA_ORIGEN" =~ $patron ]]; then
+            echo "::error::La rama de origen no respeta la convencion: req|bugfix|hotfix/<nombre>(KAN-n), release/vX.Y.Z, main o develop."
+            exit 1
+          fi
+
+          if [ "$RAMA_DESTINO" = "main" ]; then
+            if ! [[ "$RAMA_ORIGEN" =~ ^release/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::main solo acepta pull requests desde ramas release/vX.Y.Z."
+              exit 1
+            fi
+          fi
+
+          echo "Nombre de rama valido."

@@ -196,19 +196,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_tu_tienda' AND object_
     CREATE INDEX IX_tu_tienda     ON dbo.tienda_usuarios (tiendaId);   -- usuarios de una tienda
 GO
 
--- ── 6. PERMISOS A LA CUENTA DE LA APLICACIÓN EN AZURE ────────────────────────
--- 'auth_app_runtime' es la cuenta que usa el backend en Azure SQL. En la base local no
--- existe (allí la cuenta es mivalecito_app, con db_datareader y db_datawriter), así que
--- los GRANT solo se ejecutan si el principal existe en esta base.
-
-IF DATABASE_PRINCIPAL_ID(N'auth_app_runtime') IS NOT NULL
-BEGIN
-    GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.tiendas         TO [auth_app_runtime];
-    GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.tienda_usuarios TO [auth_app_runtime];
-    GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.vales           TO [auth_app_runtime];
-    GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.abonos          TO [auth_app_runtime];
-    PRINT N'Permisos otorgados a auth_app_runtime';
-END
-ELSE
-    PRINT N'auth_app_runtime no existe en esta base: no se otorgan permisos';
+-- Los permisos de la cuenta de la aplicación sobre estas tablas no se otorgan aquí: el
+-- ejecutor de scripts rechaza sentencias de permisos en esquemas/. Viven en
+-- esquemas/00_permisos_aplicacion.sql, que corre una persona después de este script.
 GO

@@ -1,0 +1,338 @@
+name: Desplegar release
+
+# Orquestador del despliegue a QA: validar -> base-de-datos -> backend -> frontend
+# -> pruebas-release -> release-pr.
+# Estructura: los pasos de pruebas del release (tarea 9) y de apertura del PR hacia main
+# (tarea 10) son los jobs pruebas-release y release-pr de ESTE archivo, no workflows
+# separados, para que el orden y las dependencias vivan en un solo orquestador.
+# Modo efectivo: en push es siempre 'aplicar'. En disparo manual, solo 'aplicar' continua
+# despues de base-de-datos; dry-run, baseline e inicializar terminan ahi (sin backend,
+# frontend, pruebas ni PR).
+# Solo se dispara con push a release/** y con disparo manual. El despliegue a produccion
+# (rama main, ambiente produccion) se agrega aparte, cuando ese ambiente exista.
+#
+# Firewall de Azure SQL: lo controla la variable de ambiente FIREWALL_MODO (vars, no secreto).
+#   - Vacia o sin definir (por defecto): no se usa regla temporal; la base se migra directo.
+#     Asume que el servidor SQL tiene activada la opcion "Permitir servicios de Azure".
+#   - 'regla-temporal': antes de migrar se abre una regla con la IP del ejecutor y al final
+#     se cierra (siempre). Exige cinco secretos del ambiente: AZURE_SQL_RESOURCE_GROUP,
+#     AZURE_SQL_SUBSCRIPTION_ID, AZURE_FIREWALL_TENANT_ID, AZURE_FIREWALL_CLIENT_ID y
+#     AZURE_FIREWALL_CLIENT_SECRET.
+#
+# Aviso: el nombre de la base escrito en la entrada confirmar-base es visible en claro en un
+# repositorio publico (entradas del disparo manual y registro de ejecuciones).
+on:
+  push:
+    branches:
+      - 'release/**'
+  workflow_dispatch:
+    inputs:
+      modo-base:
+        description: "Modo de base de datos"
+        type: choice
+        options:
+          - aplicar
+          - dry-run
+          - baseline
+          - inicializar
+        default: aplicar
+      confirmar-base:
+        description: "Solo baseline o inicializar (dry-run y aplicar no la piden): escribir el nombre exacto de la base"
+        type: string
+        required: false
+        default: ''
+
+# Grupo fijo: un solo despliegue a QA a la vez aunque haya varias ramas release/**.
+# Un despliegue en curso nunca se cancela; los demas esperan.
+concurrency:
+  group: desplegar-qa
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  validar:
+    name: validar
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      modo: ${{ steps.version.outputs.modo }}
+    steps:
+      # Sin checkout y sin secretos: solo se comprueba la referencia.
+      - name: Validar rama y derivar version
+        id: version
+        env:
+          REFERENCIA: ${{ github.ref }}
+          MODO_ENTRADA: ${{ inputs.modo-base || 'aplicar' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! [[ "$REFERENCIA" =~ ^refs/heads/release/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Solo se despliega desde una rama release/vX.Y.Z."
+            exit 1
+          fi
+          version="${REFERENCIA#refs/heads/release/}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          modo="$MODO_ENTRADA"
+          if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then modo="aplicar"; fi
+          if ! [[ "$modo" =~ ^(aplicar|dry-run|baseline|inicializar)$ ]]; then
+            echo "::error::Modo de base de datos invalido."
+            exit 1
+          fi
+          echo "modo=$modo" >> "$GITHUB_OUTPUT"
+
+  base-de-datos:
+    name: base-de-datos
+    needs: validar
+    runs-on: ubuntu-latest
+    environment: qa
+    timeout-minutes: 30
+    env:
+      FIREWALL_REGLA: gha-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        shell: bash
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            echo "Sin package-lock.json en backend: se usa npm install (sin lockfile estricto)."
+            npm install
+          fi
+
+      - name: Enmascarar valores derivados
+        env:
+          DB_SERVER: ${{ secrets.DEPLOY_DB_SERVER }}
+          DB_DATABASE: ${{ secrets.DEPLOY_DB_DATABASE }}
+          DB_USER: ${{ secrets.DEPLOY_DB_USER }}
+        shell: bash
+        run: |
+          for v in "$DB_SERVER" "$DB_DATABASE" "$DB_USER" "${DB_SERVER%%.*}"; do
+            if [ -n "$v" ]; then echo "::add-mask::$v"; fi
+          done
+
+      - name: Abrir regla temporal de firewall
+        if: ${{ vars.FIREWALL_MODO == 'regla-temporal' }}
+        uses: ./.github/actions/firewall-azure-sql
+        with:
+          accion: abrir
+          nombre-regla: ${{ env.FIREWALL_REGLA }}
+          servidor: ${{ secrets.DEPLOY_DB_SERVER }}
+          grupo-recursos: ${{ secrets.AZURE_SQL_RESOURCE_GROUP }}
+          suscripcion: ${{ secrets.AZURE_SQL_SUBSCRIPTION_ID }}
+          tenant: ${{ secrets.AZURE_FIREWALL_TENANT_ID }}
+          cliente: ${{ secrets.AZURE_FIREWALL_CLIENT_ID }}
+          secreto: ${{ secrets.AZURE_FIREWALL_CLIENT_SECRET }}
+
+      - name: Migrar base de datos
+        working-directory: backend
+        shell: bash
+        env:
+          DEPLOY_DB_SERVER: ${{ secrets.DEPLOY_DB_SERVER }}
+          DEPLOY_DB_DATABASE: ${{ secrets.DEPLOY_DB_DATABASE }}
+          DEPLOY_DB_USER: ${{ secrets.DEPLOY_DB_USER }}
+          DEPLOY_DB_PASSWORD: ${{ secrets.DEPLOY_DB_PASSWORD }}
+          MODO_BASE: ${{ inputs.modo-base || 'aplicar' }}
+          CONFIRMAR_BASE: ${{ inputs.confirmar-base }}
+          VERSION: ${{ needs.validar.outputs.version }}
+        run: |
+          set -euo pipefail
+          # En el despliegue automatico (push) el modo es siempre 'aplicar'.
+          if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then MODO_BASE="aplicar"; fi
+          if ! [[ "$MODO_BASE" =~ ^(aplicar|dry-run|baseline|inicializar)$ ]]; then
+            echo "::error::Modo de base de datos invalido."
+            exit 1
+          fi
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version invalida."
+            exit 1
+          fi
+          argumentos=(--modo "$MODO_BASE" --version "$VERSION")
+          if [ "$MODO_BASE" = "baseline" ] || [ "$MODO_BASE" = "inicializar" ]; then
+            argumentos+=(--confirmar-base "$CONFIRMAR_BASE")
+          fi
+          salida="$RUNNER_TEMP/db-migrate.log"
+          node scripts/db-migrate.js "${argumentos[@]}" 2>&1 | tee "$salida"
+          punto="$(grep -E '^PUNTO_RESTAURACION_UTC=' "$salida" | tail -n 1 || true)"
+          if [ -z "$punto" ]; then
+            echo "::error::El ejecutor no informo PUNTO_RESTAURACION_UTC; el despliegue se detiene."
+            exit 1
+          fi
+          {
+            echo "### Base de datos (modo: $MODO_BASE, version: $VERSION)"
+            echo ""
+            echo "$punto"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Resumen de modo sin despliegue
+        if: ${{ needs.validar.outputs.modo != 'aplicar' }}
+        env:
+          MODO: ${{ needs.validar.outputs.modo }}
+        shell: bash
+        run: |
+          {
+            echo ""
+            echo "**Modo $MODO: el flujo termina aqui.** No se despliega backend ni frontend,"
+            echo "no se ejecutan las pruebas del release y no se abre el pull request hacia main."
+            echo "Solo el modo 'aplicar' completa el despliegue."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Cerrar regla temporal de firewall
+        if: ${{ always() && vars.FIREWALL_MODO == 'regla-temporal' }}
+        uses: ./.github/actions/firewall-azure-sql
+        with:
+          accion: cerrar
+          nombre-regla: ${{ env.FIREWALL_REGLA }}
+          servidor: ${{ secrets.DEPLOY_DB_SERVER }}
+          grupo-recursos: ${{ secrets.AZURE_SQL_RESOURCE_GROUP }}
+          suscripcion: ${{ secrets.AZURE_SQL_SUBSCRIPTION_ID }}
+          tenant: ${{ secrets.AZURE_FIREWALL_TENANT_ID }}
+          cliente: ${{ secrets.AZURE_FIREWALL_CLIENT_ID }}
+          secreto: ${{ secrets.AZURE_FIREWALL_CLIENT_SECRET }}
+
+  backend:
+    name: backend
+    needs: [validar, base-de-datos]
+    if: ${{ needs.validar.outputs.modo == 'aplicar' }}
+    uses: ./.github/workflows/backend-deploy.yml
+    permissions:
+      contents: read
+    with:
+      ambiente: qa
+
+  frontend:
+    name: frontend
+    needs: [validar, backend]
+    if: ${{ needs.validar.outputs.modo == 'aplicar' && needs.backend.result == 'success' }}
+    uses: ./.github/workflows/frontend-deploy.yml
+    permissions:
+      contents: read
+    with:
+      ambiente: qa
+
+  # El nombre de este job es el check requerido en el ruleset de main.
+  pruebas-release:
+    name: pruebas-release
+    needs: [validar, frontend]
+    if: ${{ needs.validar.outputs.modo == 'aplicar' && needs.frontend.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      resultado: ${{ steps.pruebas.outputs.resultado }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      - name: Detectar y ejecutar pruebas
+        id: pruebas
+        shell: bash
+        run: |
+          set -euo pipefail
+          instalar_dependencias() {
+            if [ -f package-lock.json ]; then
+              npm ci
+            else
+              echo "Sin package-lock.json en $(basename "$PWD"): se usa npm install (sin lockfile estricto)."
+              npm install
+            fi
+          }
+          hay_backend=0
+          hay_frontend=0
+          if compgen -G "backend/tests/*.test.js" > /dev/null; then hay_backend=1; fi
+          if [ -f frontend/package.json ] && node -e "const s=require('./frontend/package.json').scripts; process.exit(s && s.test ? 0 : 1)"; then
+            hay_frontend=1
+          fi
+
+          if [ "$hay_backend" -eq 0 ] && [ "$hay_frontend" -eq 0 ]; then
+            echo "Sin pruebas, Omitir" >> "$GITHUB_STEP_SUMMARY"
+            echo "Sin pruebas, Omitir"
+            echo "resultado=Sin pruebas, Omitir" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$hay_backend" -eq 1 ]; then
+            echo "::group::Pruebas del backend"
+            (cd backend && instalar_dependencias && node --test tests/*.test.js)
+            echo "::endgroup::"
+          fi
+          if [ "$hay_frontend" -eq 1 ]; then
+            echo "::group::Pruebas del frontend"
+            (cd frontend && instalar_dependencias && npm test)
+            echo "::endgroup::"
+          fi
+
+          echo "Pruebas del release: aprobadas" >> "$GITHUB_STEP_SUMMARY"
+          echo "resultado=aprobadas" >> "$GITHUB_OUTPUT"
+
+  release-pr:
+    name: release-pr
+    needs: [validar, pruebas-release]
+    if: ${{ needs.validar.outputs.modo == 'aplicar' && needs.pruebas-release.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Abrir pull request hacia main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RAMA: ${{ github.ref_name }}
+          VERSION: ${{ needs.validar.outputs.version }}
+          RESULTADO: ${{ needs.pruebas-release.outputs.resultado }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version invalida."
+            exit 1
+          fi
+
+          existentes="$(gh pr list --head "$RAMA" --base main --state open --json number --jq 'length')"
+          if [ "$existentes" != "0" ]; then
+            echo "Ya existe un pull request abierto de $RAMA hacia main; no se duplica."
+            exit 0
+          fi
+
+          if ultimo_tag="$(git describe --tags --abbrev=0 --match 'v*' HEAD 2>/dev/null)"; then
+            rango="$ultimo_tag..HEAD"
+          else
+            ultimo_tag="(ninguno)"
+            rango="HEAD"
+          fi
+          claves="$(git log "$rango" --format='%s%n%b' | grep -oE 'KAN-[0-9]+' | sort -u | paste -sd ',' - | sed 's/,/, /g' || true)"
+
+          titulo="release $VERSION"
+          if [ -n "$claves" ]; then titulo="$titulo: $claves"; fi
+
+          cuerpo="$RUNNER_TEMP/cuerpo-pr.md"
+          {
+            echo "## Release $VERSION"
+            echo ""
+            echo "- Resultado de las pruebas del release: **$RESULTADO**"
+            echo "- Ultimo tag considerado: $ultimo_tag"
+            echo "- Claves de Jira incluidas: ${claves:-ninguna}"
+            echo ""
+            echo "Despliegue a QA completado en la ejecucion $GITHUB_RUN_ID."
+          } > "$cuerpo"
+
+          gh pr create --base main --head "$RAMA" --title "$titulo" --body-file "$cuerpo"
