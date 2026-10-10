@@ -15,6 +15,8 @@
 --   6  ➕  0x9527
 --   7  💼  0x3DD8BCDC
 --   8  🏪  0x3CD8EADF
+-- Los iconos dañados de una base antigua (módulos 5 a 8) no se reparan aquí: los catálogos
+-- no sobrescriben. Esa reparación es de alters/001_fix_module_icons.sql.
 -- Prerrequisito: esquemas/01_esquema_inicial.sql.
 -- ============================================================
 
@@ -37,15 +39,4 @@ FROM (VALUES
 WHERE NOT EXISTS (SELECT 1 FROM dbo.modules AS t WHERE t.id = v.id);
 
 PRINT CONCAT(N'dbo.modules: ', @@ROWCOUNT, N' filas insertadas');
-GO
-
--- Efecto de alters/001_fix_module_icons.sql, incorporado: si los módulos 5 a 8 ya existían
--- con el icono dañado (cargado sin prefijo N), se corrige. La comparación es binaria para
--- no depender de la intercalación de la base.
-UPDATE dbo.modules SET icon = CONVERT(NVARCHAR(50), 0x3ED8FEDD) WHERE id = 5 AND CONVERT(VARBINARY(100), icon) <> 0x3ED8FEDD;  -- 🧾
-UPDATE dbo.modules SET icon = CONVERT(NVARCHAR(50), 0x9527) WHERE id = 6 AND CONVERT(VARBINARY(100), icon) <> 0x9527;  -- ➕
-UPDATE dbo.modules SET icon = CONVERT(NVARCHAR(50), 0x3DD8BCDC) WHERE id = 7 AND CONVERT(VARBINARY(100), icon) <> 0x3DD8BCDC;  -- 💼
-UPDATE dbo.modules SET icon = CONVERT(NVARCHAR(50), 0x3CD8EADF) WHERE id = 8 AND CONVERT(VARBINARY(100), icon) <> 0x3CD8EADF;  -- 🏪
-
-PRINT N'dbo.modules: iconos de los módulos 5 a 8 verificados';
 GO
