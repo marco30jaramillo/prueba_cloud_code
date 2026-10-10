@@ -1,16 +1,4 @@
-const fs = require('fs');
-const path = require('path');
-const { sql, usingSql, request } = require('../database/sqlPool');
-
-const AUDIT_FILE = path.join(process.cwd(), 'audit_logs.csv');
-const AUDIT_FIELDS = [
-  'id', 'action', 'actionLabel',
-  'actorId', 'actorEmail', 'actorName',
-  'targetId', 'targetEmail',
-  'ipAddress', 'userAgent',
-  'timestamp', 'success', 'failureReason',
-  'details', 'method'
-];
+const { sql, request } = require('../database/sqlPool');
 
 const ACTION_LABELS = {
   login:                      'Inicio de sesión',
@@ -29,34 +17,6 @@ const ACTION_LABELS = {
   role_modules_updated:       'Módulos de rol actualizados',
   user_role_changed:          'Rol de usuario cambiado',
 };
-
-function escapeCSV(val) {
-  if (val === null || val === undefined) return '';
-  const str = typeof val === 'object' ? JSON.stringify(val) : String(val);
-  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-    return '"' + str.replace(/"/g, '""') + '"';
-  }
-  return str;
-}
-
-function parseLine(line) {
-  const result = [];
-  let inQuotes = false;
-  let current = '';
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
-      else inQuotes = !inQuotes;
-    } else if (ch === ',' && !inQuotes) {
-      result.push(current); current = '';
-    } else {
-      current += ch;
-    }
-  }
-  result.push(current);
-  return result;
-}
 
 function fromSql(row) {
   return {
@@ -111,12 +71,6 @@ class AuditLog {
   }
 
   static async create(log) {
-    if (!usingSql()) {
-      AuditLog.initializeCSV();
-      const line = AUDIT_FIELDS.map(f => escapeCSV(log[f])).join(',');
-      fs.appendFileSync(AUDIT_FILE, line + '\n');
-      return log;
-    }
     try {
       const db = await request();
       await db
@@ -148,53 +102,30 @@ class AuditLog {
   }
 
   static async getAll() {
-    if (!usingSql()) return AuditLog.readAll();
     const result = await (await request())
       .query('SELECT TOP 100 * FROM dbo.audit_logs ORDER BY [timestamp] DESC');
     return result.recordset.map(fromSql);
   }
 
-  static readAll() {
-    AuditLog.initializeCSV();
-    const content = fs.readFileSync(AUDIT_FILE, 'utf-8');
-    const lines = content.trim().split('\n');
-    if (lines.length <= 1) return [];
-    const headers = lines[0].split(',').map(h => h.trim());
-    return lines.slice(1).filter(l => l.trim()).map(line => {
-      const values = parseLine(line);
-      const obj = {};
-      headers.forEach((h, i) => { obj[h] = values[i] !== undefined ? values[i] : ''; });
-      return obj;
-    });
-  }
-
   static async getByActorId(actorId) {
-    if (!usingSql()) return AuditLog.readAll().filter(l => l.actorId === actorId);
     const result = await (await request()).input('actorId', sql.NVarChar(100), actorId)
       .query('SELECT TOP 200 * FROM dbo.audit_logs WHERE actorId = @actorId ORDER BY [timestamp] DESC');
     return result.recordset.map(fromSql);
   }
 
   static async getByTargetId(targetId) {
-    if (!usingSql()) return AuditLog.readAll().filter(l => l.targetId === targetId);
     const result = await (await request()).input('targetId', sql.NVarChar(100), targetId)
       .query('SELECT TOP 200 * FROM dbo.audit_logs WHERE targetId = @targetId ORDER BY [timestamp] DESC');
     return result.recordset.map(fromSql);
   }
 
   static async getByAction(action) {
-    if (!usingSql()) return AuditLog.readAll().filter(l => l.action === action);
     const result = await (await request()).input('action', sql.NVarChar(100), action)
       .query('SELECT TOP 200 * FROM dbo.audit_logs WHERE action = @action ORDER BY [timestamp] DESC');
     return result.recordset.map(fromSql);
   }
 
   static async getFailedLogins(limit = 50) {
-    if (!usingSql()) {
-      return AuditLog.readAll()
-        .filter(l => (l.action === 'login' || l.action === 'failed_login_attempt') && l.success === 'false')
-        .slice(-limit);
-    }
     const result = await (await request()).input('limit', sql.Int, limit)
       .query(`SELECT TOP (@limit) * FROM dbo.audit_logs
               WHERE action IN ('login','failed_login_attempt') AND success = 0
@@ -203,10 +134,6 @@ class AuditLog {
   }
 
   static async getRecentActivity(hours = 24) {
-    if (!usingSql()) {
-      const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
-      return AuditLog.readAll().filter(l => new Date(l.timestamp) >= cutoff);
-    }
     const result = await (await request()).input('hours', sql.Int, hours)
       .query(`SELECT * FROM dbo.audit_logs
               WHERE [timestamp] >= DATEADD(HOUR, -@hours, SYSUTCDATETIME())
@@ -238,14 +165,6 @@ class AuditLog {
       .filter(([, count]) => count > 5)
       .map(([ip, count]) => ({ ipAddress: ip, failedAttempts: count, risk: count > 10 ? 'alto' : count > 7 ? 'medio' : 'bajo' }));
   }
-
-  static initializeCSV() {
-    if (!fs.existsSync(AUDIT_FILE)) {
-      fs.writeFileSync(AUDIT_FILE, AUDIT_FIELDS.join(',') + '\n');
-    }
-  }
 }
-
-if (!usingSql()) AuditLog.initializeCSV();
 
 module.exports = AuditLog;

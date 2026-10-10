@@ -1,28 +1,15 @@
 const sql = require('mssql');
+const {
+  DbConfigError,
+  normalizeHost,
+  isLoopbackHost,
+  resolveDbConfig,
+} = require('./dbConfig');
 
 let poolPromise;
 
-function usingSql() {
-  return (process.env.DATA_PROVIDER || 'csv').toLowerCase() === 'sql';
-}
-
 function getConfig() {
-  if (process.env.AZURE_SQL_CONNECTION_STRING) return process.env.AZURE_SQL_CONNECTION_STRING;
-
-  const keys = ['AZURE_SQL_SERVER', 'AZURE_SQL_DATABASE', 'AZURE_SQL_USER', 'AZURE_SQL_PASSWORD'];
-  const missing = keys.filter((key) => !process.env[key]);
-  if (missing.length) {
-    throw new Error(`Azure SQL no está configurado. Faltan: ${missing.join(', ')}`);
-  }
-
-  return {
-    server: process.env.AZURE_SQL_SERVER,
-    database: process.env.AZURE_SQL_DATABASE,
-    user: process.env.AZURE_SQL_USER,
-    password: process.env.AZURE_SQL_PASSWORD,
-    options: { encrypt: true, trustServerCertificate: false },
-    pool: { max: 10, min: 0, idleTimeoutMillis: 30000 },
-  };
+  return resolveDbConfig(process.env).config;
 }
 
 async function getPool() {
@@ -40,4 +27,22 @@ async function request() {
   return pool.request();
 }
 
-module.exports = { sql, usingSql, getPool, request };
+// Un parámetro sql.UniqueIdentifier con un texto que no es un GUID no llega a la base: el
+// driver lanza "Invalid GUID" al validar. Los modelos lo comprueban antes de consultar y
+// tratan ese id como "no existe", igual que cualquier id desconocido.
+const GUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isGuid(value) {
+  return typeof value === 'string' && GUID_REGEX.test(value);
+}
+
+module.exports = {
+  sql,
+  getPool,
+  request,
+  isGuid,
+  resolveDbConfig,
+  normalizeHost,
+  isLoopbackHost,
+  DbConfigError,
+};

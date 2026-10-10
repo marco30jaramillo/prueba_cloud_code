@@ -5,11 +5,31 @@
  *
  * Uso:  node tests/security_tests.js
  * Requiere: npm install axios (ya incluido en el proyecto)
+ *
+ * Variables de entorno:
+ *   TEST_SUPERUSER_EMAIL     Obligatoria. Correo de un superusuario del servidor a probar.
+ *   TEST_SUPERUSER_PASSWORD  Obligatoria. Contraseña de ese superusuario.
+ *   TEST_API_URL             Opcional. URL del servidor; por defecto http://localhost:3001.
+ *
+ * Las credenciales no tienen valor por defecto: si falta alguna, el script termina sin
+ * hacer ninguna petición.
  */
+
+// Se valida antes de cargar dependencias: la falta de credenciales debe verse primero.
+const VARIABLES_OBLIGATORIAS = ['TEST_SUPERUSER_EMAIL', 'TEST_SUPERUSER_PASSWORD'];
+const faltantes = VARIABLES_OBLIGATORIAS.filter((nombre) => !process.env[nombre]);
+if (faltantes.length) {
+  console.error(`security_tests: falta definir ${faltantes.join(' y ')}.`);
+  console.error('  Define TEST_SUPERUSER_EMAIL y TEST_SUPERUSER_PASSWORD con las credenciales de un');
+  console.error('  superusuario del servidor a probar. TEST_API_URL es opcional (por defecto http://localhost:3001).');
+  process.exit(1);
+}
 
 const axios = require('axios');
 
-const BASE = 'http://localhost:3001';
+const SUPERUSER_EMAIL = process.env.TEST_SUPERUSER_EMAIL;
+const SUPERUSER_PASSWORD = process.env.TEST_SUPERUSER_PASSWORD;
+const BASE = (process.env.TEST_API_URL || 'http://localhost:3001').replace(/\/+$/, '');
 let SUPER_TOKEN = '';
 let results = [];
 
@@ -61,8 +81,8 @@ async function patch(path, body, token) {
 // ─────────────────────────────────────────────────────────────────────────────
 async function setup() {
   const r = await post('/auth/login', {
-    email: 'superuser@superuser.com',
-    password: 'Bbjge088**'
+    email: SUPERUSER_EMAIL,
+    password: SUPERUSER_PASSWORD
   });
   if (r.data?.token) {
     SUPER_TOKEN = r.data.token;
@@ -298,7 +318,7 @@ async function testJWTTampering() {
 async function testUserEnumeration() {
   console.log('\n── User Enumeration ────────────────────────────────────────');
 
-  const existingEmail = 'superuser@superuser.com';
+  const existingEmail = SUPERUSER_EMAIL;
   const nonExistingEmail = `notexist_${Date.now()}@nowhere.com`;
 
   const r1 = await post('/auth/forgot-password', { email: existingEmail });
@@ -317,7 +337,7 @@ async function testUserEnumeration() {
 async function testSQLInjection() {
   console.log('\n── SQL / NoSQL Injection (via campos de entrada) ───────────');
 
-  // Aunque el backend usa CSV, probamos que los payloads no rompen nada ni dan acceso
+  // Probamos que los payloads no rompen nada ni dan acceso
   const sqlPayloads = [
     "' OR '1'='1",
     "admin'--",

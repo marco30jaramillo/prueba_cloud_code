@@ -2,8 +2,9 @@
 
 ## 🚀 Setup
 
-1. Importa estos requests en Postman
-2. Reemplaza `{{BASE_URL}}` con tu IP (ej: `http://192.168.1.100:3000`)
+1. Ten el backend arrancado contra la base local (ver `README.md`, "Inicio rápido")
+2. Importa estos requests en Postman
+3. Reemplaza `{{BASE_URL}}` con la URL del backend (ej: `http://localhost:3001`)
 
 ---
 
@@ -193,13 +194,14 @@ Login            → 1 granted, 1 revoked
 
 ---
 
-## 🔍 Ver Archivos de Control
+## 🔍 Ver Tablas de Control
 
-Los tokens están guardados en:
-- `tokens_granted.csv` - Tokens activos
-- `tokens_revoked.csv` - Tokens invalidados
+Los tokens están guardados en dos tablas de la base local `MiValecito_Dev`:
+- `dbo.tokens_granted` - Tokens activos
+- `dbo.tokens_revoked` - Tokens invalidados
 
-Puedes inspeccionar estos archivos para ver exactamente qué tokens hay.
+Puedes consultarlas (por ejemplo, con `sqlcmd -E` o SQL Server Management Studio) para ver
+exactamente qué tokens hay.
 
 ---
 

@@ -1,12 +1,5 @@
 const crypto = require('crypto');
-const { sql, usingSql, request } = require('../database/sqlPool');
-const CsvTable = require('../utils/csvTable');
-
-const T_FIELDS = ['id','nombre','descripcion','direccion','ciudad','telefono','logo','isActive','createdAt','createdBy'];
-const TU_FIELDS = ['id','tiendaId','userId','esPropietario','assignedAt','assignedBy'];
-
-const tdb  = () => new CsvTable('tiendas.csv', T_FIELDS);
-const tudb = () => new CsvTable('tienda_usuarios.csv', TU_FIELDS);
+const { sql, request, isGuid } = require('../database/sqlPool');
 
 function fromSql(row) {
   if (!row) return null;
@@ -25,7 +18,6 @@ class Tienda {
       logo: data.logo || '', isActive: true,
       createdAt: new Date().toISOString(), createdBy
     };
-    if (!usingSql()) return tdb().create(tienda);
     const r = await request();
     await r.input('id', sql.UniqueIdentifier, tienda.id)
       .input('nombre', sql.NVarChar(200), tienda.nombre)
@@ -41,35 +33,19 @@ class Tienda {
   }
 
   static async findById(id) {
-    if (!usingSql()) return tdb().findById(id);
+    if (!isGuid(id)) return null;
     const r = await (await request()).input('id', sql.UniqueIdentifier, id)
       .query('SELECT TOP 1 * FROM dbo.tiendas WHERE id = @id');
     return fromSql(r.recordset[0]);
   }
 
   static async getAll() {
-    if (!usingSql()) return tdb().readAll();
     const r = await (await request()).query('SELECT * FROM dbo.tiendas ORDER BY nombre');
     return r.recordset.map(fromSql);
   }
 
   // Devuelve tiendas con resumen de equipo para la vista de lista admin.
   static async getAllWithSummary() {
-    if (!usingSql()) {
-      const tiendas = tdb().readAll();
-      const usuarios = tudb().readAll();
-      return tiendas.map(t => {
-        const equipo = usuarios.filter(u => u.tiendaId === t.id);
-        const propietario = equipo.find(u => u.esPropietario === true || u.esPropietario === 'true');
-        return {
-          ...t,
-          totalAsignados:   equipo.length,
-          totalPropietarios: equipo.filter(u => u.esPropietario === true || u.esPropietario === 'true').length,
-          propietarioNombre: propietario?.userName || propietario?.name || null,
-          propietarioEmail:  propietario?.userEmail || propietario?.email || null,
-        };
-      }).sort((a, b) => a.nombre.localeCompare(b.nombre));
-    }
     const r = await (await request()).query(`
       SELECT
         t.id, t.nombre, t.descripcion, t.ciudad, t.telefono, t.isActive, t.createdAt,
@@ -94,7 +70,7 @@ class Tienda {
   static async update(id, data) {
     const allowed = ['nombre','descripcion','direccion','ciudad','telefono','logo'];
     const patch = Object.fromEntries(Object.entries(data).filter(([k]) => allowed.includes(k)));
-    if (!usingSql()) return tdb().update(id, patch);
+    if (!isGuid(id)) return null;
     const fields = Object.entries(patch);
     if (!fields.length) return Tienda.findById(id);
     const r = await request();
@@ -105,12 +81,7 @@ class Tienda {
   }
 
   static async toggleActive(id) {
-    if (!usingSql()) {
-      const t = tdb().findById(id);
-      if (!t) return null;
-      const isActive = t.isActive === 'true' || t.isActive === true ? false : true;
-      return tdb().update(id, { isActive });
-    }
+    if (!isGuid(id)) return null;
     const r = await (await request()).input('id', sql.UniqueIdentifier, id)
       .query('UPDATE dbo.tiendas SET isActive=~isActive OUTPUT inserted.* WHERE id=@id');
     return fromSql(r.recordset[0]);
@@ -122,7 +93,6 @@ class Tienda {
     const entry = { id: crypto.randomUUID(), tiendaId, userId,
       esPropietario: esPropietario ? true : false,
       assignedAt: new Date().toISOString(), assignedBy };
-    if (!usingSql()) return tudb().create(entry);
     const r = await request();
     await r.input('id', sql.UniqueIdentifier, entry.id)
       .input('tiendaId', sql.UniqueIdentifier, tiendaId)
@@ -135,10 +105,7 @@ class Tienda {
   }
 
   static async removeUsuario(tiendaId, userId) {
-    if (!usingSql()) {
-      tudb().remove(r => r.tiendaId === tiendaId && r.userId === userId);
-      return true;
-    }
+    if (!isGuid(tiendaId) || !isGuid(userId)) return true;
     await (await request()).input('tiendaId', sql.UniqueIdentifier, tiendaId)
       .input('userId', sql.UniqueIdentifier, userId)
       .query('DELETE FROM dbo.tienda_usuarios WHERE tiendaId=@tiendaId AND userId=@userId');
@@ -146,7 +113,7 @@ class Tienda {
   }
 
   static async getUsuariosByTienda(tiendaId) {
-    if (!usingSql()) return tudb().filter(r => r.tiendaId === tiendaId);
+    if (!isGuid(tiendaId)) return [];
     const r = await (await request()).input('tiendaId', sql.UniqueIdentifier, tiendaId)
       .query(`SELECT tu.*, u.name, u.email, u.role, u.photo
               FROM dbo.tienda_usuarios tu JOIN dbo.users u ON u.id=tu.userId
@@ -155,13 +122,7 @@ class Tienda {
   }
 
   static async getTiendasByUsuario(userId) {
-    if (!usingSql()) {
-      const links = tudb().filter(r => r.userId === userId);
-      return links.map(l => {
-        const t = tdb().findById(l.tiendaId);
-        return t ? { ...t, esPropietario: l.esPropietario } : null;
-      }).filter(Boolean);
-    }
+    if (!isGuid(userId)) return [];
     const r = await (await request()).input('userId', sql.UniqueIdentifier, userId)
       .query(`SELECT t.*, tu.esPropietario FROM dbo.tiendas t
               JOIN dbo.tienda_usuarios tu ON tu.tiendaId=t.id
@@ -170,7 +131,7 @@ class Tienda {
   }
 
   static async hasAcceso(tiendaId, userId) {
-    if (!usingSql()) return !!tudb().filter(r => r.tiendaId === tiendaId && r.userId === userId).length;
+    if (!isGuid(tiendaId) || !isGuid(userId)) return false;
     const r = await (await request()).input('tiendaId', sql.UniqueIdentifier, tiendaId)
       .input('userId', sql.UniqueIdentifier, userId)
       .query('SELECT TOP 1 id FROM dbo.tienda_usuarios WHERE tiendaId=@tiendaId AND userId=@userId');

@@ -1,7 +1,7 @@
 # Diagrama Entidad-Relación — Mi Valecito
 
-> Las entidades `users`, `roles` y `modules` viven en archivos CSV en modo desarrollo.  
-> Las entidades `tiendas`, `tienda_usuarios`, `vales` y `abonos` viven en Azure SQL (también disponibles en CSV en modo dev).
+> Todas las entidades viven en SQL Server: una instancia local en desarrollo y Azure SQL en producción, con el mismo esquema.  
+> La definición exacta (nombres de columna, tipos, restricciones e índices) está en `database/scripts_sql/esquemas/`; este diagrama es una vista conceptual y simplifica nombres y tipos. Además de las entidades dibujadas existen `permissions`, `tokens_granted` y `tokens_revoked`.
 
 ## Diagrama ER
 
@@ -125,12 +125,12 @@ stateDiagram-v2
     anulado --> [*]
 ```
 
-## Herencia de Permisos (roles.csv → modules.csv)
+## Herencia de Permisos (dbo.roles → dbo.modules)
 
 ```mermaid
 flowchart TD
-    RC["roles.csv\nmodules: '6:write|7:full'"]
-    MC["modules.csv\n6.permWrite: 'vale:crear|vale:ver-tienda'"]
+    RC["dbo.roles\nmodules: '6:write|7:full'"]
+    MC["dbo.modules\n6.permWrite: 'vale:crear|vale:ver-tienda'"]
     EP["Permisos Efectivos del Rol\n= propios ∪ heredados de módulos"]
     
     RC -->|"Role.getEffectivePermissions()"| MC
