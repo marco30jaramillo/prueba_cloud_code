@@ -11,6 +11,11 @@ name: Desplegar release
 # Solo se dispara con push a release/** y con disparo manual. El despliegue a produccion
 # (rama main, ambiente produccion) se agrega aparte, cuando ese ambiente exista.
 #
+# Por que el despliegue de backend y frontend vive en ESTE archivo: los jobs que llamaban a
+# workflows reutilizables (uses:) con el ambiente declarado dentro del workflow llamado no
+# recibian los secretos del ambiente qa (publish-profile llegaba vacio, KAN-67). Aqui cada
+# job declara environment: qa en el propio job, igual que base-de-datos.
+#
 # Node 22: tedious 20 (dependencia de mssql 12) exige Node >= 22 y Node 20 ya no tiene soporte.
 # El runtime del App Service debe coincidir con esta version (Node 22 o superior).
 #
@@ -97,7 +102,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js 22
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
@@ -208,21 +213,110 @@ jobs:
     name: backend
     needs: [validar, base-de-datos]
     if: ${{ needs.validar.outputs.modo == 'aplicar' }}
-    uses: ./.github/workflows/backend-deploy.yml
+    runs-on: ubuntu-latest
+    environment: qa
+    timeout-minutes: 20
     permissions:
       contents: read
-    with:
-      ambiente: qa
+    steps:
+      - name: Verificar secretos del ambiente
+        env:
+          AZURE_BACKEND_APP_NAME: ${{ secrets.AZURE_BACKEND_APP_NAME }}
+          AZURE_BACKEND_PUBLISH_PROFILE: ${{ secrets.AZURE_BACKEND_PUBLISH_PROFILE }}
+        shell: bash
+        run: |
+          faltan=0
+          for nombre in AZURE_BACKEND_APP_NAME AZURE_BACKEND_PUBLISH_PROFILE; do
+            if [ -z "${!nombre}" ]; then
+              echo "::error::El secreto $nombre llego vacio al job backend (ambiente qa)."
+              faltan=1
+            fi
+          done
+          if [ "$faltan" -ne 0 ]; then exit 1; fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        shell: bash
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then
+            npm ci --omit=dev
+          else
+            echo "Sin package-lock.json en backend: se usa npm install (sin lockfile estricto)."
+            npm install --omit=dev
+          fi
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3
+        with:
+          app-name: ${{ secrets.AZURE_BACKEND_APP_NAME }}
+          publish-profile: ${{ secrets.AZURE_BACKEND_PUBLISH_PROFILE }}
+          package: backend
 
   frontend:
     name: frontend
     needs: [validar, backend]
     if: ${{ needs.validar.outputs.modo == 'aplicar' && needs.backend.result == 'success' }}
-    uses: ./.github/workflows/frontend-deploy.yml
+    runs-on: ubuntu-latest
+    environment: qa
+    timeout-minutes: 20
     permissions:
       contents: read
-    with:
-      ambiente: qa
+    steps:
+      - name: Verificar secretos del ambiente
+        env:
+          AZURE_FRONTEND_APP_NAME: ${{ secrets.AZURE_FRONTEND_APP_NAME }}
+          AZURE_FRONTEND_PUBLISH_PROFILE: ${{ secrets.AZURE_FRONTEND_PUBLISH_PROFILE }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+        shell: bash
+        run: |
+          faltan=0
+          for nombre in AZURE_FRONTEND_APP_NAME AZURE_FRONTEND_PUBLISH_PROFILE NEXT_PUBLIC_API_URL; do
+            if [ -z "${!nombre}" ]; then
+              echo "::error::El secreto $nombre llego vacio al job frontend (ambiente qa)."
+              faltan=1
+            fi
+          done
+          if [ "$faltan" -ne 0 ]; then exit 1; fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        shell: bash
+        working-directory: frontend
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            echo "Sin package-lock.json en frontend: se usa npm install (sin lockfile estricto)."
+            npm install
+          fi
+
+      - name: Build
+        run: npm run build
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3
+        with:
+          app-name: ${{ secrets.AZURE_FRONTEND_APP_NAME }}
+          publish-profile: ${{ secrets.AZURE_FRONTEND_PUBLISH_PROFILE }}
+          package: frontend
 
   # El nombre de este job es el check requerido en el ruleset de main.
   pruebas-release:
@@ -236,7 +330,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js 22
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
