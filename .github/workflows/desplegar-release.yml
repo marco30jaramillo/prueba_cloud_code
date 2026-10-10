@@ -11,6 +11,9 @@ name: Desplegar release
 # Solo se dispara con push a release/** y con disparo manual. El despliegue a produccion
 # (rama main, ambiente produccion) se agrega aparte, cuando ese ambiente exista.
 #
+# Node 22: tedious 20 (dependencia de mssql 12) exige Node >= 22 y Node 20 ya no tiene soporte.
+# El runtime del App Service debe coincidir con esta version (Node 22 o superior).
+#
 # Firewall de Azure SQL: lo controla la variable de ambiente FIREWALL_MODO (vars, no secreto).
 #   - Vacia o sin definir (por defecto): no se usa regla temporal; la base se migra directo.
 #     Asume que el servidor SQL tiene activada la opcion "Permitir servicios de Azure".
@@ -97,7 +100,7 @@ jobs:
       - name: Set up Node.js 20
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install dependencies
         shell: bash
@@ -236,7 +239,7 @@ jobs:
       - name: Set up Node.js 20
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Detectar y ejecutar pruebas
         id: pruebas
