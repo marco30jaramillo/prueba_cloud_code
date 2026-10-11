@@ -27,7 +27,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
     }
   }, [isInitialized, isAuthenticated, user, requiredRole, router]);
 
-  if (!isInitialized || !isAuthenticated) {
+  // Con el cambio de contraseña pendiente solo se muestra ese paso (modal del layout):
+  // las páginas no se montan, así no disparan llamadas que el servidor rechazaría.
+  if (!isInitialized || !isAuthenticated || user?.mustChangePassword) {
     return (
       <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
         <Spinner animation="border" />

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { Suspense, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Container, Row, Col, Alert } from 'react-bootstrap';
 import { AuthForm, AuthFormData } from '@/components/AuthForm';
 import { authAPI } from '@/lib/api';
@@ -9,8 +10,23 @@ import styles from './page.module.scss';
 
 function ResetPasswordContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  // El token viaja en el fragmento (#token=...), que el servidor nunca recibe.
+  // La query (?token=...) se acepta solo como respaldo de enlaces ya enviados.
+  // Se guarda en memoria y se quita de la barra de direcciones de inmediato.
+  const [token, setToken] = useState<string | null>(null);
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    const fromHash = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('token');
+    const found = fromHash || new URLSearchParams(window.location.search).get('token');
+    if (found) {
+      window.history.replaceState(null, '', window.location.pathname);
+      setToken(found);
+    }
+    setChecked(true);
+  }, []);
+
+  if (!checked) return null;
 
   if (!token) {
     return (
@@ -18,7 +34,8 @@ function ResetPasswordContent() {
         <Row className="justify-content-center">
           <Col lg={5} md={8}>
             <Alert variant="danger">
-              Token no proporcionado. Solicita un nuevo enlace de recuperación.
+              El enlace de recuperación no es válido. Solicita uno nuevo desde{' '}
+              <Link href="/forgot-password">recuperar contraseña</Link>.
             </Alert>
           </Col>
         </Row>
@@ -30,12 +47,15 @@ function ResetPasswordContent() {
     try {
       const result = await authAPI.resetPassword(token, data.newPassword!);
       if (result.status === 'success') {
-        router.push('/login?message=Contraseña restablecida');
+        router.push('/login?reset=1');
       }
       return { success: true, data: result };
     } catch (error: any) {
       const err = error.response?.data;
-      return { success: false, error: err?.message || 'Error al restablecer' };
+      return {
+        success: false,
+        error: err?.message || 'El enlace no es válido o ya venció. Solicita uno nuevo desde "Recuperar contraseña".'
+      };
     }
   };
 

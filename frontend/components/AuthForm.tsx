@@ -17,17 +17,19 @@ export interface AuthFormData {
 
 interface AuthFormProps {
   type: 'login' | 'register' | 'forgot-password' | 'reset-password';
-  onSubmit: (data: AuthFormData) => Promise<{ success: boolean; error?: string }>;
+  onSubmit: (data: AuthFormData) => Promise<{ success: boolean; error?: string; code?: string }>;
   isLoading?: boolean;
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+// RN-43: mayúscula, minúscula, número y símbolo
+const PASSWORD_COMPLEXITY = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
 const FIELD_CONFIG: Record<string, string[]> = {
   login:            ['email', 'password'],
   register:         ['email', 'password', 'confirmPassword', 'name', 'photo'],
   'forgot-password':['email'],
-  'reset-password': ['token', 'newPassword', 'confirmPassword']
+  'reset-password': ['newPassword', 'confirmPassword']
 };
 
 const LABELS: Record<string, string> = {
@@ -51,7 +53,7 @@ const REQUIRED: Record<string, string[]> = {
   login:             ['email', 'password'],
   register:          ['email', 'password', 'confirmPassword', 'name'],
   'forgot-password': ['email'],
-  'reset-password':  ['token', 'newPassword', 'confirmPassword']
+  'reset-password':  ['newPassword', 'confirmPassword']
 };
 
 export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = false }) => {
@@ -87,6 +89,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = 
     }
     if (formData.newPassword && formData.newPassword.length < 8) {
       newErrors.newPassword = 'Mínimo 8 caracteres';
+    } else if (type === 'reset-password' && formData.newPassword && !PASSWORD_COMPLEXITY.test(formData.newPassword)) {
+      newErrors.newPassword = 'Debe incluir mayúscula, minúscula, número y símbolo';
     }
 
     if (formData.confirmPassword) {
@@ -171,6 +175,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = 
                     {(isPwd ? showPassword : showConfirmPassword) ? '👁️' : '👁️‍🗨️'}
                   </Button>
                   <Form.Control.Feedback type="invalid">{errors[field]}</Form.Control.Feedback>
+                  {field === 'newPassword' && !errors[field] && (
+                    <Form.Text className="d-block w-100 text-muted">
+                      Mínimo 8 caracteres, con mayúscula, minúscula, número y símbolo.
+                    </Form.Text>
+                  )}
                 </InputGroup>
               ) : (
                 <>

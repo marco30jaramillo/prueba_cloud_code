@@ -18,6 +18,7 @@ const tiendasRoutes     = require('./routes/tiendas');
 const valesRoutes       = require('./routes/vales');
 const docsRoutes        = require('./routes/docs');
 const TokenCleaner = require('./scripts/cleanExpiredTokens');
+const PendingAccountPurger = require('./scripts/purgePendingAccounts');
 const TokenManager = require('./utils/tokenManager');
 const ResponseFormatter = require('./utils/responseFormatter');
 
@@ -232,7 +233,10 @@ app.get('/docs', (req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error('🔴 Error no capturado:', err);
+  // H-5: solo el tipo del error. Ni `err.message` (el de un JSON mal formado cita un
+  // fragmento del cuerpo) ni `err.body` ni el objeto completo: pueden contener un token.
+  const type = (err && (err.type || err.code || err.name)) || 'error';
+  console.error('🔴 Error no capturado: tipo=' + String(type).replace(/[^A-Za-z0-9_.:-]/g, '').slice(0, 60));
   ResponseFormatter.internalError(res, err.message || 'Error interno del servidor');
 });
 
@@ -282,4 +286,7 @@ app.listen(PORT, '0.0.0.0', async () => {
   // Iniciar limpiador de tokens automático
   console.log(`⏰ Limpiador de tokens programado...`);
   TokenCleaner.scheduleDaily();
+
+  // Limpieza de cuentas pendientes vencidas: por defecto solo simula (PENDING_ACCOUNT_PURGE).
+  PendingAccountPurger.scheduleDaily();
 });

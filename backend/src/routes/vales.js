@@ -27,6 +27,14 @@ router.post('/', authMiddleware, requirePermission('vale:crear'), async (req, re
   try {
     if (!await tiendaAcceso(req.user.userId, req.user.role, tiendaId))
       return ResponseFormatter.forbidden(res, 'No tienes acceso a esta tienda');
+    // El cliente debe existir y tener la cuenta activada (una cuenta pendiente de
+    // activación no recibe vales). Un id mal formado cuenta como inexistente.
+    const User = require('../models/User');
+    const cliente = await User.findById(clienteId);
+    if (!cliente)
+      return ResponseFormatter.badRequest(res, 'El cliente no existe');
+    if (!cliente.activatedAt)
+      return ResponseFormatter.badRequest(res, 'El cliente aún no ha activado su cuenta y no puede recibir vales');
     const vale = await Vale.create(req.body, req.user.userId);
     return ResponseFormatter.success(res, { vale, message: 'Vale registrado exitosamente' }, 201);
   } catch { return ResponseFormatter.internalError(res, 'Error al registrar el vale'); }

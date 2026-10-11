@@ -1,4 +1,5 @@
 const AuditLog = require('../models/AuditLog');
+const { getClientIp } = require('../utils/clientIp');
 
 async function lookupUser(userId) {
   if (!userId || userId === 'desconocido') return { email: '', name: '' };
@@ -235,12 +236,99 @@ const auditMiddleware = {
     await AuditLog.create(log);
   },
 
+  /**
+   * Un envío de correo: tipo, destinatario y resultado. Nunca el enlace, el token ni el
+   * contenido. `outcome`: 'sent' | 'failed' | 'throttled'.
+   */
+  async logMail({ outcome, type, group, to, transport, actorId, targetId, ipAddress, userAgent, failureReason }) {
+    const actor = await lookupUser(actorId);
+    const action = outcome === 'sent' ? 'mail_sent' : outcome === 'throttled' ? 'mail_throttled' : 'mail_failed';
+    const log = new AuditLog({
+      action,
+      actorId: actorId || 'sistema',
+      actorEmail: actor.email,
+      actorName: actor.name,
+      targetId: targetId || null,
+      targetEmail: to,
+      ipAddress,
+      userAgent,
+      success: outcome === 'sent',
+      failureReason: outcome === 'sent' ? null : failureReason || outcome,
+      details: { type, group, transport },
+      method: 'system'
+    });
+    await AuditLog.create(log);
+  },
+
+  async logAccountActivated(userId, ipAddress, userAgent) {
+    const actor = await lookupUser(userId);
+    const log = new AuditLog({
+      action: 'account_activated',
+      actorId: userId,
+      actorEmail: actor.email,
+      actorName: actor.name,
+      targetId: userId,
+      targetEmail: actor.email,
+      ipAddress,
+      userAgent,
+      success: true,
+      method: 'web'
+    });
+    await AuditLog.create(log);
+  },
+
+  async logActivationResendRequested(email, ipAddress, userAgent) {
+    const log = new AuditLog({
+      action: 'activation_resend_requested',
+      actorId: 'desconocido',
+      actorEmail: email,
+      actorName: '',
+      ipAddress,
+      userAgent,
+      success: true,
+      details: { email },
+      method: 'web'
+    });
+    await AuditLog.create(log);
+  },
+
+  /** Acción de la limpieza de cuentas pendientes: 'deleted' | 'disabled'. */
+  async logPendingAccountAction(kind, user, reason) {
+    const log = new AuditLog({
+      action: kind === 'deleted' ? 'account_pending_deleted' : 'account_pending_disabled',
+      actorId: 'sistema',
+      actorEmail: '',
+      actorName: '',
+      targetId: user.id,
+      targetEmail: user.email,
+      ipAddress: 'sistema',
+      userAgent: 'purgePendingAccounts',
+      success: true,
+      details: { role: user.role, reason },
+      method: 'system'
+    });
+    await AuditLog.create(log);
+  },
+
+  async logPendingPurgeRun(summary) {
+    const log = new AuditLog({
+      action: 'pending_purge_run',
+      actorId: 'sistema',
+      actorEmail: '',
+      actorName: '',
+      ipAddress: 'sistema',
+      userAgent: 'purgePendingAccounts',
+      success: summary.aborted ? false : true,
+      failureReason: summary.aborted ? summary.abortReason : null,
+      details: summary,
+      method: 'system'
+    });
+    await AuditLog.create(log);
+  },
+
   getIpAddress(req) {
-    return (
-      req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-      req.socket.remoteAddress ||
-      'unknown'
-    );
+    // IP confiable (utils/clientIp.js): el primer valor de X-Forwarded-For lo escribe el cliente.
+    return getClientIp(req);
   },
 
   getUserAgent(req) {

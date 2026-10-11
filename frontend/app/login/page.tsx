@@ -1,10 +1,11 @@
 'use client';
 
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Container, Row, Col } from 'react-bootstrap';
+import { Container, Row, Col, Alert } from 'react-bootstrap';
 import { AuthForm, AuthFormData } from '@/components/AuthForm';
+import { ResendActivation } from '@/components/ResendActivation';
 import { useAuth } from '@/hooks/useAuth';
 import styles from './page.module.scss';
 
@@ -12,6 +13,8 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { handleLogin, isLoading, isAuthenticated } = useAuth();
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const passwordReset = searchParams.get('reset') === '1';
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -21,6 +24,7 @@ function LoginContent() {
   }, [isAuthenticated, router, searchParams]);
 
   const onSubmit = async (data: AuthFormData) => {
+    setPendingEmail(null);
     const result = await handleLogin(
       data.email!,
       data.password!,
@@ -29,6 +33,9 @@ function LoginContent() {
     if (result?.success) {
       const returnUrl = searchParams.get('returnUrl') || '/dashboard';
       router.push(returnUrl);
+    }
+    if (result?.code === 'ACCOUNT_PENDING_ACTIVATION') {
+      setPendingEmail(data.email!.trim());
     }
     return result || { success: false, error: 'Error inesperado' };
   };
@@ -42,7 +49,19 @@ function LoginContent() {
             <p className={styles.subtitle}>Accede a tu cuenta</p>
           </div>
 
+          {passwordReset && (
+            <Alert variant="success" className="mb-4">
+              ✅ Tu contraseña fue restablecida. Inicia sesión con la nueva contraseña.
+            </Alert>
+          )}
+
           <AuthForm type="login" onSubmit={onSubmit} isLoading={isLoading} />
+
+          {pendingEmail && (
+            <div className="mt-4">
+              <ResendActivation email={pendingEmail} />
+            </div>
+          )}
 
           <div className={styles.footer}>
             <p>

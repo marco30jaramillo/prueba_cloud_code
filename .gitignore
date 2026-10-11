@@ -76,3 +76,7 @@ backend/audit_logs.bak2
 # Datos locales: los CSV del modo antiguo y las fotos subidas no se versionan (H-2)
 backend/*.csv
 datos/uploads/
+
+# 📧 Correos del transporte `outbox` (desarrollo local; contienen enlaces con token)
+.mail-outbox/
+backend/.mail-outbox/

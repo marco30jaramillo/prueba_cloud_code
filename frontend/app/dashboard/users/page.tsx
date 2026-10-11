@@ -180,7 +180,10 @@ function UsersPageContent() {
         createFormData.name,
         createFormData.role
       );
-      setMessage({ type: 'success', text: `✅ Usuario ${createFormData.email} creado exitosamente` });
+      setMessage({
+        type: 'success',
+        text: `✅ Usuario ${createFormData.email} creado. Le enviamos un correo para activar su cuenta; hasta entonces no podrá ingresar.`
+      });
       setShowCreateUser(false);
       setCreateFormData({ email: '', password: '', name: '', role: 'cliente' });
       loadUsers();
@@ -592,7 +595,7 @@ function UsersPageContent() {
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Contraseña</Form.Label>
+              <Form.Label>Contraseña inicial</Form.Label>
               <Form.Control
                 type="password"
                 value={createFormData.password}
@@ -600,6 +603,9 @@ function UsersPageContent() {
                 placeholder="Mínimo 8 caracteres"
                 disabled={isCreating}
               />
+              <Form.Text className="text-muted">
+                El usuario recibirá un correo para activar su cuenta y deberá definir su propia contraseña al ingresar.
+              </Form.Text>
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>Rol</Form.Label>

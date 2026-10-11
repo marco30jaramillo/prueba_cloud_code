@@ -268,11 +268,20 @@ describe('revisión de sentencias destructivas', () => {
     assert.equal(rechaza('ALTER TABLE dbo.t ENABLE TRIGGER trg'), false);
   });
 
-  test('los scripts reales de esquemas/, inserts/ y alters/ no tienen hallazgos que requieran aprobación', () => {
+    test('los scripts reales de esquemas/, inserts/ y alters/ no tienen hallazgos sin aprobación vigente', () => {
     const aprobaciones = m.cargarAprobaciones(RAIZ_REAL);
-    assert.equal(aprobaciones.size, 0, 'aprobaciones-destructivas.json debe estar vacío');
     const revisados = m.cargarScripts(RAIZ_REAL, ['esquemas', 'inserts', 'alters']);
+    // Cada aprobación apunta a un alter real, con su hash actual, clave de Jira y tablas.
+    for (const [nombre, ap] of aprobaciones) {
+      const s = revisados.find((x) => x.nombre === nombre);
+      assert.ok(s && s.carpeta === 'alters', `la aprobación no apunta a un script de alters/: ${nombre}`);
+      assert.equal(ap.hash, m.checksumScript(s.contenido), `el hash de ${nombre} no coincide con el archivo`);
+      assert.match(ap.claveJira, /^KAN-[0-9]+$/, nombre);
+      assert.ok(Array.isArray(ap.tablasModificadas) && ap.tablasModificadas.length > 0, `${nombre}: falta tablasModificadas`);
+    }
+    // Sin aprobación vigente, ningún script puede tener hallazgos destructivos.
     for (const s of revisados) {
+      if (m.aprobacionVigente(aprobaciones, s)) continue;
       assert.deepEqual(m.revisarDestructivo(s.contenido, s.carpeta), [], s.nombre);
     }
     // El conjunto revisado no puede quedar vacío ni incluir lo que corre una persona.

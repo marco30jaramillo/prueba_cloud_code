@@ -82,6 +82,9 @@ BEGIN
         createdAt          DATETIME2(3)     NOT NULL CONSTRAINT DF_users_createdAt DEFAULT (SYSUTCDATETIME()),
         resetToken         NVARCHAR(128)    NULL,
         resetTokenExpiry   DATETIME2(3)     NULL,
+        activatedAt         DATETIME2(3)    NULL,   -- nulo = cuenta pendiente de activacion
+        activationTokenHash NVARCHAR(128)   NULL,   -- hash del token del enlace de activacion
+        activationExpiresAt DATETIME2(3)    NULL,   -- vencimiento de la cuenta pendiente
 
         CONSTRAINT PK_users PRIMARY KEY (id),
         CONSTRAINT UQ_users_email UNIQUE (email)
@@ -94,6 +97,13 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_users_role' AND objec
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_users_resetToken' AND object_id = OBJECT_ID(N'dbo.users'))
     CREATE INDEX IX_users_resetToken ON dbo.users (resetToken) WHERE resetToken IS NOT NULL;
+GO
+
+-- Activacion de cuentas (alters/002_activacion_de_cuentas.sql). Se comprueba la columna
+-- porque una base creada antes del alter llega aqui con la tabla ya existente.
+IF COL_LENGTH(N'dbo.users', N'activationTokenHash') IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_users_activationToken' AND object_id = OBJECT_ID(N'dbo.users'))
+    CREATE INDEX IX_users_activationToken ON dbo.users (activationTokenHash) WHERE activationTokenHash IS NOT NULL;
 GO
 
 IF OBJECT_ID(N'dbo.tokens_granted', N'U') IS NULL
