@@ -30,6 +30,13 @@ export default function LoginScreen() {
         Alert.alert('Error', res?.message || 'Credenciales incorrectas.');
       }
     } catch (e: any) {
+      if (e?.response?.status === 403 && e?.response?.data?.code === 'ACCOUNT_PENDING_ACTIVATION') {
+        Alert.alert(
+          'Cuenta pendiente de activación',
+          'Tu cuenta aún no está activada. Revisa tu correo (también la carpeta de spam) y abre el enlace para activarla.'
+        );
+        return;
+      }
       const msg = e?.response?.data?.message || 'No se pudo conectar al servidor.\nVerifica que el backend esté corriendo y la IP en lib/config.ts sea correcta.';
       Alert.alert('Error de conexión', msg);
     } finally {

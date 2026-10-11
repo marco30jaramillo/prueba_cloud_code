@@ -90,8 +90,14 @@ Service.
 | `PORT` | 3001 en local, 8080 en Azure |
 | `NODE_ENV` | `development` en local, `production` en Azure |
 | `JWT_SECRET` | Firma de los tokens. Obligatorio, 32 caracteres o más; no tiene valor por defecto |
-| `APP_URL` | URL pública del backend (enlaces de recuperación y fotos) |
-| `FRONTEND_URL` | Origen de la web permitido por CORS |
+| `APP_URL` | URL pública del backend (URL de las fotos). **No** arma los enlaces de los correos |
+| `FRONTEND_URL` | Origen de la web: permitido por CORS y base de los enlaces de los correos (`/activar#token=...`, `/reset-password#token=...`: el token va en el fragmento de la URL, no en la query). En producción debe ser https |
+| `MAIL_TRANSPORT` | `azure` (Azure Communication Services Email) o `outbox` (escribe cada correo como archivo local; nunca sale a la red). Producción y App Service solo aceptan `azure`; sin definir, en local es `outbox` |
+| `ACS_EMAIL_CONNECTION_STRING` | Cadena de conexión de Communication Services. **Secreto**: solo en la configuración del ambiente |
+| `MAIL_FROM` | Remitente (dirección del dominio verificado en el servicio). Con dominio propio solo cambia este valor |
+| `MAIL_OUTBOX_DIR` | Carpeta del transporte `outbox` (por defecto `backend/.mail-outbox/`, ignorada por Git) |
+| `PENDING_ACCOUNT_PURGE` | Limpieza diaria de cuentas pendientes vencidas: `dry-run` (por defecto, solo cuenta), `apply` u `off`. Manual: `node src/scripts/purgePendingAccounts.js [--dry-run|--apply]` |
+| `PENDING_PURGE_MAX_PER_RUN` | Tope de cuentas por corrida de limpieza (50 por defecto); si hay más, aborta sin tocar nada |
 | `DB_SERVER`, `DB_PORT`, `DB_DATABASE`, `DB_USER`, `DB_PASSWORD` | Conexión a SQL Server local |
 | `DB_ENCRYPT`, `DB_TRUST_SERVER_CERTIFICATE` | Cifrado de la conexión local |
 | `AZURE_SQL_SERVER`, `AZURE_SQL_DATABASE`, `AZURE_SQL_USER`, `AZURE_SQL_PASSWORD` | Conexión a Azure SQL |
@@ -107,6 +113,8 @@ Reglas que el backend comprueba al arrancar, antes de abrir ninguna conexión:
   `test`, y fuera de App Service. Con `AZURE_SQL_*` la conexión va siempre cifrada y validando
   el certificado.
 - **`JWT_SECRET`** presente y de 32 caracteres o más.
+- **Correo.** En producción o App Service: `MAIL_TRANSPORT=azure`, cadena de conexión,
+  `MAIL_FROM` válido y `FRONTEND_URL` https; si falta algo, no arranca.
 
 Los mensajes de error de configuración nunca incluyen la contraseña ni la cadena de conexión.
 
@@ -169,8 +177,9 @@ backend/
 │       ├── passwordUtils.js      # PBKDF2 hash
 │       ├── passwordValidator.js
 │       ├── dataNormalizer.js
-│       ├── rateLimiter.js
-│       └── mailer.js
+│       ├── rateLimiter.js        # Intentos de login por IP
+│       ├── requestLimiter.js     # Límites por IP (correo, activación)
+│       └── clientIp.js           # IP confiable (no el primer X-Forwarded-For)
 ├── scripts/
 │   ├── db-setup.js            # npm run db:setup
 │   ├── seed.js                # npm run db:seed
@@ -199,14 +208,17 @@ GET /docs/audit     → auditoría
 ### Auth (`/auth`)
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
-| POST | `/auth/register` | — | Registrar cliente |
-| POST | `/auth/login` | — | Iniciar sesión → JWT |
+| POST | `/auth/register` | — | Registrar cliente (nace pendiente de activación; **no** devuelve token, envía correo) |
+| POST | `/auth/login` | — | Iniciar sesión → JWT. Cuenta pendiente: 403 `ACCOUNT_PENDING_ACTIVATION` |
+| POST | `/auth/activate` | — | Activar con el token del enlace; inicia sesión (body `{ token }`). En la primera activación la contraseña guardada se reemplaza por una aleatoria: quien no la cambie vuelve a entrar con el enlace o con «olvidé mi contraseña» |
+| POST | `/auth/resend-activation` | — | Reenviar la activación (respuesta genérica; body `{ email }`) |
+| PATCH | `/auth/change-password-temporary` | ✅ | Primer cambio de contraseña (cuenta con cambio forzado) |
 | GET | `/auth/validate` | ✅ | Validar token activo |
 | POST | `/auth/logout` | ✅ | Revocar token |
 | POST | `/auth/logout-all` | ✅ | Revocar todos los tokens |
 | PATCH | `/auth/change-password` | ✅ | Cambiar propia contraseña |
 | PATCH | `/auth/profile` | ✅ | Actualizar nombre |
-| POST | `/auth/create-user` | ✅ admin | Crear usuario |
+| POST | `/auth/create-user` | ✅ admin | Crear usuario (pendiente de activación; **no** devuelve token) |
 | PATCH | `/auth/password/:userId` | ✅ admin | Cambiar contraseña de otro |
 | POST | `/auth/forgot-password` | — | Solicitar recuperación |
 | POST | `/auth/reset-password` | — | Restablecer con token |
@@ -281,3 +293,25 @@ En la tabla `dbo.roles`, la columna `modules` asigna módulos con nivel:
 ```
 Esto hace que el rol **herede** los permisos que la tabla `dbo.modules` define para ese nivel
 (`permRead`, `permWrite`, `permFull`). Ver `docs/diagrams/er-diagram.md`.
+
+## Correo transaccional
+
+Todo el correo sale por `src/mail/`: `mailService.send('<plantilla>', { to, data })`. `send` nunca
+lanza; deja en la auditoría tipo, destinatario y resultado (nunca el enlace ni el token).
+
+| Plantilla | Correo | Cuándo |
+|---|---|---|
+| `activationSelf` | C-1 | Autorregistro |
+| `activationByOther` | C-2 | Un tendero o administrador registra a un cliente (y reenvío a clientes) |
+| `activationStaff` | C-3 | Un administrador crea personal (y reenvío a no clientes) |
+| `passwordReset` | C-4 | `forgot-password` |
+| `passwordChanged` | C-5 | Cada cambio de contraseña, por cualquier vía |
+
+**Agregar un correo nuevo:** crear `src/mail/templates/<nombre>.js` con `{ group, subject(data), render(data) }`
+(usar `renderLayout`, que aporta firma y pie), registrarlo en `src/mail/templates/index.js` y llamar
+`mailService.send('<nombre>', { to, data })` donde corresponda.
+
+**Límites** (conteo persistente en la auditoría): 3 por hora y 10 por día por destinatario y grupo, 60 s
+entre envíos, 200 por hora en total. Superados, el envío se descarta en silencio.
+
+**En local** (`MAIL_TRANSPORT=outbox`) los correos quedan en `backend/.mail-outbox/*.json`, con el enlace completo.

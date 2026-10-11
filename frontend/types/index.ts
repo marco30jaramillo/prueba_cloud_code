@@ -14,6 +14,8 @@ export interface AuthResponse {
   message: string;
   user?: User;
   token?: string;
+  pendingActivation?: boolean;
+  code?: string;
 }
 
 export interface ApiError {

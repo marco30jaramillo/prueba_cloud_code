@@ -1,6 +1,8 @@
 // Simple in-memory rate limiter. Resets on server restart.
 // Key: IP address. Tracks failed attempts within a sliding window.
 
+const { getClientIp } = require('./clientIp');
+
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 15 * 60 * 1000;   // 15 minutes
 const BLOCK_MS   = 15 * 60 * 1000;  // block for 15 minutes
@@ -63,7 +65,8 @@ const rateLimiter = {
 
   // Express middleware
   middleware(req, res, next) {
-    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    // IP confiable (utils/clientIp.js): el primer valor de X-Forwarded-For lo escribe el cliente.
+    const ip = getClientIp(req);
     req._rateLimitIp = ip;
     const result = rateLimiter.check(ip);
 

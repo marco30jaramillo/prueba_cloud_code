@@ -1,1 +1,8 @@
-[]
+[
+  {
+    "script": "alters/002_activacion_de_cuentas.sql",
+    "hash": "d2c47a9cddd06a80faa8fe4111776a4c20d2096595d19385d87c11719f527b69",
+    "claveJira": "KAN-69",
+    "tablasModificadas": ["dbo.users"]
+  }
+]

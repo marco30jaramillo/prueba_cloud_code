@@ -35,6 +35,11 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
       return;
     }
 
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(newPassword)) {
+      setMessage({ type: 'error', text: 'La contraseña debe incluir mayúscula, minúscula, número y símbolo' });
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
       setMessage({ type: 'error', text: 'Las contraseñas no coinciden' });
       return;
@@ -69,8 +74,8 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
       <Modal.Body className={styles.body}>
         <Alert variant="warning" className="mb-4">
           <p className="mb-0">
-            <strong>Contraseña Temporal:</strong> Se ha asignado una contraseña temporal a tu cuenta.
-            Debes cambiarla ahora para continuar.
+            <strong>Define tu contraseña:</strong> por seguridad debes crear una contraseña nueva
+            antes de continuar. Usa mínimo 8 caracteres con mayúscula, minúscula, número y símbolo.
           </p>
         </Alert>
 

@@ -21,6 +21,7 @@ interface NavModule {
 
 export const Navbar: React.FC = () => {
   const { isAuthenticated, user } = useAuthStore();
+  const mustChangePassword = !!user?.mustChangePassword;
   const { handleLogout, handleLogoutAll } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -50,11 +51,12 @@ export const Navbar: React.FC = () => {
 
   // Fetch accessible modules when auth state changes
   useEffect(() => {
-    if (!isAuthenticated) { setNavModules([]); return; }
+    // Con el cambio de contraseña pendiente el servidor solo permite ese cambio: no se piden módulos.
+    if (!isAuthenticated || mustChangePassword) { setNavModules([]); return; }
     modulesAPI.getAll()
       .then(res => setNavModules((res.modules || []).filter((m: NavModule) => m.showInNav)))
       .catch(() => {});
-  }, [isAuthenticated]);
+  }, [isAuthenticated, mustChangePassword]);
 
   const useSidebar = isNarrow && scrolled;
 

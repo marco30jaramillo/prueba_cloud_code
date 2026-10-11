@@ -5,6 +5,7 @@ const ResponseFormatter = require('../utils/responseFormatter');
 const { authMiddleware, tokenManager } = require('../middleware/auth');
 const roleMiddleware = require('../middleware/roleMiddleware');
 const auditMiddleware = require('../middleware/auditMiddleware');
+const accountMail = require('../mail/accountMail');
 
 const router = express.Router();
 
@@ -51,7 +52,8 @@ router.get('/clientes/buscar', authMiddleware, roleMiddleware.requirePermission(
   try {
     const allUsers = await User.getAll();
     const clientes = allUsers
-      .filter(u => u.role === 'cliente' && (u.isActive === true || u.isActive === 'true'))
+      // Una cuenta pendiente de activación no recibe vales: no aparece entre los clientes.
+      .filter(u => u.role === 'cliente' && (u.isActive === true || u.isActive === 'true') && u.activatedAt)
       .filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
       .slice(0, 10)
       .map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role }));
@@ -176,6 +178,18 @@ router.patch('/:userId/status', authMiddleware, roleMiddleware.requireRole('supe
   const userAgent = auditMiddleware.getUserAgent(req);
   await auditMiddleware.logUserStatusChange(requesterId, userId, isActive, ipAddress, userAgent);
 
+  // Habilitar una cuenta que sigue pendiente (por ejemplo la que dejó deshabilitada la
+  // limpieza por vencimiento) exige una nueva activación: siete días y enlace nuevos. Un
+  // administrador no puede saltarse la activación habilitándola.
+  if (isActive && !targetUser.activatedAt) {
+    const rearmed = await User.rearmActivation(userId);
+    if (rearmed) {
+      accountMail.sendActivation(rearmed.user, rearmed.token, {
+        context: { actorId: requesterId, ipAddress, userAgent }
+      }).catch(() => {});
+    }
+  }
+
   return ResponseFormatter.success(res, {
     message: `Usuario ${isActive ? 'habilitado' : 'deshabilitado'} exitosamente`,
     user: {
@@ -204,10 +218,13 @@ router.post('/:userId/generate-password', authMiddleware, roleMiddleware.require
 
   const newPassword = User.generateRandomPassword();
   await User.setPasswordForUser(userId, newPassword);
+  // H-2: la contraseña anterior pudo estar comprometida; ninguna sesión previa sobrevive.
+  await tokenManager.revokeAllUserTokens(userId, targetUser.email);
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
   await auditMiddleware.logPasswordGeneration(requesterId, userId, ipAddress, userAgent);
+  accountMail.notifyPasswordChanged(targetUser, { actorId: requesterId, ipAddress, userAgent }).catch(() => {});
 
   return ResponseFormatter.success(res, {
     message: 'Contraseña generada exitosamente',

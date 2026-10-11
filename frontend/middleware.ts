@@ -7,6 +7,7 @@ export function middleware(request: NextRequest) {
   const pathname = url.pathname;
   const origin = request.headers.get('origin') || request.headers.get('x-forwarded-for') || 'unknown';
 
+  // Solo el pathname: nunca la query string (/activar y /reset-password llevan un token en ella).
   if (pathname.startsWith('/_next') === false && pathname !== '/favicon.ico') {
     console.log(`[FRONTEND] ${method} ${pathname} - Origin: ${origin}`);
   }

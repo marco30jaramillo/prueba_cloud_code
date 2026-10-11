@@ -19,6 +19,15 @@ const nextConfig = {
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
         ],
       },
+      {
+        // Los enlaces de activación y de recuperación llevan un token en la URL: no debe viajar en
+        // Referer ni quedar en caché.
+        source: '/:ruta(activar|reset-password)',
+        headers: [
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'Cache-Control', value: 'no-store' },
+        ],
+      },
     ];
   },
 };
