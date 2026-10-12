@@ -112,6 +112,20 @@ function UsersPageContent() {
     }
   };
 
+  const puedeCerrarSesiones = (u: User) =>
+    !!user && u.id !== user.id && u.role !== user.role && !(user.role === 'administrador' && u.role === 'superuser');
+
+  const handleCerrarSesiones = async (u: User) => {
+    if (!confirm(`¿Cerrar todas las sesiones de ${u.name}? Tendrá que iniciar sesión de nuevo.`)) return;
+    try {
+      const response = await usersAPI.revokeSessions(u.id);
+      setMessage({ type: 'primary', text: response.message || 'Sesiones cerradas' });
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'No pudimos cerrar las sesiones';
+      setMessage({ type: 'error', text: `${errorMsg}` });
+    }
+  };
+
   const handleEditUser = (selectedUser: User) => {
     setEditingUser(selectedUser);
     setEditFormData({ name: selectedUser.name, photo: selectedUser.photo, role: selectedUser.role });
@@ -403,6 +417,17 @@ function UsersPageContent() {
                               >
                                 <Icon name="candado" /> Generar Contraseña
                               </Dropdown.Item>
+                              {puedeCerrarSesiones(u) && (
+                                <>
+                                  <Dropdown.Divider />
+                                  <Dropdown.Item
+                                    onClick={() => handleCerrarSesiones(u)}
+                                    className={styles.passwordItem}
+                                  >
+                                    <Icon name="cerrar-sesion-todos" /> Cerrar sesiones
+                                  </Dropdown.Item>
+                                </>
+                              )}
                               <Dropdown.Divider />
                               <Dropdown.Item
                                 onClick={() => handleToggleStatus(u.id, u.isActive)}

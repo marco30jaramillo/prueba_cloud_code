@@ -228,6 +228,11 @@ export const usersAPI = {
     return data;
   },
 
+  revokeSessions: async (userId: string) => {
+    const { data } = await apiClient.post(`/users/${userId}/revoke-sessions`, {});
+    return data;
+  },
+
   getManageableRoles: async () => {
     const { data } = await apiClient.get('/users/manageable-roles');
     return data;

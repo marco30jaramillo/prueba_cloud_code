@@ -234,4 +234,45 @@ router.post('/:userId/generate-password', authMiddleware, roleMiddleware.require
   });
 });
 
+// POST /users/:userId/revoke-sessions — cierra todas las sesiones de una persona.
+// Solo quien está por encima de su rol y puede gestionarlo: el superusuario cierra las de cualquier
+// rol distinto al suyo; el administrador, las de los roles que su rol gestiona (canManage).
+router.post('/:userId/revoke-sessions', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), async (req, res) => {
+  const { userId } = req.params;
+  const requesterId = req.user.userId;
+
+  if (userId === requesterId) {
+    return ResponseFormatter.badRequest(res, 'Para cerrar tus propias sesiones usa «Cerrar sesión en todos tus dispositivos»');
+  }
+
+  const targetUser = await User.findById(userId);
+  if (!targetUser) {
+    return ResponseFormatter.notFound(res, 'Usuario');
+  }
+
+  const requester = await User.findById(requesterId);
+  let permitido;
+  if (requester.role === 'superuser') {
+    permitido = targetUser.role !== 'superuser';
+  } else {
+    const gestionables = await Role.getManageableRoles(requester.role);
+    permitido = targetUser.role !== requester.role && gestionables.includes(targetUser.role);
+  }
+  if (!permitido) {
+    return ResponseFormatter.forbidden(res, 'No puedes cerrar las sesiones de una persona con tu mismo rol o uno superior');
+  }
+
+  const closedCount = await tokenManager.revokeAllUserTokens(userId, targetUser.email);
+
+  const ipAddress = auditMiddleware.getIpAddress(req);
+  const userAgent = auditMiddleware.getUserAgent(req);
+  await auditMiddleware.logUserSessionsClosed(requesterId, userId, closedCount, ipAddress, userAgent);
+
+  return ResponseFormatter.success(res, {
+    message: closedCount > 0 ? 'Sesiones cerradas' : 'Esa persona no tenía sesiones abiertas',
+    userId,
+    closedCount
+  });
+});
+
 module.exports = router;

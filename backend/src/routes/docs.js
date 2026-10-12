@@ -128,6 +128,7 @@ router.get('/users', (req, res) => {
       endpoint('PATCH', '/users/:id/status', 'Habilitar o deshabilitar usuario. Habilitar una cuenta que sigue pendiente de activación la re-arma: 7 días nuevos y correo de activación nuevo', 'admin:manage-users',
         { active: 'boolean' }),
       endpoint('POST', '/users/:id/generate-password', 'Generar contraseña aleatoria segura (la cuenta queda con cambio forzado, se cierran todas sus sesiones y se le envía el aviso de contraseña cambiada, sin la contraseña)', 'admin:manage-users'),
+      endpoint('POST', '/users/:id/revoke-sessions', 'Cerrar todas las sesiones de una persona de un rol inferior que el rol del solicitante pueda gestionar (queda en auditoría)', 'admin:manage-users'),
     ],
   });
 });

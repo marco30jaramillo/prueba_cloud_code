@@ -52,6 +52,7 @@ const MODULE_MAP: Record<string, { label: string; color: string }> = {
   user_created:             { label: 'Usuarios', color: '#2563eb' },
   user_enable:              { label: 'Usuarios', color: '#2563eb' },
   user_disable:             { label: 'Usuarios', color: '#2563eb' },
+  user_sessions_closed:     { label: 'Usuarios', color: '#2563eb' },
   user_role_changed:        { label: 'Usuarios', color: '#2563eb' },
   superuser_created:        { label: 'Usuarios', color: '#2563eb' },
   role_created:             { label: 'Roles',    color: '#b45309' },
