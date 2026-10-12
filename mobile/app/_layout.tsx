@@ -1,9 +1,12 @@
 import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import { useFonts } from 'expo-font';
 import { useAuthStore } from '@/lib/store';
+import { archivosFuentes, colores } from '@/lib/tema';
 
 export default function RootLayout() {
   const { user, isLoaded, init } = useAuthStore();
+  const [fuentesListas] = useFonts(archivosFuentes);
   const router = useRouter();
   const segments = useSegments();
 
@@ -21,6 +24,8 @@ export default function RootLayout() {
     }
   }, [user, isLoaded, segments]);
 
+  if (!fuentesListas) return null;
+
   return (
     <Stack>
       <Stack.Screen name="login" options={{ headerShown: false }} />
@@ -29,17 +34,17 @@ export default function RootLayout() {
         name="vale-nuevo"
         options={{
           presentation: 'modal',
-          title: 'Nuevo Vale',
-          headerTintColor: '#3b82f6',
-          headerStyle: { backgroundColor: '#fff' },
+          title: 'Nuevo vale',
+          headerTintColor: colores.azul,
+          headerStyle: { backgroundColor: colores.superficie },
         }}
       />
       <Stack.Screen
         name="vale/[id]"
         options={{
-          title: 'Detalle del Vale',
-          headerTintColor: '#3b82f6',
-          headerStyle: { backgroundColor: '#fff' },
+          title: 'Detalle del vale',
+          headerTintColor: colores.azul,
+          headerStyle: { backgroundColor: colores.superficie },
           headerShadowVisible: false,
         }}
       />

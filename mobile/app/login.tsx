@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { authAPI } from '@/lib/api';
+import { Logo } from '@/components/Logo';
 import { useAuthStore } from '@/lib/store';
 
 export default function LoginScreen() {
@@ -37,7 +38,7 @@ export default function LoginScreen() {
         );
         return;
       }
-      const msg = e?.response?.data?.message || 'No se pudo conectar al servidor.\nVerifica que el backend esté corriendo y la IP en lib/config.ts sea correcta.';
+      const msg = e?.response?.data?.message || 'No pudimos conectarnos. Revisa tu internet e intenta de nuevo.';
       Alert.alert('Error de conexión', msg);
     } finally {
       setLoading(false);
@@ -51,9 +52,9 @@ export default function LoginScreen() {
     >
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.hero}>
-          <Text style={styles.logo}>🧾</Text>
+          <Logo alto={56} conNombre={false} />
           <Text style={styles.appName}>Mi Valecito</Text>
-          <Text style={styles.tagline}>Sistema de crédito local</Text>
+          <Text style={styles.tagline}>Tus vales, claros y al día</Text>
         </View>
 
         <View style={styles.card}>
@@ -68,7 +69,7 @@ export default function LoginScreen() {
             autoCapitalize="none"
             autoComplete="email"
             placeholder="usuario@ejemplo.com"
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor="#6b7280"
             returnKeyType="next"
           />
 
@@ -79,7 +80,7 @@ export default function LoginScreen() {
             onChangeText={setPassword}
             secureTextEntry
             placeholder="••••••••"
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor="#6b7280"
             returnKeyType="done"
             onSubmitEditing={handleLogin}
           />
@@ -91,7 +92,7 @@ export default function LoginScreen() {
             activeOpacity={0.8}
           >
             {loading
-              ? <ActivityIndicator color="#fff" />
+              ? <ActivityIndicator color="#ffffff" />
               : <Text style={styles.btnText}>Ingresar</Text>
             }
           </TouchableOpacity>
@@ -102,40 +103,40 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#eff6ff' },
+  root: { flex: 1, backgroundColor: '#dbeafe' },
   container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
   hero: { alignItems: 'center', marginBottom: 36 },
   logo: { fontSize: 72, marginBottom: 8 },
-  appName: { fontSize: 30, fontWeight: '800', color: '#1e3a8a', letterSpacing: -0.5 },
+  appName: { fontSize: 30, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#1e40af', letterSpacing: -0.5 },
   tagline: { color: '#6b7280', marginTop: 6, fontSize: 15 },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     borderRadius: 20,
     padding: 28,
-    shadowColor: '#1e3a8a',
+    shadowColor: '#1e40af',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 16,
     elevation: 4,
   },
-  cardTitle: { fontSize: 20, fontWeight: '700', color: '#111827', marginBottom: 16 },
-  label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6, marginTop: 14 },
+  cardTitle: { fontSize: 20, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#1f2937', marginBottom: 16 },
+  label: { fontSize: 13, fontFamily: 'PlusJakartaSans-SemiBold', color: '#374151', marginBottom: 6, marginTop: 14 },
   input: {
     borderWidth: 1.5,
     borderColor: '#dbeafe',
     borderRadius: 12,
     padding: 13,
     fontSize: 15,
-    color: '#111827',
-    backgroundColor: '#f9fafb',
+    color: '#1f2937',
+    backgroundColor: '#f8fafc',
   },
   btn: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#2563eb',
     borderRadius: 12,
     padding: 15,
     alignItems: 'center',
     marginTop: 28,
   },
   btnDisabled: { opacity: 0.6 },
-  btnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  btnText: { color: '#ffffff', fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 16 },
 });

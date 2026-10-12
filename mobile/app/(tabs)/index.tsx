@@ -3,13 +3,14 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore, isAdminRole, ROLE_LABEL } from '@/lib/store';
 
-const ACTIONS_ALL = [
-  { icon: '➕', label: 'Nuevo Vale', desc: 'Registrar un crédito nuevo', route: '/vale-nuevo', color: '#3b82f6', bg: '#eff6ff' },
-  { icon: '📋', label: 'Mis Vales', desc: 'Consultar y gestionar vales', route: '/(tabs)/vales', color: '#10b981', bg: '#f0fdf4' },
+import { Icon, type NombreIcono } from '@/components/Icon';
+const ACTIONS_ALL: { icon: NombreIcono; label: string; desc: string; route: string; color: string; bg: string }[] = [
+  { icon: 'agregar', label: 'Nuevo Vale', desc: 'Registrar un crédito nuevo', route: '/vale-nuevo', color: '#2563eb', bg: '#dbeafe' },
+  { icon: 'vale', label: 'Mis Vales', desc: 'Consultar y gestionar vales', route: '/(tabs)/vales', color: '#059669', bg: '#d1fae5' },
 ];
-const ACTIONS_ADMIN = [
-  { icon: '💼', label: 'Cartera', desc: 'Panel de indicadores', route: '/(tabs)/cartera', color: '#f59e0b', bg: '#fffbeb' },
-  { icon: '👥', label: 'Equipo', desc: 'Gestionar usuarios y roles', route: '/(tabs)/equipo', color: '#8b5cf6', bg: '#f5f3ff' },
+const ACTIONS_ADMIN: typeof ACTIONS_ALL = [
+  { icon: 'cartera', label: 'Cartera', desc: 'Panel de indicadores', route: '/(tabs)/cartera', color: '#d97706', bg: '#fef3c7' },
+  { icon: 'equipo', label: 'Equipo', desc: 'Gestionar personas y roles', route: '/(tabs)/equipo', color: '#2563eb', bg: '#dbeafe' },
 ];
 
 export default function HomeScreen() {
@@ -54,7 +55,7 @@ export default function HomeScreen() {
               onPress={() => router.push(a.route as any)}
               activeOpacity={0.75}
             >
-              <Text style={styles.cardIcon}>{a.icon}</Text>
+              <Icon name={a.icon} size={26} color={a.color} />
               <Text style={styles.cardLabel}>{a.label}</Text>
               <Text style={styles.cardDesc}>{a.desc}</Text>
               <View style={[styles.cardBtn, { backgroundColor: a.color }]}>
@@ -78,7 +79,7 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 28,
     overflow: 'hidden',
-    shadowColor: '#10b981',
+    shadowColor: '#059669',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -86,8 +87,8 @@ const styles = StyleSheet.create({
   },
   /* Capa 1: fondo verde */
   gradientBg1: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#10b981',
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#059669',
   },
   /* Capa 2: media elipse azul desde la derecha — simula gradiente */
   gradientBg2: {
@@ -97,7 +98,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#2563eb',
     opacity: 0.85,
   },
 
@@ -112,9 +113,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.5)',
   },
-  avatarText: { fontSize: 22, fontWeight: '800', color: '#fff' },
-  greeting: { fontSize: 13, color: 'rgba(255,255,255,0.85)', fontWeight: '500' },
-  userName: { fontSize: 22, fontWeight: '800', color: '#fff', marginTop: 1 },
+  avatarText: { fontSize: 22, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#ffffff' },
+  greeting: { fontSize: 13, color: 'rgba(255,255,255,0.85)', fontFamily: 'PlusJakartaSans-SemiBold' },
+  userName: { fontSize: 22, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#ffffff', marginTop: 1 },
   rolePill: {
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 20,
@@ -123,11 +124,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.4)',
   },
-  roleText: { color: '#fff', fontWeight: '700', fontSize: 12 },
+  roleText: { color: '#ffffff', fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 12 },
 
   sectionTitle: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
     color: '#6b7280',
     marginBottom: 14,
     letterSpacing: 0.8,
@@ -146,12 +147,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardIcon: { fontSize: 32, marginBottom: 10 },
-  cardLabel: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 4 },
+  cardLabel: { fontSize: 15, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#1f2937', marginBottom: 4 },
   cardDesc: { fontSize: 12, color: '#6b7280', marginBottom: 14, lineHeight: 17 },
   cardBtn: {
     borderRadius: 8,
     paddingVertical: 7,
     alignItems: 'center',
   },
-  cardBtnText: { color: '#fff', fontWeight: '700', fontSize: 12 },
+  cardBtnText: { color: '#ffffff', fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 12 },
 });

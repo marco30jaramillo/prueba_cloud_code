@@ -7,6 +7,7 @@ import { useFocusEffect } from 'expo-router';
 import { tiendasAPI } from '@/lib/api';
 import { useAuthStore, ROLE_LABEL } from '@/lib/store';
 
+import { Icon } from '@/components/Icon';
 interface Miembro {
   id: string;
   userId?: string;
@@ -66,7 +67,7 @@ export default function EquipoScreen() {
               await tiendasAPI.removeUsuario(tienda.id, uid);
               setMiembros((prev) => prev.filter((x) => (x.userId ?? x.id) !== uid));
             } catch {
-              Alert.alert('Error', 'No se pudo quitar al usuario.');
+              Alert.alert('Error', 'No pudimos quitar a la persona.');
             }
           },
         },
@@ -75,12 +76,12 @@ export default function EquipoScreen() {
   };
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#3b82f6" /></View>;
+    return <View style={styles.center}><ActivityIndicator size="large" color="#2563eb" /></View>;
   }
 
   return (
     <View style={styles.root}>
-      {tienda && <Text style={styles.tiendaLabel}>📍 {tienda.nombre}</Text>}
+      {tienda && <Text style={styles.tiendaLabel}>{tienda.nombre}</Text>}
 
       <FlatList
         data={miembros}
@@ -102,7 +103,7 @@ export default function EquipoScreen() {
                 <Text style={styles.email} numberOfLines={1}>{item.email ?? ''}</Text>
                 <View style={styles.metaRow}>
                   <Text style={styles.rolBadge}>{ROLE_LABEL[rol] ?? rol}</Text>
-                  <View style={[styles.statusDot, { backgroundColor: activo ? '#10b981' : '#d1d5db' }]} />
+                  <View style={[styles.statusDot, { backgroundColor: activo ? '#059669' : '#e5e7eb' }]} />
                   <Text style={styles.statusLabel}>{activo ? 'Activo' : 'Inactivo'}</Text>
                 </View>
               </View>
@@ -115,11 +116,11 @@ export default function EquipoScreen() {
           );
         }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor="#3b82f6" />
+          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor="#2563eb" />
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>👥</Text>
+            <View style={{ marginBottom: 12 }}><Icon name="equipo" size={40} color="#6b7280" /></View>
             <Text style={styles.emptyText}>No hay miembros en el equipo</Text>
           </View>
         }
@@ -132,9 +133,9 @@ export default function EquipoScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#f3f4f6' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  tiendaLabel: { fontSize: 13, color: '#6b7280', fontWeight: '600', padding: 16, paddingBottom: 0 },
+  tiendaLabel: { fontSize: 13, color: '#6b7280', fontFamily: 'PlusJakartaSans-SemiBold', padding: 16, paddingBottom: 0 },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     borderRadius: 14,
     padding: 14,
     flexDirection: 'row',
@@ -154,13 +155,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  avatarText: { fontSize: 18, fontWeight: '700', color: '#1e40af' },
+  avatarText: { fontSize: 18, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#1e40af' },
   info: { flex: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  nombre: { fontSize: 15, fontWeight: '700', color: '#111827', flex: 1 },
+  nombre: { fontSize: 15, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#1f2937', flex: 1 },
   ownerBadge: {
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
     color: '#92400e',
     backgroundColor: '#fef3c7',
     paddingHorizontal: 6,
@@ -169,7 +170,7 @@ const styles = StyleSheet.create({
   },
   email: { fontSize: 12, color: '#6b7280', marginTop: 1 },
   metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 6 },
-  rolBadge: { fontSize: 12, color: '#3b82f6', fontWeight: '600' },
+  rolBadge: { fontSize: 12, color: '#2563eb', fontFamily: 'PlusJakartaSans-SemiBold' },
   statusDot: { width: 7, height: 7, borderRadius: 4 },
   statusLabel: { fontSize: 12, color: '#6b7280' },
   removeBtn: {
@@ -177,10 +178,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#fca5a5',
+    borderColor: '#fee2e2',
   },
-  removeBtnText: { fontSize: 12, color: '#ef4444', fontWeight: '600' },
+  removeBtnText: { fontSize: 12, color: '#dc2626', fontFamily: 'PlusJakartaSans-SemiBold' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
   emptyIcon: { fontSize: 40, marginBottom: 12 },
-  emptyText: { color: '#9ca3af', fontSize: 15 },
+  emptyText: { color: '#6b7280', fontSize: 15 },
 });

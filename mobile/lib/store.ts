@@ -62,7 +62,7 @@ export const isAdminRole = (role?: string) =>
   ['superuser', 'administrador', 'tendero'].includes(role ?? '');
 
 export const ROLE_LABEL: Record<string, string> = {
-  superuser: 'Super Usuario',
+  superuser: 'Superusuario',
   administrador: 'Administrador',
   tendero: 'Tendero',
   vendedor: 'Vendedor',

@@ -5,8 +5,10 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "icon": "./assets/marca/icon.png",
     "splash": {
-      "backgroundColor": "#3b82f6",
+      "image": "./assets/marca/splash-icon.png",
+      "backgroundColor": "#2563EB",
       "resizeMode": "contain"
     },
     "ios": {
@@ -15,7 +17,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#3b82f6"
+        "foregroundImage": "./assets/marca/adaptive-icon.png",
+        "backgroundColor": "#2563EB"
       },
       "package": "com.mivalecito.app"
     },

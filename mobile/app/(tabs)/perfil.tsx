@@ -9,6 +9,7 @@ import { useAuthStore, ROLE_LABEL } from '@/lib/store';
 import { authAPI } from '@/lib/api';
 import { WEB_URL } from '@/lib/config';
 
+import { Icon } from '@/components/Icon';
 export default function PerfilScreen() {
   const { user, clearAuth, setUser } = useAuthStore();
   const router = useRouter();
@@ -113,10 +114,10 @@ export default function PerfilScreen() {
               onChangeText={setNewName}
               autoFocus
               placeholder="Nombre completo"
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor="#6b7280"
             />
             <TouchableOpacity style={styles.saveBtn} onPress={handleSaveName} disabled={savingName}>
-              {savingName ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.saveBtnText}>Guardar</Text>}
+              {savingName ? <ActivityIndicator color="#ffffff" size="small" /> : <Text style={styles.saveBtnText}>Guardar</Text>}
             </TouchableOpacity>
             <TouchableOpacity style={styles.cancelBtn} onPress={() => { setEditingName(false); setNewName(user?.name ?? ''); }}>
               <Text style={styles.cancelBtnText}>Cancelar</Text>
@@ -134,12 +135,12 @@ export default function PerfilScreen() {
       <SectionCard title="Contraseña">
         {changingPwd ? (
           <>
-            <TextInput style={styles.input} value={pwdForm.current} onChangeText={v => setPwdForm(f => ({ ...f, current: v }))} secureTextEntry placeholder="Contraseña actual" placeholderTextColor="#9ca3af" />
-            <TextInput style={styles.input} value={pwdForm.next} onChangeText={v => setPwdForm(f => ({ ...f, next: v }))} secureTextEntry placeholder="Nueva contraseña" placeholderTextColor="#9ca3af" />
-            <TextInput style={styles.input} value={pwdForm.confirm} onChangeText={v => setPwdForm(f => ({ ...f, confirm: v }))} secureTextEntry placeholder="Confirmar contraseña" placeholderTextColor="#9ca3af" />
+            <TextInput style={styles.input} value={pwdForm.current} onChangeText={v => setPwdForm(f => ({ ...f, current: v }))} secureTextEntry placeholder="Contraseña actual" placeholderTextColor="#6b7280" />
+            <TextInput style={styles.input} value={pwdForm.next} onChangeText={v => setPwdForm(f => ({ ...f, next: v }))} secureTextEntry placeholder="Nueva contraseña" placeholderTextColor="#6b7280" />
+            <TextInput style={styles.input} value={pwdForm.confirm} onChangeText={v => setPwdForm(f => ({ ...f, confirm: v }))} secureTextEntry placeholder="Confirmar contraseña" placeholderTextColor="#6b7280" />
             <View style={styles.editRow}>
               <TouchableOpacity style={[styles.saveBtn, { flex: 1 }]} onPress={handleChangePwd} disabled={savingPwd}>
-                {savingPwd ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.saveBtnText}>Cambiar</Text>}
+                {savingPwd ? <ActivityIndicator color="#ffffff" size="small" /> : <Text style={styles.saveBtnText}>Cambiar</Text>}
               </TouchableOpacity>
               <TouchableOpacity style={styles.cancelBtn} onPress={() => { setChangingPwd(false); setPwdForm({ current: '', next: '', confirm: '' }); }}>
                 <Text style={styles.cancelBtnText}>Cancelar</Text>
@@ -156,7 +157,7 @@ export default function PerfilScreen() {
 
       {/* Open web */}
       <TouchableOpacity style={styles.webBtn} onPress={handleOpenWeb} activeOpacity={0.8}>
-        <Text style={styles.webBtnIcon}>🌐</Text>
+        <Icon name="nube" size={28} color="#2563eb" />
         <View>
           <Text style={styles.webBtnTitle}>Abrir versión web</Text>
           <Text style={styles.webBtnSub}>Accede a funciones avanzadas</Text>
@@ -183,7 +184,7 @@ function SectionCard({ title, children }: { title: string; children: React.React
 
 const cardStyles = StyleSheet.create({
   wrap: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     borderRadius: 14,
     padding: 16,
     marginBottom: 14,
@@ -193,7 +194,7 @@ const cardStyles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  title: { fontSize: 11, fontWeight: '700', color: '#9ca3af', letterSpacing: 0.5, marginBottom: 10 },
+  title: { fontSize: 11, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#6b7280', letterSpacing: 0.5, marginBottom: 10 },
 });
 
 const styles = StyleSheet.create({
@@ -202,7 +203,7 @@ const styles = StyleSheet.create({
   profileBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 18,
     marginBottom: 20,
@@ -221,21 +222,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarText: { fontSize: 24, fontWeight: '800', color: '#1e40af' },
-  name: { fontSize: 17, fontWeight: '700', color: '#111827' },
+  avatarText: { fontSize: 24, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#1e40af' },
+  name: { fontSize: 17, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#1f2937' },
   email: { fontSize: 13, color: '#6b7280', marginTop: 2 },
   roleBadge: {
     marginTop: 6,
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#dbeafe',
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
     alignSelf: 'flex-start',
   },
-  roleText: { fontSize: 12, color: '#3b82f6', fontWeight: '600' },
+  roleText: { fontSize: 12, color: '#2563eb', fontFamily: 'PlusJakartaSans-SemiBold' },
   editTrigger: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  fieldValue: { fontSize: 15, color: '#111827', fontWeight: '500' },
-  editHint: { fontSize: 13, color: '#3b82f6', fontWeight: '600' },
+  fieldValue: { fontSize: 15, color: '#1f2937', fontFamily: 'PlusJakartaSans-SemiBold' },
+  editHint: { fontSize: 13, color: '#2563eb', fontFamily: 'PlusJakartaSans-SemiBold' },
   editRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   input: {
     borderWidth: 1.5,
@@ -243,23 +244,23 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 11,
     fontSize: 14,
-    color: '#111827',
-    backgroundColor: '#fafafa',
+    color: '#1f2937',
+    backgroundColor: '#f8fafc',
     marginBottom: 10,
   },
   saveBtn: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#2563eb',
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  saveBtnText: { color: '#ffffff', fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 13 },
   cancelBtn: { paddingHorizontal: 12 },
-  cancelBtnText: { color: '#6b7280', fontSize: 13, fontWeight: '600' },
+  cancelBtnText: { color: '#6b7280', fontSize: 13, fontFamily: 'PlusJakartaSans-SemiBold' },
   webBtn: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     borderRadius: 14,
     padding: 16,
     flexDirection: 'row',
@@ -273,16 +274,16 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   webBtnIcon: { fontSize: 28 },
-  webBtnTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
+  webBtnTitle: { fontSize: 15, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#1f2937' },
   webBtnSub: { fontSize: 12, color: '#6b7280', marginTop: 1 },
-  webBtnArrow: { marginLeft: 'auto', fontSize: 22, color: '#9ca3af' },
+  webBtnArrow: { marginLeft: 'auto', fontSize: 22, color: '#6b7280' },
   logoutBtn: {
-    backgroundColor: '#fef2f2',
+    backgroundColor: '#fee2e2',
     borderRadius: 14,
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: '#fee2e2',
   },
-  logoutText: { color: '#ef4444', fontWeight: '700', fontSize: 15 },
+  logoutText: { color: '#dc2626', fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 15 },
 });
