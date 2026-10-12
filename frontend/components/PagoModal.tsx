@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Modal, Button, Form, Alert, Spinner, Table, Badge } from 'react-bootstrap';
 import { valesAPI } from '@/lib/api';
+import MontoInput from '@/components/MontoInput';
 
 export interface ValeActivo {
   id: string;
@@ -44,15 +45,6 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
   const [monto, setMonto] = useState('');   // valor numérico crudo (sin formato)
 
-  // Convierte "$ 20.000" → "20000" al escribir
-  function handleMontoChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const raw = e.target.value.replace(/[^\d]/g, '');
-    setMonto(raw);
-  }
-
-  const montoFormatted = monto
-    ? '$ ' + parseInt(monto, 10).toLocaleString('es-CO')
-    : '';
   const [notas, setNotas] = useState('');
   const [registrando, setRegistrando] = useState(false);
   const [error, setError] = useState('');
@@ -209,12 +201,10 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
                 Total {totalSeleccionado > 0 ? `(${fmt(totalSeleccionado)})` : ''}
               </Button>
             </div>
-            <Form.Control
-              type="text"
-              inputMode="numeric"
+            <MontoInput
               placeholder="$ 0"
-              value={montoFormatted}
-              onChange={handleMontoChange}
+              value={monto}
+              onChange={setMonto}
               required
               className="mb-3"
               style={{ fontSize: '1.1rem', fontWeight: 600 }}

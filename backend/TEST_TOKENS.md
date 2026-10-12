@@ -5,6 +5,8 @@
 1. Ten el backend arrancado contra la base local (ver `README.md`, "Inicio rápido")
 2. Importa estos requests en Postman
 3. Reemplaza `{{BASE_URL}}` con la URL del backend (ej: `http://localhost:3001`)
+4. `/tokens/stats` y `/tokens/clean` requieren sesión de superusuario o administrador: envía
+   `Authorization: Bearer <token>` en cada request. Sin token responden 401; con otro rol, 403.
 
 ---
 

@@ -6,6 +6,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { tiendasAPI, valesAPI, usersAPI } from '@/lib/api';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import PagoModal, { ValeActivo } from '@/components/PagoModal';
+import MontoInput from '@/components/MontoInput';
 import styles from './page.module.scss';
 
 interface Tienda { id: string; nombre: string; }
@@ -566,7 +567,7 @@ function CarteraContent() {
                   <Form onSubmit={handleAbono}>
                     <Row className="g-2 align-items-end">
                       <Col md={5}>
-                        <Form.Control type="number" min="1" step="100" placeholder="Monto abono" value={montoAbono} onChange={e => setMontoAbono(e.target.value)} required />
+                        <MontoInput placeholder="Monto abono" value={montoAbono} onChange={setMontoAbono} required />
                       </Col>
                       <Col md={4}>
                         <Form.Control placeholder="Nota (opcional)" value={notasAbono} onChange={e => setNotasAbono(e.target.value)} />

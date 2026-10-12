@@ -218,7 +218,7 @@ router.patch('/:valeId/abonos/:abonoId/anular', authMiddleware, requirePermissio
     if (!vale) return ResponseFormatter.notFound(res, 'Vale no encontrado');
     if (!await tiendaAcceso(req.user.userId, req.user.role, vale.tiendaId))
       return ResponseFormatter.forbidden(res, 'No tienes acceso a esta tienda');
-    const result = await Abono.anular(req.params.abonoId, req.user.userId);
+    const result = await Abono.anular(req.params.abonoId, req.params.valeId, req.user.userId);
     if (!result) return ResponseFormatter.notFound(res, 'Abono no encontrado o ya anulado');
     return ResponseFormatter.success(res, { ...result, message: 'Abono anulado' });
   } catch { return ResponseFormatter.internalError(res, 'Error al anular el abono'); }

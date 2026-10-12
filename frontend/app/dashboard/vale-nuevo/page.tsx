@@ -5,6 +5,7 @@ import { Container, Card, Form, Button, Alert, Spinner, Row, Col, ListGroup } fr
 import { useAuthStore } from '@/lib/auth-store';
 import { tiendasAPI, valesAPI, usersAPI } from '@/lib/api';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import MontoInput from '@/components/MontoInput';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.scss';
 
@@ -204,11 +205,10 @@ function ValeNuevoContent() {
                   <Col md={6}>
                     <Form.Group className="mb-3">
                       <Form.Label className={styles.label}>Monto total (COP) *</Form.Label>
-                      <Form.Control
-                        type="number" min="1" step="100"
-                        placeholder="0"
+                      <MontoInput
+                        placeholder="$ 0"
                         value={form.montoTotal}
-                        onChange={e => setForm(f => ({ ...f, montoTotal: e.target.value }))}
+                        onChange={v => setForm(f => ({ ...f, montoTotal: v }))}
                         required
                       />
                     </Form.Group>
