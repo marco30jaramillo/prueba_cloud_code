@@ -127,12 +127,15 @@ function ProfilePageContent() {
 
   return (
     <Container className={styles.container}>
+      <div className={styles.header}>
+        <div>
+          <h1 className={styles.title}><Icon name="cliente" /> Mi Perfil</h1>
+          <p className={styles.subtitle}>Gestiona tu información personal</p>
+        </div>
+      </div>
+
       <Row className="justify-content-center">
         <Col lg={6} md={8}>
-          <div className={styles.header}>
-            <h1 className={styles.title}><Icon name="cliente" /> Mi Perfil</h1>
-            <p className={styles.subtitle}>Gestiona tu información personal</p>
-          </div>
 
           {message && (
             <Alert
