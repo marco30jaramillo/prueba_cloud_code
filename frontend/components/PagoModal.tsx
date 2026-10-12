@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Modal, Button, Form, Alert, Spinner, Table, Badge } from 'react-bootstrap';
 import { valesAPI } from '@/lib/api';
 import MontoInput from '@/components/MontoInput';
+import { valesCobrables, distribuirPago, validarPago, saldoDe, totalSaldos } from '@/lib/pago-integral';
 
 export interface ValeActivo {
   id: string;
@@ -35,12 +36,7 @@ function fmtDate(s?: string) {
 
 export default function PagoModal({ show, onHide, clienteId, clienteNombre, vales, onPagoCorrecto }: Props) {
   // Solo vales activos, ordenados más viejo primero (mismo orden que el backend aplicará)
-  const valesOrdenados = useMemo(
-    () => [...vales]
-      .filter(v => ['pendiente', 'parcial'].includes(v.estado))
-      .sort((a, b) => new Date(a.fechaVale).getTime() - new Date(b.fechaVale).getTime()),
-    [vales]
-  );
+  const valesOrdenados = useMemo(() => valesCobrables([...vales]), [vales]);
 
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
   const [monto, setMonto] = useState('');   // valor numérico crudo (sin formato)
@@ -62,21 +58,15 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
   }, [show, valesOrdenados]);
 
   const valesSeleccionados = valesOrdenados.filter(v => seleccionados.has(v.id));
-  const totalSeleccionado = valesSeleccionados.reduce((s, v) => s + parseFloat(String(v.saldoPendiente)), 0);
-  const minSugerido = valesSeleccionados.length > 0 ? parseFloat(String(valesSeleccionados[0].saldoPendiente)) : 0;
+  const totalSeleccionado = totalSaldos(valesSeleccionados);
+  const minSugerido = valesSeleccionados.length > 0 ? saldoDe(valesSeleccionados[0]) : 0;
   const montoNum = parseFloat(monto) || 0;
 
   // Preview de distribución
-  const preview = useMemo(() => {
-    if (montoNum <= 0 || valesSeleccionados.length === 0) return [];
-    let restante = montoNum;
-    return valesSeleccionados.map(v => {
-      const saldo = parseFloat(String(v.saldoPendiente));
-      const aplicado = Math.min(restante, saldo);
-      restante = Math.max(0, restante - saldo);
-      return { ...v, aplicado, quedaPendiente: Math.max(0, saldo - aplicado) };
-    });
-  }, [montoNum, valesSeleccionados]);
+  const preview = useMemo(
+    () => distribuirPago(montoNum, valesSeleccionados).map(r => ({ ...r.vale, aplicado: r.aplicado, quedaPendiente: r.quedaPendiente })),
+    [montoNum, valesSeleccionados]
+  );
 
   function toggleVale(id: string) {
     setSeleccionados(prev => {
@@ -89,10 +79,12 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
 
   async function handlePagar(e: React.FormEvent) {
     e.preventDefault();
-    if (montoNum <= 0) return setError('Ingresa un monto válido.');
-    if (valesSeleccionados.length === 0) return setError('Selecciona al menos un crédito.');
-    if (montoNum > totalSeleccionado + 0.01)
+    const validacion = validarPago(montoNum, valesSeleccionados);
+    if (!validacion.ok) {
+      if (validacion.motivo === 'monto-invalido') return setError('Ingresa un monto válido.');
+      if (validacion.motivo === 'sin-seleccion') return setError('Selecciona al menos un crédito.');
       return setError(`El monto supera el total seleccionado (${fmt(totalSeleccionado)}).`);
+    }
 
     setRegistrando(true);
     setError('');

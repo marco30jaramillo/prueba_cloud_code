@@ -7,7 +7,9 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "db:setup": "node scripts/db-setup.js",
-    "db:seed": "node scripts/seed.js"
+    "db:seed": "node scripts/seed.js",
+    "test:db": "node scripts/db-test.js",
+    "test:web": "node scripts/web-test.js"
   },
   "engines": {
     "node": ">=22"
