@@ -35,7 +35,7 @@ export const Navbar: React.FC = () => {
   const [navModules, setNavModules] = useState<NavModule[]>([]);
 
   useEffect(() => {
-    const checkMobile = () => setIsNarrow(window.innerWidth < 1024);
+    const checkMobile = () => setIsNarrow(window.innerWidth < 1200);
     checkMobile();
 
     const handleScroll = () => {
@@ -109,7 +109,7 @@ export const Navbar: React.FC = () => {
       {/* ── Top Navbar ── */}
       <BSNavbar
         bg="light"
-        expand="lg"
+        expand="xl"
         className={`${styles.navbar} ${useSidebar ? styles.navbarHidden : ''} shadow-sm`}
       >
         <Container>

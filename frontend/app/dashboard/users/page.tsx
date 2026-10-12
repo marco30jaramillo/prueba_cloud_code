@@ -334,7 +334,7 @@ function UsersPageContent() {
           <Card className={styles.card}>
             <Card.Body>
               <div className={styles.tableWrapper}>
-                <Table hover responsive className={styles.table}>
+                <Table hover className={styles.table}>
                   <thead>
                     <tr>
                       <th>Foto</th>
@@ -388,7 +388,7 @@ function UsersPageContent() {
                               <Icon name="ajustes" />
                             </Dropdown.Toggle>
 
-                            <Dropdown.Menu>
+                            <Dropdown.Menu popperConfig={{ strategy: 'fixed' }}>
                               <Dropdown.Item
                                 onClick={() => handleEditUser(u)}
                                 className={styles.editItem}
