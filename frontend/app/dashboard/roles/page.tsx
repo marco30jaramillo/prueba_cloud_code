@@ -6,6 +6,7 @@ import { rolesConfigAPI } from '@/lib/api';
 import styles from './page.module.scss';
 
 import { Icon } from '@/components/Icon';
+import { iconoDeModulo } from '@/lib/icono-modulo';
 // ──────────────────────────────────────────────────────────
 // Types + helpers
 // ──────────────────────────────────────────────────────────
@@ -28,7 +29,8 @@ const BTN_ACTIVE_CLASS: Record<Level, string> = {
 interface ModuleDef {
   id: string;
   name: string;
-  description: string;
+  icon: string;
+  href?: string;
   icon: string;
   permRead: string[];
   permWrite: string[];
@@ -151,7 +153,7 @@ function CreateRoleModal({ modules, onClose, onCreated }: CreateModalProps) {
               const level = getLevel(mod.id);
               return (
                 <div key={mod.id} className={styles.modalModuleRow}>
-                  <span className={styles.modalModuleIcon}>{mod.icon}</span>
+                  <span className={styles.modalModuleIcon}><Icon name={iconoDeModulo(mod.icon, mod.href)} /></span>
                   <span className={styles.modalModuleName}>{mod.name}</span>
                   <div className={styles.modalLevelBtns}>
                     {LEVELS.map(lvl => (
@@ -395,7 +397,7 @@ function RolesContent() {
                   return (
                     <div key={mod.id} className={`${styles.moduleCard} ${styles[CARD_LEVEL_CLASS[level]] || ''}`}>
                       <div className={styles.moduleTop}>
-                        <span className={styles.moduleIcon}>{mod.icon}</span>
+                        <span className={styles.moduleIcon}><Icon name={iconoDeModulo(mod.icon, mod.href)} /></span>
                         <div>
                           <div className={styles.moduleName}>{mod.name}</div>
                           <div className={styles.moduleDescText}>{mod.description}</div>
@@ -449,7 +451,7 @@ function RolesContent() {
                       if (!allModPerms.length) return null;
                       return (
                         <div key={mod.id} className={styles.permGroup}>
-                          <div className={styles.permGroupLabel}>{mod.icon} {mod.name}</div>
+                          <div className={styles.permGroupLabel}><Icon name={iconoDeModulo(mod.icon, mod.href)} /> {mod.name}</div>
                           <div className={styles.permGrid}>
                             {allModPerms.map(perm => (
                               <label key={perm} className={`${styles.permCheck} ${pendingDirect.includes(perm) ? styles.permCheckOn : ''}`}>

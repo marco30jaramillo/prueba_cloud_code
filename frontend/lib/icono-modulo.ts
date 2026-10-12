@@ -13,7 +13,7 @@ const ICONO_POR_RUTA: Record<string, NombreIcono> = {
 };
 
 /** El módulo trae su icono del servidor: si no es un nombre del set de marca, se usa uno por ruta. */
-export function iconoDeModulo(icono: string, href: string): NombreIcono {
+export function iconoDeModulo(icono: string, href = ''): NombreIcono {
   if (icono in ICONOS) return icono as NombreIcono;
   return ICONO_POR_RUTA[href] ?? 'informacion';
 }
