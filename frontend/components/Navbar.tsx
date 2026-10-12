@@ -148,40 +148,35 @@ export const Navbar: React.FC = () => {
                 </>
               ) : (
                 <>
-                  {navModules.map(mod => (
+                  {navModules.filter(mod => mod.href !== '/dashboard/profile').map(mod => (
                     <Nav.Link key={mod.id} as={Link} href={mod.href} className={styles.navLink}>
                       <Icon name={iconoDeModulo(mod.icon, mod.href)} /> {mod.name}
                     </Nav.Link>
                   ))}
-                  <div className={styles.userInfo}>
-                    <img
-                      src={getImageUrl(user?.photo)}
-                      alt={user?.name}
-                      className={styles.userPhoto}
-                      onError={(e) => {
-                        const img = e.target as HTMLImageElement;
-                        if (!img.dataset.fallbackAttempted) {
-                          img.dataset.fallbackAttempted = 'true';
-                          img.src = getImageUrl(undefined);
-                        }
-                      }}
-                    />
-                    <span>{user?.name} ({user?.role})</span>
-                  </div>
-                  <Dropdown className={styles.logoutDropdown}>
-                    <Dropdown.Toggle
-                      variant="outline-danger"
-                      size="sm"
-                      id="logout-dropdown"
-                      disabled={isLoggingOut}
-                    >
-                      Cerrar sesión
+                  <Dropdown className={styles.userDropdown} align="end">
+                    <Dropdown.Toggle id="user-dropdown" className={styles.userInfo} disabled={isLoggingOut}>
+                      <img
+                        src={getImageUrl(user?.photo)}
+                        alt=""
+                        className={styles.userPhoto}
+                        onError={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          if (!img.dataset.fallbackAttempted) {
+                            img.dataset.fallbackAttempted = 'true';
+                            img.src = getImageUrl(undefined);
+                          }
+                        }}
+                      />
+                      <span>{user?.name} ({user?.role})</span>
                     </Dropdown.Toggle>
-                    <Dropdown.Menu align="end">
+                    <Dropdown.Menu popperConfig={{ strategy: 'fixed' }}>
+                      <Dropdown.Item as={Link} href="/dashboard/profile">
+                        <Icon name="cliente" /> Mi perfil
+                      </Dropdown.Item>
+                      <Dropdown.Divider />
                       <Dropdown.Item onClick={handleLogoutClick} disabled={isLoggingOut}>
                         <Icon name="cerrar-sesion" /> Cerrar sesión en este dispositivo
                       </Dropdown.Item>
-                      <Dropdown.Divider />
                       <Dropdown.Item
                         onClick={handleLogoutAllClick}
                         disabled={isLoggingOut}
