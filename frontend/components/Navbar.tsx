@@ -117,26 +117,9 @@ export const Navbar: React.FC = () => {
             <Logo variante="horizontal" alto={28} />
           </BSNavbar.Brand>
 
-          {isAuthenticated && (
-            <Link href="/dashboard" className={styles.panelBtn} title="Panel principal">
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <rect x="0"  y="0"  width="5" height="5" rx="1" fill="currentColor"/>
-                <rect x="6.5" y="0"  width="5" height="5" rx="1" fill="currentColor"/>
-                <rect x="13" y="0"  width="5" height="5" rx="1" fill="currentColor"/>
-                <rect x="0"  y="6.5" width="5" height="5" rx="1" fill="currentColor"/>
-                <rect x="6.5" y="6.5" width="5" height="5" rx="1" fill="currentColor"/>
-                <rect x="13" y="6.5" width="5" height="5" rx="1" fill="currentColor"/>
-                <rect x="0"  y="13" width="5" height="5" rx="1" fill="currentColor"/>
-                <rect x="6.5" y="13" width="5" height="5" rx="1" fill="currentColor"/>
-                <rect x="13" y="13" width="5" height="5" rx="1" fill="currentColor"/>
-              </svg>
-              <span className={styles.panelBtnLabel}>Panel</span>
-            </Link>
-          )}
-
           <BSNavbar.Toggle aria-controls="basic-navbar-nav" />
           <BSNavbar.Collapse id="basic-navbar-nav">
-            <Nav className="ms-auto">
+            <Nav className={isAuthenticated ? 'me-auto' : 'ms-auto'}>
               {!isAuthenticated ? (
                 <>
                   <Nav.Link as={Link} href="/login" className={styles.navLink}>
@@ -148,13 +131,21 @@ export const Navbar: React.FC = () => {
                 </>
               ) : (
                 <>
+                  <Nav.Link as={Link} href="/dashboard" className={styles.navLink}>
+                    <Icon name="grafica" /> Panel
+                  </Nav.Link>
                   {navModules.filter(mod => mod.href !== '/dashboard/profile').map(mod => (
                     <Nav.Link key={mod.id} as={Link} href={mod.href} className={styles.navLink}>
                       <Icon name={iconoDeModulo(mod.icon, mod.href)} /> {mod.name}
                     </Nav.Link>
                   ))}
+                </>
+              )}
+            </Nav>
+            {isAuthenticated && (
+              <Nav className="ms-auto">
                   <Dropdown className={styles.userDropdown} align="end">
-                    <Dropdown.Toggle id="user-dropdown" className={styles.userInfo} disabled={isLoggingOut}>
+                    <Dropdown.Toggle as="button" id="user-dropdown" className={styles.userInfo} disabled={isLoggingOut}>
                       <img
                         src={getImageUrl(user?.photo)}
                         alt=""
@@ -186,9 +177,8 @@ export const Navbar: React.FC = () => {
                       </Dropdown.Item>
                     </Dropdown.Menu>
                   </Dropdown>
-                </>
-              )}
-            </Nav>
+              </Nav>
+            )}
           </BSNavbar.Collapse>
         </Container>
       </BSNavbar>

@@ -203,34 +203,6 @@
 
 
 // ── Panel button (9-squares grid) ───────────────────────
-.panelBtn {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin-left: 1rem;
-  padding: 0.3rem 0.6rem;
-  border-radius: 7px;
-  color: #6b7280;
-  text-decoration: none;
-  transition: color 0.2s, background 0.2s;
-  flex-shrink: 0;
-
-  svg { display: block; flex-shrink: 0; }
-
-  &:hover {
-    color: #4b5563;
-    background: #f3f4f6;
-    text-decoration: none;
-  }
-}
-
-.panelBtnLabel {
-  font-size: 0.78rem;
-  font-weight: 500;
-
-  @media (max-width: 576px) { display: none; }
-}
-
 // ── Mobile Sidebar ───────────────────────────────────────
 
 .sidebarOverlay {
