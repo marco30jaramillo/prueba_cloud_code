@@ -58,7 +58,8 @@ router.get('/', (req, res) => {
     },
     utility_endpoints: {
       health: `GET ${BASE}/health`,
-      token_stats: `GET ${BASE}/tokens/stats`,
+      token_stats: `GET ${BASE}/tokens/stats (requiere sesión de superusuario o administrador)`,
+      token_clean: `POST ${BASE}/tokens/clean (requiere sesión de superusuario o administrador)`,
     },
   });
 });

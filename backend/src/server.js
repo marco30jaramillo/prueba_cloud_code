@@ -21,6 +21,8 @@ const TokenCleaner = require('./scripts/cleanExpiredTokens');
 const PendingAccountPurger = require('./scripts/purgePendingAccounts');
 const TokenManager = require('./utils/tokenManager');
 const ResponseFormatter = require('./utils/responseFormatter');
+const { authMiddleware } = require('./middleware/auth');
+const roleMiddleware = require('./middleware/roleMiddleware');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -78,18 +80,11 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.get('/debug/headers', (req, res) => {
-  ResponseFormatter.success(res, {
-    message: 'Headers recibidos',
-    authorization: {
-      header: req.headers.authorization || '❌ NO INCLUIDO',
-      status: req.headers.authorization ? '✅ Presente' : '❌ Faltante'
-    },
-    allHeaders: req.headers
-  });
-});
+// Operaciones de sistema: solo superusuario y administrador (req. 005, S-06). Se usa el rol
+// y no un permiso porque no son operaciones de una tienda. `/health` es la única pública.
+const soloAdministracion = [authMiddleware, roleMiddleware.requireRole('superuser', 'administrador')];
 
-app.get('/tokens/stats', (req, res) => {
+app.get('/tokens/stats', ...soloAdministracion, (req, res) => {
   const tokenManager = new TokenManager();
   const stats = tokenManager.getStats();
   ResponseFormatter.success(res, {
@@ -98,7 +93,7 @@ app.get('/tokens/stats', (req, res) => {
   });
 });
 
-app.post('/tokens/clean', (req, res) => {
+app.post('/tokens/clean', ...soloAdministracion, (req, res) => {
   const deleted = TokenCleaner.run();
   ResponseFormatter.success(res, {
     message: 'Limpieza de tokens ejecutada',
@@ -202,18 +197,21 @@ app.get('/docs', (req, res) => {
           method: 'GET',
           path: '/health',
           description: 'Verificar estado del servidor',
+          auth: 'none',
           response: { status: 'healthy' }
         },
         {
           method: 'GET',
           path: '/tokens/stats',
           description: 'Ver estadísticas de tokens',
+          auth: 'required (superuser o administrador)',
           response: { stats: { totalGranted: 'number', totalRevoked: 'number' } }
         },
         {
           method: 'POST',
           path: '/tokens/clean',
           description: 'Ejecutar limpieza manual de tokens vencidos',
+          auth: 'required (superuser o administrador)',
           response: { tokensEliminados: 'number' }
         },
         {
@@ -281,7 +279,6 @@ app.listen(PORT, '0.0.0.0', async () => {
   }
 
   console.log(`📚 Documentación: http://localhost:${PORT}/docs`);
-  console.log(`📋 Tokens: http://localhost:${PORT}/tokens/stats`);
 
   // Iniciar limpiador de tokens automático
   console.log(`⏰ Limpiador de tokens programado...`);

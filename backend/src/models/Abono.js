@@ -50,18 +50,21 @@ class Abono {
     return r.recordset.map(fromSql);
   }
 
-  // Anula el abono y recalcula el saldo del vale. Devuelve { abono, vale }.
-  static async anular(id, anuladoPor) {
-    const now = new Date().toISOString();
+  // Anula el abono y recalcula el saldo del vale. Devuelve { abono, vale }, o null si el
+  // abono no existe, ya estaba anulado o no pertenece al vale `valeId` (mismo resultado en
+  // los tres casos: no se revela si el abono existe en otro vale). La pertenencia se
+  // comprueba en la propia sentencia, no con una lectura previa.
+  static async anular(id, valeId, anuladoPor) {
     let abono;
-    if (!isGuid(id)) {
+    if (!isGuid(id) || !isGuid(valeId)) {
       abono = null;
     } else {
       const r = await (await request()).input('id', sql.UniqueIdentifier, id)
+        .input('valeId', sql.UniqueIdentifier, valeId)
         .input('anuladoPor', sql.UniqueIdentifier, anuladoPor)
         .input('now', sql.DateTime2, new Date())
         .query(`UPDATE dbo.abonos SET anulado=1, anuladoPor=@anuladoPor, anuladoAt=@now
-                OUTPUT inserted.* WHERE id=@id AND anulado=0`);
+                OUTPUT inserted.* WHERE id=@id AND valeId=@valeId AND anulado=0`);
       abono = fromSql(r.recordset[0]);
     }
     if (!abono) return null;
