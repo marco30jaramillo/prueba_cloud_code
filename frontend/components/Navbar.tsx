@@ -11,33 +11,15 @@ import { useRouter } from 'next/navigation';
 import { getImageUrl } from '@/lib/image-url';
 import styles from './Navbar.module.scss';
 
-import { Icon, type NombreIcono } from './Icon';
+import { Icon } from './Icon';
 import { Logo } from './Logo';
-import { ICONOS } from '@/lib/marca-datos';
+import { iconoDeModulo } from '@/lib/icono-modulo';
 interface NavModule {
   id: string;
   name: string;
   href: string;
   icon: string;
   showInNav: boolean;
-}
-
-const ICONO_POR_RUTA: Record<string, NombreIcono> = {
-  '/dashboard': 'grafica',
-  '/dashboard/cartera': 'cartera',
-  '/dashboard/mis-vales': 'vale',
-  '/dashboard/vale-nuevo': 'agregar',
-  '/dashboard/tienda': 'tienda',
-  '/dashboard/users': 'equipo',
-  '/dashboard/roles': 'escudo',
-  '/dashboard/audit': 'nota',
-  '/dashboard/profile': 'cliente',
-};
-
-/** El módulo trae su icono del servidor: si no es un nombre del set de marca, se usa uno por ruta. */
-function iconoDeModulo(icono: string, href: string): NombreIcono {
-  if (icono in ICONOS) return icono as NombreIcono;
-  return ICONO_POR_RUTA[href] ?? 'informacion';
 }
 
 export const Navbar: React.FC = () => {

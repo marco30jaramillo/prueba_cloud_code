@@ -8,6 +8,8 @@ import { modulesAPI } from '@/lib/api';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import styles from './page.module.scss';
 
+import { Icon } from '@/components/Icon';
+import { iconoDeModulo } from '@/lib/icono-modulo';
 interface DashboardModule {
   id: string;
   name: string;
@@ -85,7 +87,7 @@ function DashboardPageContent() {
               <Card className={`${styles.actionCard} h-100`}>
                 <Card.Body>
                   <Card.Title className={styles.cardTitle}>
-                    {mod.icon} {mod.name}
+                    <Icon name={iconoDeModulo(mod.icon, mod.href)} /> {mod.name}
                   </Card.Title>
                   <Card.Text>{mod.description}</Card.Text>
                   <Button
