@@ -1,0 +1,411 @@
+{
+  "descripcion": "Línea base del inventario de marca (requerimiento 008, tarea 5). Medida sobre el estado de partida de la rama req/008-definicion-e-implementacion-de-marca(KAN-75), antes de implementar. Las pruebas de objetivo están pendientes (todo T-27) mientras estricto sea false.",
+  "fecha": "2026-10-12",
+  "estricto": false,
+  "alcance": {
+    "web": 58,
+    "movil": 13,
+    "movilConfig": 1,
+    "correos": 8,
+    "api": 24,
+    "origenes": 90
+  },
+  "metricas": {
+    "colores.web.fuera": {
+      "valor": 261,
+      "objetivo": 0
+    },
+    "colores.web.dentro": {
+      "valor": 304,
+      "soloInforme": true
+    },
+    "colores.web.tonos": {
+      "valor": 56,
+      "soloInforme": true
+    },
+    "colores.movil.fuera": {
+      "valor": 126,
+      "objetivo": 0
+    },
+    "colores.movil.dentro": {
+      "valor": 90,
+      "soloInforme": true
+    },
+    "colores.movil.sombras": {
+      "valor": 10,
+      "soloInforme": true
+    },
+    "colores.movil.tonos": {
+      "valor": 20,
+      "soloInforme": true
+    },
+    "colores.movilConfig.fuera": {
+      "valor": 2,
+      "objetivo": 0
+    },
+    "colores.correos.fuera": {
+      "valor": 10,
+      "objetivo": 0
+    },
+    "colores.web.funcionales": {
+      "valor": 20,
+      "objetivo": 0
+    },
+    "colores.movil.funcionales": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "colores.web.nombres": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "colores.movil.nombres": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "botones.web.verdes": {
+      "valor": 24,
+      "objetivo": 0
+    },
+    "botones.web.verdesDinamicos": {
+      "valor": 2,
+      "objetivo": 0
+    },
+    "botones.web.alertasDinamicas": {
+      "valor": 7,
+      "soloInforme": true
+    },
+    "botones.web.alertasVerdes": {
+      "valor": 8,
+      "soloInforme": true
+    },
+    "botones.web.cargaVerde": {
+      "valor": 5,
+      "objetivo": 0
+    },
+    "botones.web.insigniasVerdes": {
+      "valor": 9,
+      "soloInforme": true
+    },
+    "botones.web.otroVerde": {
+      "valor": 0,
+      "soloInforme": true
+    },
+    "botones.web.variantePrimary": {
+      "valor": 3,
+      "soloInforme": true
+    },
+    "botones.web.archivosConVariosPrincipales": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "emojis.web.lineas": {
+      "valor": 187,
+      "objetivo": 0
+    },
+    "emojis.web.lineasSinComentarios": {
+      "valor": 187,
+      "soloInforme": true
+    },
+    "emojis.web.bootstrap": {
+      "valor": 61,
+      "objetivo": 0
+    },
+    "emojis.movil.lineas": {
+      "valor": 19,
+      "objetivo": 0
+    },
+    "emojis.movil.lineasSinComentarios": {
+      "valor": 19,
+      "soloInforme": true
+    },
+    "emojis.api.mensajes": {
+      "valor": 14,
+      "objetivo": 0
+    },
+    "emojis.correos.textos": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "textos.web.total": {
+      "valor": 760,
+      "soloInforme": true
+    },
+    "textos.movil.total": {
+      "valor": 182,
+      "soloInforme": true
+    },
+    "textos.api.total": {
+      "valor": 225,
+      "soloInforme": true
+    },
+    "textos.correos.total": {
+      "valor": 44,
+      "soloInforme": true
+    },
+    "ingles.web": {
+      "valor": 25,
+      "objetivo": 0
+    },
+    "usted.web": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "ustedPosesivo.web": {
+      "valor": 3,
+      "soloInforme": true
+    },
+    "fiado.web": {
+      "valor": 3,
+      "objetivo": 0
+    },
+    "fiadoPermitido.web": {
+      "valor": 4,
+      "soloInforme": true
+    },
+    "glosario.web": {
+      "valor": 2,
+      "objetivo": 0
+    },
+    "usuarioFueraDeModulo.web": {
+      "valor": 41,
+      "soloInforme": true
+    },
+    "jerga.web": {
+      "valor": 26,
+      "objetivo": 0
+    },
+    "valencito.web": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "exclamacion.web": {
+      "valor": 1,
+      "soloInforme": true
+    },
+    "ingles.movil": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "usted.movil": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "ustedPosesivo.movil": {
+      "valor": 0,
+      "soloInforme": true
+    },
+    "fiado.movil": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "fiadoPermitido.movil": {
+      "valor": 0,
+      "soloInforme": true
+    },
+    "glosario.movil": {
+      "valor": 1,
+      "objetivo": 0
+    },
+    "usuarioFueraDeModulo.movil": {
+      "valor": 4,
+      "soloInforme": true
+    },
+    "jerga.movil": {
+      "valor": 1,
+      "objetivo": 0
+    },
+    "valencito.movil": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "exclamacion.movil": {
+      "valor": 1,
+      "soloInforme": true
+    },
+    "ingles.api": {
+      "valor": 17,
+      "objetivo": 0
+    },
+    "usted.api": {
+      "valor": 2,
+      "objetivo": 0
+    },
+    "ustedPosesivo.api": {
+      "valor": 1,
+      "soloInforme": true
+    },
+    "fiado.api": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "fiadoPermitido.api": {
+      "valor": 0,
+      "soloInforme": true
+    },
+    "glosario.api": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "usuarioFueraDeModulo.api": {
+      "valor": 28,
+      "soloInforme": true
+    },
+    "jerga.api": {
+      "valor": 18,
+      "objetivo": 0
+    },
+    "valencito.api": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "exclamacion.api": {
+      "valor": 0,
+      "soloInforme": true
+    },
+    "ingles.correos": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "usted.correos": {
+      "valor": 1,
+      "objetivo": 0
+    },
+    "ustedPosesivo.correos": {
+      "valor": 2,
+      "soloInforme": true
+    },
+    "fiado.correos": {
+      "valor": 1,
+      "objetivo": 0
+    },
+    "fiadoPermitido.correos": {
+      "valor": 0,
+      "soloInforme": true
+    },
+    "glosario.correos": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "usuarioFueraDeModulo.correos": {
+      "valor": 1,
+      "soloInforme": true
+    },
+    "jerga.correos": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "valencito.correos": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "exclamacion.correos": {
+      "valor": 0,
+      "soloInforme": true
+    },
+    "jerga.api.reenviosDeError": {
+      "valor": 3,
+      "objetivo": 0
+    },
+    "ciudad.web": {
+      "valor": 3,
+      "objetivo": 0
+    },
+    "ciudad.movil": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "ciudad.defectos": {
+      "valor": 2,
+      "objetivo": 0
+    },
+    "ciudad.backend.menciones": {
+      "valor": 4,
+      "soloInforme": true
+    },
+    "ciudad.pruebas": {
+      "valor": 0,
+      "soloInforme": true
+    },
+    "contraste.web.paresMedidos": {
+      "valor": 38,
+      "soloInforme": true
+    },
+    "contraste.web.paresBajoAA": {
+      "valor": 12,
+      "objetivo": 0
+    },
+    "contraste.web.supuestosBajoAA": {
+      "valor": 66,
+      "objetivo": 0
+    },
+    "contraste.movil.paresMedidos": {
+      "valor": 6,
+      "soloInforme": true
+    },
+    "contraste.movil.paresBajoAA": {
+      "valor": 1,
+      "objetivo": 0
+    },
+    "contraste.movil.supuestosBajoAA": {
+      "valor": 31,
+      "objetivo": 0
+    },
+    "contraste.marca.paresBajoMinimo": {
+      "valor": 0,
+      "soloInforme": true
+    },
+    "fuente.web.local": {
+      "valor": 0,
+      "objetivo": "minimo-1"
+    },
+    "fuente.web.solicitudesExternas": {
+      "valor": 1,
+      "objetivo": 0
+    },
+    "fuente.web.tabular": {
+      "valor": 4,
+      "objetivo": "minimo-1"
+    },
+    "fuente.movil.local": {
+      "valor": 0,
+      "objetivo": "minimo-1"
+    },
+    "fuente.movil.solicitudesExternas": {
+      "valor": 0,
+      "objetivo": 0
+    },
+    "fuente.movil.tabular": {
+      "valor": 0,
+      "objetivo": "minimo-1"
+    },
+    "logo.movil.iconoDeApp": {
+      "valor": 0,
+      "objetivo": "minimo-1"
+    },
+    "logo.movil.pantallaDeInicio": {
+      "valor": 0,
+      "objetivo": "minimo-1"
+    },
+    "logo.web.favicon": {
+      "valor": 0,
+      "objetivo": "minimo-1"
+    },
+    "logo.web.componente": {
+      "valor": 0,
+      "objetivo": "minimo-1"
+    },
+    "logo.movil.componente": {
+      "valor": 0,
+      "objetivo": "minimo-1"
+    },
+    "iconos.movil.libreriasExternas": {
+      "valor": 2,
+      "objetivo": 0
+    },
+    "iconos.web.libreriasExternas": {
+      "valor": 0,
+      "objetivo": 0
+    }
+  }
+}
