@@ -21,7 +21,7 @@ async function tiendaAcceso(userId, role, tiendaId) {
 router.post('/', authMiddleware, requirePermission('vale:crear'), async (req, res) => {
   const { tiendaId, clienteId, descripcion, montoTotal } = req.body;
   if (!tiendaId || !clienteId || !descripcion?.trim() || !montoTotal)
-    return ResponseFormatter.badRequest(res, 'tiendaId, clienteId, descripcion y montoTotal son requeridos');
+    return ResponseFormatter.badRequest(res, 'Faltan la tienda, el cliente, la descripción o el monto del vale');
   if (parseFloat(montoTotal) <= 0)
     return ResponseFormatter.badRequest(res, 'El monto debe ser mayor a 0');
   try {
@@ -34,7 +34,7 @@ router.post('/', authMiddleware, requirePermission('vale:crear'), async (req, re
     if (!cliente)
       return ResponseFormatter.badRequest(res, 'El cliente no existe');
     if (!cliente.activatedAt)
-      return ResponseFormatter.badRequest(res, 'El cliente aún no ha activado su cuenta y no puede recibir vales');
+      return ResponseFormatter.badRequest(res, 'El cliente aún no activa su cuenta y no puede recibir vales');
     const vale = await Vale.create(req.body, req.user.userId);
     return ResponseFormatter.success(res, { vale, message: 'Vale registrado exitosamente' }, 201);
   } catch { return ResponseFormatter.internalError(res, 'Error al registrar el vale'); }
@@ -45,7 +45,7 @@ router.post('/pago-integral', authMiddleware, requirePermission('abono:crear'), 
   const { clienteId, monto, valeIds } = req.body;
   const montoNum = parseFloat(monto);
   if (!clienteId || !montoNum || montoNum <= 0 || !Array.isArray(valeIds) || valeIds.length === 0)
-    return ResponseFormatter.badRequest(res, 'clienteId, monto y al menos un valeId son requeridos');
+    return ResponseFormatter.badRequest(res, 'Faltan el cliente, el monto o los vales a abonar');
 
   try {
     // Carga y valida cada vale
@@ -132,7 +132,7 @@ router.get('/usuario/:userId', authMiddleware, requirePermission('vale:ver-tiend
       v.fechaVencimiento && new Date(v.fechaVencimiento) < new Date()
     ).length;
     return ResponseFormatter.success(res, { vales, totalPendiente, enMora });
-  } catch { return ResponseFormatter.internalError(res, 'Error al obtener vales del usuario'); }
+  } catch { return ResponseFormatter.internalError(res, 'No pudimos cargar los vales'); }
 });
 
 // GET /vales/tienda/:tiendaId — cartera de la tienda

@@ -39,7 +39,7 @@ router.get('/', authMiddleware, roleMiddleware.requireRole('superuser', 'adminis
   }));
 
   return ResponseFormatter.success(res, {
-    message: 'Usuarios obtenidos exitosamente',
+    message: 'Personas cargadas',
     total: safeUsers.length,
     users: safeUsers
   });
@@ -72,7 +72,7 @@ router.get('/:userId', authMiddleware, async (req, res) => {
 
   const requester = await User.findById(requesterId);
   if (requester.role !== 'superuser' && requester.role !== 'administrador' && userId !== requesterId) {
-    return ResponseFormatter.forbidden(res, 'No tienes permiso para ver este usuario');
+    return ResponseFormatter.forbidden(res, 'No tienes permiso para ver a esta persona');
   }
 
   return ResponseFormatter.success(res, {
@@ -100,7 +100,7 @@ router.patch('/:userId', authMiddleware, roleMiddleware.requireRole('superuser',
 
   const requester = await User.findById(requesterId);
   if (requester.role === 'administrador' && targetUser.role === 'superuser') {
-    return ResponseFormatter.forbidden(res, 'No puedes editar a un superuser');
+    return ResponseFormatter.forbidden(res, 'No puedes editar a un superusuario');
   }
 
   if (!name && !photo && !role) {
@@ -133,7 +133,7 @@ router.patch('/:userId', authMiddleware, roleMiddleware.requireRole('superuser',
   }
 
   return ResponseFormatter.success(res, {
-    message: 'Usuario actualizado exitosamente',
+    message: 'Persona actualizada',
     user: {
       id: updatedUser.id,
       email: updatedUser.email,
@@ -151,7 +151,7 @@ router.patch('/:userId/status', authMiddleware, roleMiddleware.requireRole('supe
   const requesterId = req.user.userId;
 
   if (typeof isActive !== 'boolean') {
-    return ResponseFormatter.badRequest(res, 'El campo isActive debe ser un booleano');
+    return ResponseFormatter.badRequest(res, 'Indica si la persona queda activa o inactiva');
   }
 
   if (userId === requesterId) {
@@ -165,7 +165,7 @@ router.patch('/:userId/status', authMiddleware, roleMiddleware.requireRole('supe
 
   const requester = await User.findById(requesterId);
   if (requester.role === 'administrador' && targetUser.role === 'superuser') {
-    return ResponseFormatter.forbidden(res, 'No puedes deshabilitar un superuser');
+    return ResponseFormatter.forbidden(res, 'No puedes deshabilitar a un superusuario');
   }
 
   const updatedUser = await User.toggleActive(userId, isActive);
@@ -213,7 +213,7 @@ router.post('/:userId/generate-password', authMiddleware, roleMiddleware.require
 
   const requester = await User.findById(requesterId);
   if (requester.role === 'administrador' && targetUser.role === 'superuser') {
-    return ResponseFormatter.forbidden(res, 'No puedes generar contraseña para un superuser');
+    return ResponseFormatter.forbidden(res, 'No puedes generar contraseña para un superusuario');
   }
 
   const newPassword = User.generateRandomPassword();
@@ -230,7 +230,7 @@ router.post('/:userId/generate-password', authMiddleware, roleMiddleware.require
     message: 'Contraseña generada exitosamente',
     userId: userId,
     newPassword: newPassword,
-    warning: '⚠️ Comparte esta contraseña de forma segura. El usuario debe cambiarla en su primer login.'
+    warning: 'Comparte esta contraseña de forma segura. La persona debe cambiarla al entrar por primera vez.'
   });
 });
 

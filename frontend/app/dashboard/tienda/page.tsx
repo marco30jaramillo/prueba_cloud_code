@@ -318,7 +318,7 @@ function TiendaContent() {
               </Form.Group>
               <div className="d-flex gap-2 justify-content-end">
                 <Button variant="secondary" onClick={() => setShowCreate(false)}>Cancelar</Button>
-                <Button type="submit" variant="primary" disabled={creating}>
+                <Button type="submit" variant="outline-primary" disabled={creating}>
                   {creating ? <Spinner size="sm" /> : 'Crear Tienda'}
                 </Button>
               </div>
@@ -393,7 +393,7 @@ function TiendaContent() {
                     <Form.Control value={form.telefono} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))} disabled={!isAdmin} />
                   </Form.Group>
                   {isAdmin && (
-                    <Button type="submit" variant="primary" disabled={saving}>
+                    <Button type="submit" variant="outline-primary" disabled={saving}>
                       {saving ? <><Spinner size="sm" className="me-2" />Guardando...</> : 'Guardar cambios'}
                     </Button>
                   )}
@@ -669,7 +669,7 @@ function TiendaContent() {
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowAddUser(false)}>Cancelar</Button>
-          <Button variant="primary" onClick={handleAddUser} disabled={!selectedUser || addingUser}>
+          <Button variant="outline-primary" onClick={handleAddUser} disabled={!selectedUser || addingUser}>
             {addingUser ? <Spinner size="sm" /> : 'Agregar'}
           </Button>
         </Modal.Footer>

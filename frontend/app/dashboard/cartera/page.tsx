@@ -505,7 +505,7 @@ function CarteraContent() {
                             {['pendiente', 'parcial'].includes(v.estado) && v.clienteId && (
                               <Button
                                 size="sm"
-                                variant="primary"
+                                variant="outline-primary"
                                 onClick={() => abrirPagoIntegral(v.clienteId, v.clienteNombre || '—')}
                                 title="Pago integral del cliente"
                               >
@@ -574,7 +574,7 @@ function CarteraContent() {
                         <Form.Control placeholder="Nota (opcional)" value={notasAbono} onChange={e => setNotasAbono(e.target.value)} />
                       </Col>
                       <Col md={3}>
-                        <Button type="submit" variant="primary" className="w-100" disabled={registrando}>
+                        <Button type="submit" variant="outline-primary" className="w-100" disabled={registrando}>
                           {registrando ? <Spinner size="sm" /> : 'Abonar'}
                         </Button>
                       </Col>

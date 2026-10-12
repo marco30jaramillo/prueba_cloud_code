@@ -9,7 +9,7 @@ const router = express.Router();
 router.get('/logs', authMiddleware, roleMiddleware.requirePermission('admin:view-audit'), async (req, res) => {
   const logs = await AuditLog.getAll();
   return ResponseFormatter.success(res, {
-    message: 'Logs de auditoría obtenidos exitosamente',
+    message: 'Registro de auditoría cargado',
     total: logs.length,
     logs,
   });

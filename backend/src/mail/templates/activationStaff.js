@@ -12,7 +12,7 @@ const ROLE_INFO = {
   },
   administrador: {
     label: 'administrador',
-    can: 'Con tu rol puedes gestionar usuarios, tiendas y roles, y consultar la auditoría y la cartera.',
+    can: 'Con tu rol puedes gestionar personas, tiendas y roles, y consultar la auditoría y la cartera.',
   },
   tendero: {
     label: 'tendero',
@@ -24,7 +24,7 @@ const ROLE_INFO = {
   },
   cliente: {
     label: 'cliente',
-    can: 'Con tu rol puedes consultar tus vales y abonos en las tiendas donde compras al fiado.',
+    can: 'Con tu rol puedes consultar tus vales y abonos en las tiendas donde tienes vales.',
   },
 };
 

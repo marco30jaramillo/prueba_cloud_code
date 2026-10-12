@@ -73,24 +73,24 @@ router.get('/:id/usuarios', authMiddleware, requirePermission('tienda:ver'), asy
   try {
     if (!await checkAcceso(req, res, req.params.id)) return;
     return ResponseFormatter.success(res, { usuarios: await Tienda.getUsuariosByTienda(req.params.id) });
-  } catch { return ResponseFormatter.internalError(res, 'Error al obtener usuarios'); }
+  } catch { return ResponseFormatter.internalError(res, 'No pudimos cargar a las personas'); }
 });
 
 // POST /tiendas/:id/usuarios — asignar tendero/vendedor
 router.post('/:id/usuarios', authMiddleware, requirePermission('tienda:administrar'), async (req, res) => {
   const { userId, esPropietario } = req.body;
-  if (!userId) return ResponseFormatter.badRequest(res, 'userId es requerido');
+  if (!userId) return ResponseFormatter.badRequest(res, 'Falta elegir a la persona');
   try {
     const user = await User.findById(userId);
-    if (!user) return ResponseFormatter.notFound(res, 'Usuario no encontrado');
+    if (!user) return ResponseFormatter.notFound(res, 'No encontramos a esa persona');
     if (!['tendero', 'vendedor'].includes(user.role))
       return ResponseFormatter.badRequest(res, 'Solo tenderos y vendedores pueden asignarse a una tienda');
     const entry = await Tienda.addUsuario(req.params.id, userId, esPropietario, req.user.userId);
-    return ResponseFormatter.success(res, { entry, message: 'Usuario asignado a la tienda' }, 201);
+    return ResponseFormatter.success(res, { entry, message: 'Persona asignada a la tienda' }, 201);
   } catch (err) {
     if (err.message?.includes('UQ_') || err.number === 2627)
-      return ResponseFormatter.conflict(res, 'El usuario ya está asignado a esta tienda');
-    return ResponseFormatter.internalError(res, 'Error al asignar usuario');
+      return ResponseFormatter.conflict(res, 'Esa persona ya está en esta tienda');
+    return ResponseFormatter.internalError(res, 'No pudimos asignar a la persona');
   }
 });
 
@@ -98,8 +98,8 @@ router.post('/:id/usuarios', authMiddleware, requirePermission('tienda:administr
 router.delete('/:id/usuarios/:userId', authMiddleware, requirePermission('tienda:administrar'), async (req, res) => {
   try {
     await Tienda.removeUsuario(req.params.id, req.params.userId);
-    return ResponseFormatter.success(res, { message: 'Usuario removido de la tienda' });
-  } catch { return ResponseFormatter.internalError(res, 'Error al remover usuario'); }
+    return ResponseFormatter.success(res, { message: 'Persona quitada de la tienda' });
+  } catch { return ResponseFormatter.internalError(res, 'No pudimos quitar a la persona'); }
 });
 
 module.exports = router;

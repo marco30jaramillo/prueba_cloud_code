@@ -78,9 +78,9 @@ router.post('/register', mailRequestLimiter.middleware, async (req, res) => {
 
   if (!email || !password || !name) {
     return ResponseFormatter.badRequest(res, 'Campos requeridos faltantes', {
-      email: email ? '✅' : '❌ requerido',
-      password: password ? '✅' : '❌ requerido',
-      name: name ? '✅' : '❌ requerido'
+      email: email ? 'ok' : 'es obligatorio',
+      password: password ? 'ok' : 'es obligatorio',
+      name: name ? 'ok' : 'es obligatorio'
     });
   }
 
@@ -117,7 +117,7 @@ router.post('/register', mailRequestLimiter.middleware, async (req, res) => {
   });
 
   return ResponseFormatter.success(res, {
-    message: 'Usuario registrado exitosamente. Revisa tu correo para activar tu cuenta.',
+    message: 'Registro listo. Revisa tu correo para activar tu cuenta.',
     user: {
       id: user.id,
       email: user.email,
@@ -134,11 +134,11 @@ router.post('/login', rateLimiter.middleware, async (req, res) => {
   const userAgent = auditMiddleware.getUserAgent(req);
 
   if (!email || !password) {
-    return ResponseFormatter.badRequest(res, 'Email y contraseña son requeridos');
+    return ResponseFormatter.badRequest(res, 'Escribe tu correo y tu contraseña');
   }
 
   if (!EMAIL_REGEX.test(email)) {
-    return ResponseFormatter.badRequest(res, 'El formato del email es inválido');
+    return ResponseFormatter.badRequest(res, 'El correo no es válido');
   }
 
   const { user, reason } = await User.authenticate(email, password);
@@ -166,7 +166,7 @@ router.post('/login', rateLimiter.middleware, async (req, res) => {
         code: 'ACCOUNT_DISABLED'
       });
     }
-    return ResponseFormatter.unauthorized(res, 'Email o contraseña incorrectos. Verifica tus datos e intenta nuevamente');
+    return ResponseFormatter.unauthorized(res, 'El correo o la contraseña no coinciden. Revisa tus datos e intenta de nuevo');
   }
 
   // Login correcto: resetear contador de intentos fallidos
@@ -199,7 +199,7 @@ router.post('/resend-activation', mailRequestLimiter.middleware, async (req, res
   const { email } = req.body || {};
 
   if (!email || typeof email !== 'string' || !EMAIL_REGEX.test(email)) {
-    return ResponseFormatter.badRequest(res, 'Email inválido');
+    return ResponseFormatter.badRequest(res, 'El correo no es válido');
   }
 
   const context = requestContext(req);
@@ -261,12 +261,12 @@ router.post('/forgot-password', mailRequestLimiter.middleware, async (req, res) 
   const { email } = req.body;
   // Respuesta genérica siempre para evitar user enumeration
   const GENERIC_RESPONSE = {
-    message: 'Si ese email está registrado, recibirás un enlace de recuperación.',
+    message: 'Si ese correo está registrado, recibirás un enlace para recuperar tu contraseña.',
     hint: 'Revisa tu bandeja de entrada y carpeta de spam'
   };
 
   if (!email || typeof email !== 'string' || !EMAIL_REGEX.test(email)) {
-    return ResponseFormatter.badRequest(res, 'Email inválido');
+    return ResponseFormatter.badRequest(res, 'El correo no es válido');
   }
 
   const ipAddress = auditMiddleware.getIpAddress(req);
@@ -302,14 +302,14 @@ router.post('/reset-password', async (req, res) => {
   const { token, newPassword } = req.body;
 
   if (!token || !newPassword) {
-    return ResponseFormatter.badRequest(res, 'Token y contraseña nueva son requeridos', {
-      token: token ? '✅' : '❌ requerido',
-      newPassword: newPassword ? '✅' : '❌ requerido'
+    return ResponseFormatter.badRequest(res, 'Falta el enlace de recuperación o la contraseña nueva', {
+      token: token ? 'ok' : 'es obligatorio',
+      newPassword: newPassword ? 'ok' : 'es obligatorio'
     });
   }
 
   if (typeof token !== 'string' || typeof newPassword !== 'string') {
-    return ResponseFormatter.badRequest(res, 'Token y contraseña nueva son requeridos');
+    return ResponseFormatter.badRequest(res, 'Falta el enlace de recuperación o la contraseña nueva');
   }
 
   // RN-43: la complejidad completa, antes de gastar el token.
@@ -322,7 +322,7 @@ router.post('/reset-password', async (req, res) => {
   // pendientes ni deshabilitadas.
   const user = await User.resetPasswordWithToken(token, newPassword);
   if (!user) {
-    return ResponseFormatter.badRequest(res, 'Token de recuperación inválido o expirado', {
+    return ResponseFormatter.badRequest(res, 'El enlace de recuperación no es válido o ya venció', {
       hint: 'Solicita un nuevo enlace de recuperación'
     });
   }
@@ -345,8 +345,8 @@ router.post('/reset-password', async (req, res) => {
 
 router.post('/bootstrap-superuser', async (req, res) => {
   if (await User.isSuperuserExists()) {
-    return ResponseFormatter.badRequest(res, 'Ya existe un super usuario en el sistema', {
-      hint: 'Para crear más super usuarios, necesitas tener un token de super usuario'
+    return ResponseFormatter.badRequest(res, 'Ya existe un superusuario', {
+      hint: 'Para crear más superusuarios, tu sesión debe ser de superusuario'
     });
   }
 
@@ -354,9 +354,9 @@ router.post('/bootstrap-superuser', async (req, res) => {
 
   if (!email || !password || !name) {
     return ResponseFormatter.badRequest(res, 'Campos requeridos faltantes', {
-      email: email ? '✅' : '❌ requerido',
-      password: password ? '✅' : '❌ requerido',
-      name: name ? '✅' : '❌ requerido'
+      email: email ? 'ok' : 'es obligatorio',
+      password: password ? 'ok' : 'es obligatorio',
+      name: name ? 'ok' : 'es obligatorio'
     });
   }
 
@@ -386,7 +386,7 @@ router.post('/bootstrap-superuser', async (req, res) => {
   await auditMiddleware.logUserCreation(user.id, user.id, user.email, 'superuser', ipAddress, userAgent);
 
   return ResponseFormatter.success(res, {
-    message: 'Super usuario creado exitosamente',
+    message: 'Superusuario creado',
     user: {
       id: user.id,
       email: user.email,
@@ -403,10 +403,10 @@ router.post('/create-user', authMiddleware, async (req, res) => {
 
   if (!email || !password || !name || !targetRole) {
     return ResponseFormatter.badRequest(res, 'Campos requeridos faltantes', {
-      email: email ? '✅' : '❌ requerido',
-      password: password ? '✅' : '❌ requerido',
-      name: name ? '✅' : '❌ requerido',
-      role: targetRole ? '✅' : '❌ requerido'
+      email: email ? 'ok' : 'es obligatorio',
+      password: password ? 'ok' : 'es obligatorio',
+      name: name ? 'ok' : 'es obligatorio',
+      role: targetRole ? 'ok' : 'es obligatorio'
     });
   }
 
@@ -495,7 +495,7 @@ router.get('/validate', authMiddleware, async (req, res) => {
   }
 
   return ResponseFormatter.success(res, {
-    message: 'Sesión válida ✅',
+    message: 'Tu sesión está activa',
     user: {
       id: user.id,
       email: user.email,
@@ -522,7 +522,7 @@ router.post('/logout', authMiddleware, async (req, res) => {
   return ResponseFormatter.success(res, {
     message: 'Sesión cerrada exitosamente',
     email,
-    details: 'Tu token ha sido revocado y no se puede usar más'
+    details: 'Tu sesión se cerró. Inicia sesión de nuevo'
   });
 });
 
@@ -627,7 +627,7 @@ router.patch('/password/:userId', authMiddleware, roleMiddleware.requireRole(['s
 
   const requester = await User.findById(requesterId);
   if (requester.role === 'administrador' && targetUser.role === 'superuser') {
-    return ResponseFormatter.forbidden(res, 'No puedes cambiar la contraseña de un superuser');
+    return ResponseFormatter.forbidden(res, 'No puedes cambiar la contraseña de un superusuario');
   }
 
   await User.setPasswordForUser(userId, newPassword);
@@ -641,7 +641,7 @@ router.patch('/password/:userId', authMiddleware, roleMiddleware.requireRole(['s
     accountMail.notifyPasswordChanged(targetUser, { actorId: requesterId, ipAddress, userAgent }));
 
   return ResponseFormatter.success(res, {
-    message: 'Contraseña del usuario actualizada exitosamente',
+    message: 'Contraseña actualizada',
     userId: userId
   });
 });

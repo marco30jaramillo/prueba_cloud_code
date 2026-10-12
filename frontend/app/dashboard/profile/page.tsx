@@ -231,7 +231,7 @@ function ProfilePageContent() {
                   </div>
                 ) : (
                   <Button
-                    variant="primary"
+                    variant="outline-primary"
                     onClick={() => setIsEditing(true)}
                     className="w-100"
                   >

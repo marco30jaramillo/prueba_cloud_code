@@ -515,7 +515,7 @@ function UsersPageContent() {
           <Button variant="secondary" onClick={() => setShowEditModal(false)}>
             Cancelar
           </Button>
-          <Button variant="primary" onClick={handleSaveEdit}>
+          <Button variant="outline-primary" onClick={handleSaveEdit}>
             <Icon name="check" /> Guardar
           </Button>
         </Modal.Footer>
@@ -553,7 +553,7 @@ function UsersPageContent() {
         </Modal.Body>
         <Modal.Footer>
           <Button
-            variant="primary"
+            variant="outline-primary"
             onClick={handleCopyPassword}
             className="me-2"
           >
@@ -633,7 +633,7 @@ function UsersPageContent() {
             Cancelar
           </Button>
           <Button
-            variant="primary"
+            variant="outline-primary"
             onClick={handleCreateUser}
             disabled={isCreating}
           >
