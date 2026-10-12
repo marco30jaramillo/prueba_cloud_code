@@ -7,6 +7,7 @@ import { AuthForm, AuthFormData } from '@/components/AuthForm';
 import { authAPI } from '@/lib/api';
 import styles from './page.module.scss';
 
+import { Icon } from '@/components/Icon';
 export default function ForgotPasswordPage() {
   const [sentTo, setSentTo] = useState<string | null>(null);
 
@@ -32,7 +33,7 @@ export default function ForgotPasswordPage() {
 
           {sentTo ? (
             <Alert variant="success" className="mb-4">
-              <Alert.Heading>📧 Revisa tu correo</Alert.Heading>
+              <Alert.Heading><Icon name="correo" /> Revisa tu correo</Alert.Heading>
               Si <strong>{sentTo}</strong> pertenece a una cuenta, te enviamos un enlace para crear
               una nueva contraseña. El enlace sirve una sola vez y vence en una hora. Mira también
               la carpeta de spam.
@@ -50,7 +51,7 @@ export default function ForgotPasswordPage() {
 
           <div className={styles.footer}>
             <Link href="/login" className={styles.link}>
-              ← Volver a iniciar sesión
+              Volver a iniciar sesión
             </Link>
           </div>
         </Col>

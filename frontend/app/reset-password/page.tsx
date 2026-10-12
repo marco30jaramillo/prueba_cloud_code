@@ -46,7 +46,7 @@ function ResetPasswordContent() {
   const onSubmit = async (data: AuthFormData) => {
     try {
       const result = await authAPI.resetPassword(token, data.newPassword!);
-      if (result.status === 'success') {
+      if (result.status === 'primary') {
         router.push('/login?reset=1');
       }
       return { success: true, data: result };

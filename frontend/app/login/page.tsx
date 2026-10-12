@@ -9,6 +9,7 @@ import { ResendActivation } from '@/components/ResendActivation';
 import { useAuth } from '@/hooks/useAuth';
 import styles from './page.module.scss';
 
+import { Icon } from '@/components/Icon';
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -51,7 +52,7 @@ function LoginContent() {
 
           {passwordReset && (
             <Alert variant="success" className="mb-4">
-              ✅ Tu contraseña fue restablecida. Inicia sesión con la nueva contraseña.
+              <Icon name="exito" /> Tu contraseña fue restablecida. Inicia sesión con la nueva contraseña.
             </Alert>
           )}
 

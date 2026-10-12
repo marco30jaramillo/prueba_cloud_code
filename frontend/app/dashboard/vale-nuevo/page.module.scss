@@ -5,7 +5,7 @@
 .title {
   font-weight: 800;
   font-size: 2rem;
-  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  background: linear-gradient(135deg, #059669 0%, #2563eb 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -29,7 +29,7 @@
   width: 100%;
   max-height: 220px;
   overflow-y: auto;
-  border: 1px solid #d1d5db;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   background: white;
@@ -41,5 +41,5 @@
 .searchItem {
   padding: 0.6rem 1rem;
   cursor: pointer;
-  &:hover { background-color: #f0fdf4; }
+  &:hover { background-color: #d1fae5; }
 }

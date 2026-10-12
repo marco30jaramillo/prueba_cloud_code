@@ -7,6 +7,7 @@ import { getBaseUrl } from '@/lib/image-url';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import styles from './page.module.scss';
 
+import { Icon } from '@/components/Icon';
 interface AuditEntry {
   id: string;
   action: string;
@@ -41,32 +42,32 @@ function formatDate(ts: string): string {
 
 // ── Mapa de módulos ─────────────────────────────────────────────────────────
 const MODULE_MAP: Record<string, { label: string; color: string }> = {
-  login:                    { label: 'Sesión',   color: '#3b82f6' },
-  logout:                   { label: 'Sesión',   color: '#3b82f6' },
-  failed_login_attempt:     { label: 'Sesión',   color: '#ef4444' },
-  password_change:          { label: 'Perfil',   color: '#8b5cf6' },
-  password_generated:       { label: 'Perfil',   color: '#8b5cf6' },
-  password_reset_requested: { label: 'Perfil',   color: '#8b5cf6' },
-  profile_update:           { label: 'Perfil',   color: '#8b5cf6' },
-  user_created:             { label: 'Usuarios', color: '#0ea5e9' },
-  user_enable:              { label: 'Usuarios', color: '#0ea5e9' },
-  user_disable:             { label: 'Usuarios', color: '#0ea5e9' },
-  user_role_changed:        { label: 'Usuarios', color: '#0ea5e9' },
-  superuser_created:        { label: 'Usuarios', color: '#0ea5e9' },
-  role_created:             { label: 'Roles',    color: '#f59e0b' },
-  role_permissions_updated: { label: 'Roles',    color: '#f59e0b' },
-  role_modules_updated:     { label: 'Roles',    color: '#f59e0b' },
-  vale_creado:              { label: 'Créditos', color: '#10b981' },
-  vale_anulado:             { label: 'Créditos', color: '#10b981' },
-  abono_creado:             { label: 'Créditos', color: '#10b981' },
-  abono_anulado:            { label: 'Créditos', color: '#10b981' },
-  pago_integral:            { label: 'Créditos', color: '#10b981' },
-  tienda_creada:            { label: 'Tiendas',  color: '#f97316' },
-  tienda_actualizada:       { label: 'Tiendas',  color: '#f97316' },
-  tienda_habilitada:        { label: 'Tiendas',  color: '#f97316' },
-  tienda_deshabilitada:     { label: 'Tiendas',  color: '#f97316' },
-  tienda_usuario_agregado:  { label: 'Tiendas',  color: '#f97316' },
-  tienda_usuario_removido:  { label: 'Tiendas',  color: '#f97316' },
+  login:                    { label: 'Sesión',   color: '#2563eb' },
+  logout:                   { label: 'Sesión',   color: '#2563eb' },
+  failed_login_attempt:     { label: 'Sesión',   color: '#dc2626' },
+  password_change:          { label: 'Perfil',   color: '#2563eb' },
+  password_generated:       { label: 'Perfil',   color: '#2563eb' },
+  password_reset_requested: { label: 'Perfil',   color: '#2563eb' },
+  profile_update:           { label: 'Perfil',   color: '#2563eb' },
+  user_created:             { label: 'Usuarios', color: '#2563eb' },
+  user_enable:              { label: 'Usuarios', color: '#2563eb' },
+  user_disable:             { label: 'Usuarios', color: '#2563eb' },
+  user_role_changed:        { label: 'Usuarios', color: '#2563eb' },
+  superuser_created:        { label: 'Usuarios', color: '#2563eb' },
+  role_created:             { label: 'Roles',    color: '#d97706' },
+  role_permissions_updated: { label: 'Roles',    color: '#d97706' },
+  role_modules_updated:     { label: 'Roles',    color: '#d97706' },
+  vale_creado:              { label: 'Créditos', color: '#2563eb' },
+  vale_anulado:             { label: 'Créditos', color: '#2563eb' },
+  abono_creado:             { label: 'Créditos', color: '#2563eb' },
+  abono_anulado:            { label: 'Créditos', color: '#2563eb' },
+  pago_integral:            { label: 'Créditos', color: '#2563eb' },
+  tienda_creada:            { label: 'Tiendas',  color: '#d97706' },
+  tienda_actualizada:       { label: 'Tiendas',  color: '#d97706' },
+  tienda_habilitada:        { label: 'Tiendas',  color: '#d97706' },
+  tienda_deshabilitada:     { label: 'Tiendas',  color: '#d97706' },
+  tienda_usuario_agregado:  { label: 'Tiendas',  color: '#d97706' },
+  tienda_usuario_removido:  { label: 'Tiendas',  color: '#d97706' },
 };
 
 const MODULES = ['Sesión', 'Perfil', 'Usuarios', 'Roles', 'Créditos', 'Tiendas', 'Sistema'];
@@ -210,11 +211,11 @@ function AuditPageContent() {
       {/* ── Encabezado ── */}
       <div className={styles.header}>
         <div>
-          <h1>📋 Auditoría del Sistema</h1>
+          <h1><Icon name="copiar" /> Auditoría del Sistema</h1>
           <p>Registro completo de todas las acciones y eventos</p>
         </div>
         <button className={styles.refreshBtn} onClick={fetchLogs} disabled={loading}>
-          {loading ? '⏳' : '🔄'} Actualizar
+          <Icon name="actualizar" /> Actualizar
         </button>
       </div>
 
@@ -233,14 +234,14 @@ function AuditPageContent() {
         {/* Fila 1: búsqueda + resultado + limpiar */}
         <div className={styles.filterRow}>
           <div className={styles.searchBox}>
-            <span className={styles.searchIcon}>🔍</span>
+            <span className={styles.searchIcon}><Icon name="buscar" /></span>
             <input
               className={styles.searchInput}
-              placeholder="Buscar por acción, email, nombre…"
+              placeholder="Buscar por acción, correo o nombre…"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
-            {search && <button className={styles.clearX} onClick={() => setSearch('')}>✕</button>}
+            {search && <button className={styles.clearX} onClick={() => setSearch('')}><Icon name="cerrar" /></button>}
           </div>
 
           <div className={styles.resultGroup}>
@@ -250,7 +251,7 @@ function AuditPageContent() {
                 className={`${styles.resultBtn} ${result === v ? styles.resultActive : ''} ${v === 'ok' ? styles.resultOk : v === 'fail' ? styles.resultFail : ''}`}
                 onClick={() => setResult(v)}
               >
-                {v === 'all' ? 'Todos' : v === 'ok' ? '✅ Exitosos' : '❌ Fallidos'}
+                {v === 'all' ? 'Todos' : v === 'ok' ? 'Exitosos' : 'Fallidos'}
               </button>
             ))}
           </div>
@@ -287,7 +288,7 @@ function AuditPageContent() {
               <button
                 key={m}
                 className={`${styles.modBtn} ${active ? styles.modBtnActive : ''}`}
-                style={active ? { background: color, borderColor: color, color: '#fff' } : { '--mod-color': color } as React.CSSProperties}
+                style={active ? { background: color, borderColor: color, color: '#ffffff' } : { '--mod-color': color } as React.CSSProperties}
                 onClick={() => setModFilter(active ? '' : m)}
               >
                 <span className={styles.modDot} style={{ background: color }} />
@@ -301,16 +302,16 @@ function AuditPageContent() {
         {showAdv && (
           <div className={styles.advRow}>
             <label className={styles.advField}>
-              <span>Actor / Usuario</span>
+              <span>Quién lo hizo</span>
               <div className={styles.advInputWrap}>
                 <input
                   list="actors-list"
                   className={styles.advInput}
-                  placeholder="Nombre o email…"
+                  placeholder="Nombre o correo…"
                   value={actorSearch}
                   onChange={e => setActorSearch(e.target.value)}
                 />
-                {actorSearch && <button className={styles.clearX} onClick={() => setActorSearch('')}>✕</button>}
+                {actorSearch && <button className={styles.clearX} onClick={() => setActorSearch('')}><Icon name="cerrar" /></button>}
               </div>
               <datalist id="actors-list">
                 {uniqueActors.map(([email, name]) => (
@@ -329,7 +330,7 @@ function AuditPageContent() {
                   value={ipFilter}
                   onChange={e => setIpFilter(e.target.value)}
                 />
-                {ipFilter && <button className={styles.clearX} onClick={() => setIpFilter('')}>✕</button>}
+                {ipFilter && <button className={styles.clearX} onClick={() => setIpFilter('')}><Icon name="cerrar" /></button>}
               </div>
               <datalist id="ip-list">
                 {uniqueIPs.map(ip => <option key={ip} value={ip} />)}
@@ -410,8 +411,8 @@ function AuditPageContent() {
                   <td><code className={styles.ip}>{log.ipAddress || '—'}</code></td>
                   <td className={styles.resultCell}>
                     {isSuccess(log)
-                      ? <span className={styles.ok}>✓</span>
-                      : <span className={styles.fail}>✗</span>}
+                      ? <span className={styles.ok}><Icon name="check" /></span>
+                      : <span className={styles.fail}><Icon name="cerrar" /></span>}
                   </td>
                   <td><DetailCell log={log} /></td>
                 </tr>

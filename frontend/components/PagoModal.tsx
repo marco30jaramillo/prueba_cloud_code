@@ -6,6 +6,7 @@ import { valesAPI } from '@/lib/api';
 import MontoInput from '@/components/MontoInput';
 import { valesCobrables, distribuirPago, validarPago, saldoDe, totalSaldos } from '@/lib/pago-integral';
 
+import { Icon } from './Icon';
 export interface ValeActivo {
   id: string;
   tiendaNombre?: string;
@@ -109,7 +110,7 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
   return (
     <Modal show={show} onHide={onHide} size="lg" scrollable>
       <Modal.Header closeButton>
-        <Modal.Title>💳 Pago integral — {clienteNombre}</Modal.Title>
+        <Modal.Title><Icon name="abono" /> Pago integral — {clienteNombre}</Modal.Title>
       </Modal.Header>
 
       <Modal.Body>
@@ -125,7 +126,7 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
               Créditos a incluir
             </h6>
             <Table size="sm" hover className="mb-3" style={{ fontSize: '0.9rem' }}>
-              <thead style={{ background: '#f9fafb' }}>
+              <thead style={{ background: '#f8fafc' }}>
                 <tr>
                   <th style={{ width: 36 }}>
                     <Form.Check
@@ -164,7 +165,7 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
             </Table>
 
             {/* Resumen selección */}
-            <div className="d-flex justify-content-between mb-3 p-2 rounded" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+            <div className="d-flex justify-content-between mb-3 p-2 rounded" style={{ background: '#d1fae5', border: '1px solid #d1fae5' }}>
               <span style={{ fontSize: '0.9rem' }}>
                 {valesSeleccionados.length} crédito{valesSeleccionados.length !== 1 ? 's' : ''} seleccionado{valesSeleccionados.length !== 1 ? 's' : ''}
               </span>
@@ -186,7 +187,7 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
                 Mínimo {minSugerido > 0 ? `(${fmt(minSugerido)})` : ''}
               </Button>
               <Button
-                size="sm" variant="outline-success"
+                size="sm" variant="outline-primary"
                 onClick={() => setMonto(String(Math.round(totalSeleccionado)))}
                 disabled={totalSeleccionado <= 0}
               >
@@ -209,7 +210,7 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
                   Distribución del pago
                 </h6>
                 <Table size="sm" className="mb-3" style={{ fontSize: '0.88rem' }}>
-                  <thead style={{ background: '#f9fafb' }}>
+                  <thead style={{ background: '#f8fafc' }}>
                     <tr>
                       <th>Crédito</th>
                       <th className="text-end">Saldo actual</th>
@@ -224,7 +225,7 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
                         <td className="text-end">{fmt(parseFloat(String(p.saldoPendiente)))}</td>
                         <td className="text-end text-success fw-bold">{p.aplicado > 0 ? fmt(p.aplicado) : '—'}</td>
                         <td className="text-end" style={{ color: p.quedaPendiente > 0 ? '#d97706' : '#059669' }}>
-                          {p.quedaPendiente > 0 ? fmt(p.quedaPendiente) : '✓ Pagado'}
+                          {p.quedaPendiente > 0 ? fmt(p.quedaPendiente) : 'Pagado'}
                         </td>
                       </tr>
                     ))}
@@ -241,7 +242,7 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
             <div className="d-grid mt-2">
               <Button
                 type="submit"
-                variant="success"
+                variant="primary"
                 size="lg"
                 disabled={registrando || valesSeleccionados.length === 0 || montoNum <= 0 || exito !== ''}
               >

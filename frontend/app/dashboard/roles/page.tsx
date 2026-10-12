@@ -5,6 +5,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { rolesConfigAPI } from '@/lib/api';
 import styles from './page.module.scss';
 
+import { Icon } from '@/components/Icon';
 // ──────────────────────────────────────────────────────────
 // Types + helpers
 // ──────────────────────────────────────────────────────────
@@ -116,7 +117,7 @@ function CreateRoleModal({ modules, onClose, onCreated }: CreateModalProps) {
       <div className={styles.modal}>
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitle}>Crear nuevo rol</h2>
-          <button className={styles.modalClose} onClick={onClose}>✕</button>
+          <button className={styles.modalClose} onClick={onClose}><Icon name="cerrar" /></button>
         </div>
 
         {error && <div className={`${styles.alert} ${styles.alertError}`} style={{ margin: '0 0 1rem' }}>{error}</div>}
@@ -281,7 +282,7 @@ function RolesContent() {
   const handleRoleCreated = async (newRole: RoleData) => {
     setShowCreateModal(false);
     await load(newRole.id);
-    setSuccessMsg(`Rol "${newRole.name}" creado. Ya está disponible para asignar a usuarios.`);
+    setSuccessMsg(`Rol "${newRole.name}" creado. Ya está disponible para asignar a personas.`);
   };
 
   const orphanPerms = pendingDirect.filter(p =>
@@ -314,7 +315,7 @@ function RolesContent() {
 
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>🛡️ Roles y Permisos</h1>
+          <h1 className={styles.title}><Icon name="escudo" /> Roles y Permisos</h1>
           <p className={styles.subtitle}>Gestiona el acceso de cada rol a módulos y permisos del sistema</p>
         </div>
       </div>
@@ -379,9 +380,9 @@ function RolesContent() {
                   className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
                   onClick={() => setActiveTab(tab)}
                 >
-                  {tab === 'modules'     && '📦 Acceso a módulos'}
-                  {tab === 'permissions' && '🔑 Permisos directos'}
-                  {tab === 'effective'   && '✅ Efectivos'}
+                  {tab === 'modules'     && 'Acceso a módulos'}
+                  {tab === 'permissions' && 'Permisos directos'}
+                  {tab === 'effective'   && 'Efectivos'}
                 </button>
               ))}
             </div>
@@ -467,7 +468,7 @@ function RolesContent() {
 
                     {orphanPerms.length > 0 && (
                       <div className={styles.permGroup}>
-                        <div className={styles.permGroupLabel}>🔓 Permisos huérfanos (sin módulo)</div>
+                        <div className={styles.permGroupLabel}><Icon name="candado" /> Permisos huérfanos (sin módulo)</div>
                         <div className={styles.permGrid}>
                           {orphanPerms.map(perm => (
                             <label key={perm} className={`${styles.permCheck} ${styles.permCheckOn} ${styles.orphanCheck}`}>

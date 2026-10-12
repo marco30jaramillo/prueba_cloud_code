@@ -11,12 +11,33 @@ import { useRouter } from 'next/navigation';
 import { getImageUrl } from '@/lib/image-url';
 import styles from './Navbar.module.scss';
 
+import { Icon, type NombreIcono } from './Icon';
+import { Logo } from './Logo';
+import { ICONOS } from '@/lib/marca-datos';
 interface NavModule {
   id: string;
   name: string;
   href: string;
   icon: string;
   showInNav: boolean;
+}
+
+const ICONO_POR_RUTA: Record<string, NombreIcono> = {
+  '/dashboard': 'grafica',
+  '/dashboard/cartera': 'cartera',
+  '/dashboard/mis-vales': 'vale',
+  '/dashboard/vale-nuevo': 'agregar',
+  '/dashboard/tienda': 'tienda',
+  '/dashboard/users': 'equipo',
+  '/dashboard/roles': 'escudo',
+  '/dashboard/audit': 'nota',
+  '/dashboard/profile': 'cliente',
+};
+
+/** El módulo trae su icono del servidor: si no es un nombre del set de marca, se usa uno por ruta. */
+function iconoDeModulo(icono: string, href: string): NombreIcono {
+  if (icono in ICONOS) return icono as NombreIcono;
+  return ICONO_POR_RUTA[href] ?? 'informacion';
 }
 
 export const Navbar: React.FC = () => {
@@ -83,7 +104,7 @@ export const Navbar: React.FC = () => {
   };
 
   const handleLogoutAllClick = async () => {
-    if (!confirm('⚠️ Esto cerrará tu sesión en TODOS tus dispositivos. ¿Continuar?')) return;
+    if (!confirm('Esto cerrará tu sesión en TODOS tus dispositivos. ¿Continuar?')) return;
     setIsLoggingOut(true);
     try {
       await handleLogoutAll();
@@ -97,8 +118,8 @@ export const Navbar: React.FC = () => {
   const navItems = isAuthenticated
     ? navModules.map(m => ({ href: m.href, icon: m.icon, label: m.name }))
     : [
-        { href: '/login',    icon: '🔑', label: 'Iniciar Sesión' },
-        { href: '/register', icon: '📝', label: 'Registrarse'    },
+        { href: '/login',    icon: 'candado', label: 'Iniciar Sesión' },
+        { href: '/register', icon: 'nota', label: 'Registrarse'    },
       ];
 
   return (
@@ -111,8 +132,7 @@ export const Navbar: React.FC = () => {
       >
         <Container>
           <BSNavbar.Brand as={Link} href="/" className={styles.brand}>
-            <span className={styles.logo}>🧾</span>
-            Mi Valecito
+            <Logo variante="horizontal" alto={28} />
           </BSNavbar.Brand>
 
           {isAuthenticated && (
@@ -148,7 +168,7 @@ export const Navbar: React.FC = () => {
                 <>
                   {navModules.map(mod => (
                     <Nav.Link key={mod.id} as={Link} href={mod.href} className={styles.navLink}>
-                      {mod.icon} {mod.name}
+                      <Icon name={iconoDeModulo(mod.icon, mod.href)} /> {mod.name}
                     </Nav.Link>
                   ))}
                   <div className={styles.userInfo}>
@@ -177,7 +197,7 @@ export const Navbar: React.FC = () => {
                     </Dropdown.Toggle>
                     <Dropdown.Menu align="end">
                       <Dropdown.Item onClick={handleLogoutClick} disabled={isLoggingOut}>
-                        🚪 Logout en este dispositivo
+                        <Icon name="cerrar-sesion" /> Cerrar sesión en este dispositivo
                       </Dropdown.Item>
                       <Dropdown.Divider />
                       <Dropdown.Item
@@ -185,7 +205,7 @@ export const Navbar: React.FC = () => {
                         disabled={isLoggingOut}
                         className={styles.logoutAllItem}
                       >
-                        🌍 Logout en todos los dispositivos
+                        <Icon name="cerrar-sesion-todos" /> Cerrar sesión en todos tus dispositivos
                       </Dropdown.Item>
                     </Dropdown.Menu>
                   </Dropdown>
@@ -213,13 +233,13 @@ export const Navbar: React.FC = () => {
             onClick={() => setSidebarExpanded(v => !v)}
             aria-label={sidebarExpanded ? 'Colapsar menú' : 'Expandir menú'}
           >
-            {sidebarExpanded ? '✕' : '☰'}
+            <Icon name={sidebarExpanded ? 'cerrar' : 'siguiente'} />
           </button>
 
           <nav className={`${styles.sidebar} ${sidebarExpanded ? styles.sidebarExpanded : ''}`}>
             {/* Brand */}
             <Link href="/" className={styles.sidebarBrand} onClick={() => setSidebarExpanded(false)}>
-              <span className={styles.sidebarIcon}>🧾</span>
+              <span className={styles.sidebarIcon}><Logo variante="isotipo" alto={24} decorativo /></span>
               <span className={styles.sidebarLabel}>Mi Valecito</span>
             </Link>
 
@@ -232,7 +252,7 @@ export const Navbar: React.FC = () => {
                   className={`${styles.sidebarItem} ${pathname === item.href ? styles.sidebarItemActive : ''}`}
                   onClick={() => setSidebarExpanded(false)}
                 >
-                  <span className={styles.sidebarIcon}>{item.icon}</span>
+                  <span className={styles.sidebarIcon}><Icon name={iconoDeModulo(item.icon, item.href)} /></span>
                   <span className={styles.sidebarLabel}>{item.label}</span>
                 </Link>
               ))}
@@ -264,7 +284,7 @@ export const Navbar: React.FC = () => {
                   onClick={handleLogoutClick}
                   disabled={isLoggingOut}
                 >
-                  <span className={styles.sidebarIcon}>🚪</span>
+                  <span className={styles.sidebarIcon}><Icon name="cerrar-sesion" /></span>
                   <span className={styles.sidebarLabel}>Salir</span>
                 </button>
               </div>

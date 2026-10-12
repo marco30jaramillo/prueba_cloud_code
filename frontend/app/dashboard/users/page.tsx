@@ -10,6 +10,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { getImageUrl } from '@/lib/image-url';
 import styles from './page.module.scss';
 
+import { Icon } from '@/components/Icon';
 interface User {
   id: string;
   email: string;
@@ -25,7 +26,7 @@ function UsersPageContent() {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: 'primary' | 'error'; text: string } | null>(null);
 
   // ── Filtros ──────────────────────────────────────────────────
   const [filterText, setFilterText]     = useState('');
@@ -89,8 +90,8 @@ function UsersPageContent() {
       const response = await usersAPI.getAll();
       setUsers(response.users);
     } catch (error: any) {
-      const errorMsg = error.response?.data?.message || 'Error al cargar usuarios';
-      setMessage({ type: 'error', text: `⚠️ ${errorMsg}` });
+      const errorMsg = error.response?.data?.message || 'No pudimos cargar a las personas';
+      setMessage({ type: 'error', text: `${errorMsg}` });
     } finally {
       setIsLoading(false);
     }
@@ -105,7 +106,7 @@ function UsersPageContent() {
       setShowPasswordModal(true);
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || 'Error al generar contraseña';
-      setMessage({ type: 'error', text: `⚠️ ${errorMsg}` });
+      setMessage({ type: 'error', text: `${errorMsg}` });
     } finally {
       setIsGenerating(false);
     }
@@ -133,12 +134,12 @@ function UsersPageContent() {
 
     try {
       await usersAPI.update(editingUser.id, updates);
-      setMessage({ type: 'success', text: '✅ Usuario actualizado exitosamente' });
+      setMessage({ type: 'primary', text: 'Persona actualizada' });
       setShowEditModal(false);
       loadUsers();
     } catch (error: any) {
-      const errorMsg = error.response?.data?.message || 'Error al actualizar usuario';
-      setMessage({ type: 'error', text: `⚠️ ${errorMsg}` });
+      const errorMsg = error.response?.data?.message || 'No pudimos actualizar a la persona';
+      setMessage({ type: 'error', text: `${errorMsg}` });
     }
   };
 
@@ -146,29 +147,29 @@ function UsersPageContent() {
     try {
       await usersAPI.toggleStatus(userId, !currentStatus);
       setMessage({
-        type: 'success',
-        text: `✅ Usuario ${!currentStatus ? 'habilitado' : 'deshabilitado'} exitosamente`
+        type: 'primary',
+        text: `Usuario ${!currentStatus ? 'habilitado' : 'deshabilitado'} exitosamente`
       });
       loadUsers();
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || 'Error al cambiar estado';
-      setMessage({ type: 'error', text: `⚠️ ${errorMsg}` });
+      setMessage({ type: 'error', text: `${errorMsg}` });
     }
   };
 
   const handleCopyPassword = () => {
     navigator.clipboard.writeText(generatedPassword);
-    setMessage({ type: 'success', text: '✅ Contraseña copiada al portapapeles' });
+    setMessage({ type: 'primary', text: 'Contraseña copiada' });
   };
 
   const handleCreateUser = async () => {
     if (!createFormData.email || !createFormData.password || !createFormData.name) {
-      setMessage({ type: 'error', text: '⚠️ Completa todos los campos' });
+      setMessage({ type: 'error', text: 'Completa todos los campos' });
       return;
     }
 
     if (createFormData.password.length < 8) {
-      setMessage({ type: 'error', text: '⚠️ La contraseña debe tener al menos 8 caracteres' });
+      setMessage({ type: 'error', text: 'La contraseña debe tener al menos 8 caracteres' });
       return;
     }
 
@@ -181,15 +182,15 @@ function UsersPageContent() {
         createFormData.role
       );
       setMessage({
-        type: 'success',
-        text: `✅ Usuario ${createFormData.email} creado. Le enviamos un correo para activar su cuenta; hasta entonces no podrá ingresar.`
+        type: 'primary',
+        text: `Usuario ${createFormData.email} creado. Le enviamos un correo para activar la cuenta; hasta entonces no podrá entrar.`
       });
       setShowCreateUser(false);
       setCreateFormData({ email: '', password: '', name: '', role: 'cliente' });
       loadUsers();
     } catch (error: any) {
-      const errorMsg = error.response?.data?.message || 'Error al crear usuario';
-      setMessage({ type: 'error', text: `⚠️ ${errorMsg}` });
+      const errorMsg = error.response?.data?.message || 'No pudimos crear a la persona';
+      setMessage({ type: 'error', text: `${errorMsg}` });
     } finally {
       setIsCreating(false);
     }
@@ -220,7 +221,7 @@ function UsersPageContent() {
           <div className={styles.header}>
             <div className="d-flex justify-content-between align-items-center">
               <div>
-                <h1 className={styles.title}>👥 Gestión de Usuarios</h1>
+                <h1 className={styles.title}><Icon name="equipo" /> Gestión de Usuarios</h1>
                 <p className={styles.subtitle}>
                   {user?.role === 'superuser'
                     ? 'Administra todos los usuarios del sistema'
@@ -228,11 +229,11 @@ function UsersPageContent() {
                 </p>
               </div>
               <Button
-                variant="success"
+                variant="primary"
                 onClick={() => setShowCreateUser(true)}
                 className="me-2"
               >
-                ➕ Crear Usuario
+                <Icon name="agregar" /> Crear Usuario
               </Button>
             </div>
           </div>
@@ -243,7 +244,7 @@ function UsersPageContent() {
         <Row className="mb-3">
           <Col>
             <Alert
-              variant={message.type === 'success' ? 'success' : 'danger'}
+              variant={message.type === 'primary' ? 'primary' : 'danger'}
               onClose={() => setMessage(null)}
               dismissible
             >
@@ -260,16 +261,16 @@ function UsersPageContent() {
             <div className={styles.filterRow}>
               {/* Búsqueda texto */}
               <div className={styles.searchBox}>
-                <span className={styles.searchIcon}>🔍</span>
+                <span className={styles.searchIcon}><Icon name="buscar" /></span>
                 <input
                   className={styles.searchInput}
                   type="text"
-                  placeholder="Buscar por nombre o email..."
+                  placeholder="Buscar por nombre o correo..."
                   value={filterText}
                   onChange={e => setFilterText(e.target.value)}
                 />
                 {filterText && (
-                  <button className={styles.clearX} onClick={() => setFilterText('')}>✕</button>
+                  <button className={styles.clearX} onClick={() => setFilterText('')}><Icon name="cerrar" /></button>
                 )}
               </div>
 
@@ -297,13 +298,13 @@ function UsersPageContent() {
                   className={`${styles.statusBtn} ${styles.statusOk} ${filterStatus === 'active' ? styles.statusActive : ''}`}
                   onClick={() => setFilterStatus(filterStatus === 'active' ? '' : 'active')}
                 >
-                  🟢 Activos
+                  <Icon name="exito" /> Activos
                 </button>
                 <button
                   className={`${styles.statusBtn} ${styles.statusFail} ${filterStatus === 'inactive' ? styles.statusActive : ''}`}
                   onClick={() => setFilterStatus(filterStatus === 'inactive' ? '' : 'inactive')}
                 >
-                  🔴 Inactivos
+                  <Icon name="error" /> Inactivos
                 </button>
               </div>
 
@@ -338,7 +339,7 @@ function UsersPageContent() {
                     <tr>
                       <th>Foto</th>
                       <th>Nombre</th>
-                      <th>Email</th>
+                      <th>Correo</th>
                       <th>Rol</th>
                       <th>Estado</th>
                       <th>Creado</th>
@@ -371,7 +372,7 @@ function UsersPageContent() {
                         </td>
                         <td>
                           <span className={u.isActive ? styles.active : styles.inactive}>
-                            {u.isActive ? '🟢 Activo' : '🔴 Inactivo'}
+                            {u.isActive ? 'Activo' : 'Inactivo'}
                           </span>
                         </td>
                         <td className={styles.date}>
@@ -384,7 +385,7 @@ function UsersPageContent() {
                               id={`dropdown-${u.id}`}
                               className={styles.actionBtn}
                             >
-                              ⚙️
+                              <Icon name="ajustes" />
                             </Dropdown.Toggle>
 
                             <Dropdown.Menu>
@@ -392,7 +393,7 @@ function UsersPageContent() {
                                 onClick={() => handleEditUser(u)}
                                 className={styles.editItem}
                               >
-                                ✏️ Editar
+                                <Icon name="editar" /> Editar
                               </Dropdown.Item>
                               <Dropdown.Divider />
                               <Dropdown.Item
@@ -400,14 +401,14 @@ function UsersPageContent() {
                                 disabled={isGenerating}
                                 className={styles.passwordItem}
                               >
-                                🔑 Generar Contraseña
+                                <Icon name="candado" /> Generar Contraseña
                               </Dropdown.Item>
                               <Dropdown.Divider />
                               <Dropdown.Item
                                 onClick={() => handleToggleStatus(u.id, u.isActive)}
                                 className={u.isActive ? styles.disableItem : styles.enableItem}
                               >
-                                {u.isActive ? '🔴 Deshabilitar' : '🟢 Habilitar'}
+                                {u.isActive ? 'Deshabilitar' : 'Habilitar'}
                               </Dropdown.Item>
                             </Dropdown.Menu>
                           </Dropdown>
@@ -436,7 +437,7 @@ function UsersPageContent() {
       {/* ── Modal editar usuario ─────────────────────────────── */}
       <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered>
         <Modal.Header closeButton>
-          <Modal.Title>✏️ Editar Usuario</Modal.Title>
+          <Modal.Title><Icon name="editar" /> Editar Usuario</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {editingUser && (
@@ -454,14 +455,14 @@ function UsersPageContent() {
               </Form.Group>
 
               <Form.Group className="mb-3">
-                <Form.Label>Email</Form.Label>
+                <Form.Label>Correo</Form.Label>
                 <Form.Control
                   type="email"
                   value={editingUser.email}
                   disabled
                   className={styles.disabled}
                 />
-                <small className="text-muted">El email no puede ser modificado</small>
+                <small className="text-muted">El correo no se puede cambiar</small>
               </Form.Group>
 
               <Form.Group className="mb-3">
@@ -489,7 +490,7 @@ function UsersPageContent() {
                     </Form.Select>
                     {editFormData.role !== editingUser.role && (
                       <small className="text-warning">
-                        ⚠️ Cambiará de <strong>{editingUser.role}</strong> a <strong>{editFormData.role}</strong>
+                        <Icon name="alerta" /> Cambiará de <strong>{editingUser.role}</strong> a <strong>{editFormData.role}</strong>
                       </small>
                     )}
                   </>
@@ -502,7 +503,7 @@ function UsersPageContent() {
                       className={styles.disabled}
                     />
                     {editingUser.role === 'superuser' && (
-                      <small className="text-muted">El rol de superuser no puede ser cambiado</small>
+                      <small className="text-muted">El rol de superusuario no se puede cambiar</small>
                     )}
                   </>
                 )}
@@ -515,7 +516,7 @@ function UsersPageContent() {
             Cancelar
           </Button>
           <Button variant="primary" onClick={handleSaveEdit}>
-            💾 Guardar
+            <Icon name="check" /> Guardar
           </Button>
         </Modal.Footer>
       </Modal>
@@ -523,12 +524,12 @@ function UsersPageContent() {
       {/* ── Modal contraseña generada ────────────────────────── */}
       <Modal show={showPasswordModal} onHide={() => { setShowPasswordModal(false); setGeneratedPassword(''); }} centered>
         <Modal.Header closeButton>
-          <Modal.Title>🔑 Contraseña Generada</Modal.Title>
+          <Modal.Title><Icon name="candado" /> Contraseña Generada</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Alert variant="info" className="mb-3">
             <p className="mb-0">
-              ℹ️ Se generó una contraseña aleatoria. Comparte con el usuario de forma segura.
+              <Icon name="informacion" /> Se generó una contraseña aleatoria. Compártela con la persona de forma segura.
             </p>
           </Alert>
 
@@ -545,18 +546,18 @@ function UsersPageContent() {
                 variant="outline-secondary"
                 onClick={() => setShowPassword(!showPassword)}
               >
-                {showPassword ? '👁️' : '👁️‍🗨️'}
+                <Icon name={showPassword ? 'ocultar' : 'ver'} />
               </Button>
             </div>
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
           <Button
-            variant="success"
+            variant="primary"
             onClick={handleCopyPassword}
             className="me-2"
           >
-            📋 Copiar
+            <Icon name="copiar" /> Copiar
           </Button>
           <Button
             variant="secondary"
@@ -570,7 +571,7 @@ function UsersPageContent() {
       {/* ── Modal crear usuario ──────────────────────────────── */}
       <Modal show={showCreateUser} onHide={() => setShowCreateUser(false)} centered>
         <Modal.Header closeButton>
-          <Modal.Title>➕ Crear Nuevo Usuario</Modal.Title>
+          <Modal.Title><Icon name="agregar" /> Crear Nuevo Usuario</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form>
@@ -585,7 +586,7 @@ function UsersPageContent() {
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Email</Form.Label>
+              <Form.Label>Correo</Form.Label>
               <Form.Control
                 type="email"
                 value={createFormData.email}
@@ -604,7 +605,7 @@ function UsersPageContent() {
                 disabled={isCreating}
               />
               <Form.Text className="text-muted">
-                El usuario recibirá un correo para activar su cuenta y deberá definir su propia contraseña al ingresar.
+                La persona recibirá un correo para activar su cuenta y deberá definir su propia contraseña al ingresar.
               </Form.Text>
             </Form.Group>
             <Form.Group className="mb-3">
@@ -632,11 +633,11 @@ function UsersPageContent() {
             Cancelar
           </Button>
           <Button
-            variant="success"
+            variant="primary"
             onClick={handleCreateUser}
             disabled={isCreating}
           >
-            {isCreating ? '✓ Creando...' : '✓ Crear Usuario'}
+            {isCreating ? 'Creando...' : 'Crear Usuario'}
           </Button>
         </Modal.Footer>
       </Modal>

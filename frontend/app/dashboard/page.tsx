@@ -18,10 +18,10 @@ interface DashboardModule {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  superuser:     '#f59e0b',
-  administrador: '#3b82f6',
-  vendedor:      '#10b981',
-  cliente:       '#8b5cf6',
+  superuser:     '#d97706',
+  administrador: '#2563eb',
+  vendedor:      '#2563eb',
+  cliente:       '#2563eb',
 };
 
 function DashboardPageContent() {

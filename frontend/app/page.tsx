@@ -5,35 +5,36 @@ import Link from 'next/link';
 import { Container, Row, Col, Button, Card } from 'react-bootstrap';
 import styles from './page.module.scss';
 
+import { Icon, type NombreIcono } from '@/components/Icon';
 export default function Home() {
-  const features = [
+  const features: { icon: NombreIcono; title: string; description: string }[] = [
     {
-      icon: '📝',
+      icon: 'nota',
       title: 'Registra Vales al Instante',
       description: 'Anota cada fiado en segundos desde el celular o computador, sin necesidad de cuaderno ni lápiz.'
     },
     {
-      icon: '💰',
+      icon: 'saldo',
       title: 'Cobros y Abonos',
       description: 'Lleva el historial completo de pagos por cliente. Sabe exactamente cuánto ha abonado y cuánto debe.'
     },
     {
-      icon: '⚠️',
+      icon: 'alerta',
       title: 'Alertas de Mora',
       description: 'Recibe notificaciones cuando un vale lleva mucho tiempo sin abonar para que puedas actuar a tiempo.'
     },
     {
-      icon: '📱',
-      title: 'Tus Clientes Ven su Saldo',
+      icon: 'celular',
+      title: 'Tus clientes ven su saldo',
       description: 'Cada cliente puede consultar su deuda desde el celular. Adiós a las discusiones por diferencias en las cuentas.'
     },
     {
-      icon: '📊',
+      icon: 'grafica',
       title: 'Reportes de Cartera',
       description: 'Visualiza cuánto te deben en total, quién debe más y cuáles vales están próximos a vencer.'
     },
     {
-      icon: '☁️',
+      icon: 'nube',
       title: 'En la Nube, Siempre Seguro',
       description: 'Tu información está guardada en la nube. Si pierdes el celular o cambias de teléfono, no pierdes nada.'
     }
@@ -46,7 +47,7 @@ export default function Home() {
         <Container>
           <Row className="align-items-center">
             <Col lg={6} className={styles.heroContent}>
-              <p className={styles.eyebrow}>Para tiendas de barrio en Cartagena</p>
+              <p className={styles.eyebrow}>Para tiendas de barrio</p>
               <h1 className={styles.title}>
                 Di adiós al cuaderno. Bienvenido al vale digital.
               </h1>
@@ -55,12 +56,12 @@ export default function Home() {
               </p>
               <div className={styles.ctaButtons}>
                 <Link href="/register">
-                  <Button variant="success" size="lg" className={styles.btnPrimary}>
+                  <Button variant="primary" size="lg" className={styles.btnPrimary}>
                     Crear mi cuenta de cliente
                   </Button>
                 </Link>
                 <Link href="/login">
-                  <Button variant="outline-success" size="lg" className={styles.btnSecondary}>
+                  <Button variant="outline-primary" size="lg" className={styles.btnSecondary}>
                     Iniciar Sesión
                   </Button>
                 </Link>
@@ -88,7 +89,7 @@ export default function Home() {
                 <div className={`${styles.illustrationCard} ${styles.illustrationCardPaid}`}>
                   <p className={styles.illustrationLabel}>Abono recibido</p>
                   <p className={styles.illustrationName}>Carlos Pérez</p>
-                  <p className={styles.illustrationAmount}>$20.000 ✓</p>
+                  <p className={styles.illustrationAmount}>$20.000</p>
                   <p className={styles.illustrationDate}>hoy</p>
                 </div>
               </div>
@@ -102,7 +103,7 @@ export default function Home() {
         <Container>
           <Row className="align-items-center g-4">
             <Col lg={5} className="text-center">
-              <div className={styles.notebookIcon}>📒</div>
+              <div className={styles.notebookIcon}><Icon name="vale" /></div>
             </Col>
             <Col lg={7}>
               <p className={styles.problemEyebrow}>El problema de hoy</p>
@@ -134,7 +135,7 @@ export default function Home() {
               <Col lg={4} md={6} key={idx}>
                 <Card className={`${styles.featureCard} h-100 border-0 shadow-sm`}>
                   <Card.Body className={styles.featureBody}>
-                    <div className={styles.featureIcon}>{feature.icon}</div>
+                    <div className={styles.featureIcon}><Icon name={feature.icon} /></div>
                     <h5 className={styles.featureTitle}>{feature.title}</h5>
                     <p className={styles.featureDescription}>{feature.description}</p>
                   </Card.Body>
@@ -158,7 +159,7 @@ export default function Home() {
             <Col lg={4} md={6}>
               <Card className={`${styles.roleCard} ${styles.admin} h-100`}>
                 <Card.Body>
-                  <div className={styles.roleIcon}>🏪</div>
+                  <div className={styles.roleIcon}><Icon name="tienda" /></div>
                   <h5>Tendero (Administrador)</h5>
                   <p>Gestiona todos los vales, ve la cartera completa, administra a tus empleados y genera reportes de cobro.</p>
                 </Card.Body>
@@ -167,7 +168,7 @@ export default function Home() {
             <Col lg={4} md={6}>
               <Card className={`${styles.roleCard} ${styles.vendor} h-100`}>
                 <Card.Body>
-                  <div className={styles.roleIcon}>🛒</div>
+                  <div className={styles.roleIcon}><Icon name="cliente" /></div>
                   <h5>Vendedor</h5>
                   <p>Registra vales y abonos en el día a día sin acceder a configuraciones del negocio. Ideal para empleados de confianza.</p>
                 </Card.Body>
@@ -176,7 +177,7 @@ export default function Home() {
             <Col lg={4} md={6}>
               <Card className={`${styles.roleCard} ${styles.client} h-100`}>
                 <Card.Body>
-                  <div className={styles.roleIcon}>👤</div>
+                  <div className={styles.roleIcon}><Icon name="cliente" /></div>
                   <h5>Cliente</h5>
                   <p>Consulta tu saldo pendiente e historial de vales desde el celular. Transparencia total entre tienda y cliente.</p>
                 </Card.Body>
@@ -196,7 +197,7 @@ export default function Home() {
           <Row className="g-4 justify-content-center">
             <Col lg={5} md={6}>
               <div className={styles.ctaCard}>
-                <div className={styles.ctaCardIcon}>👤</div>
+                <div className={styles.ctaCardIcon}><Icon name="cliente" /></div>
                 <h3 className={styles.ctaCardTitle}>Soy cliente de una tienda</h3>
                 <p className={styles.ctaCardText}>
                   Crea tu cuenta gratis y consulta tus vales pendientes, historial de pagos y saldo en cualquier tienda que use Mi Valecito.
@@ -210,7 +211,7 @@ export default function Home() {
             </Col>
             <Col lg={5} md={6}>
               <div className={`${styles.ctaCard} ${styles.ctaCardDark}`}>
-                <div className={styles.ctaCardIcon}>🏪</div>
+                <div className={styles.ctaCardIcon}><Icon name="tienda" /></div>
                 <h3 className={styles.ctaCardTitle}>Tengo una tienda</h3>
                 <p className={styles.ctaCardText}>
                   Registra tu tienda con nuestra ayuda. Te configuramos el sistema, tus vendedores y tus clientes en minutos.

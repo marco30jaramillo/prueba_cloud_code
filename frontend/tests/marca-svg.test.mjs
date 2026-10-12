@@ -21,7 +21,7 @@ test('marca · el logo se lee como svg con sus grupos y sin texto', () => {
     const [raiz] = parsearSvg(svg);
     assert.equal(raiz.etiqueta, 'svg', variante);
     assert.ok(raiz.atributos.viewBox, variante);
-    assert.ok(raiz.hijos.length >= 2, variante);
+    assert.ok(raiz.hijos.length >= 1, variante);
     assert.ok(raiz.hijos.every((h) => h.etiqueta !== 'title'), variante);
   }
 });

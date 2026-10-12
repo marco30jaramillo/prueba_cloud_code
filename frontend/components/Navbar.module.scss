@@ -1,7 +1,7 @@
 // ── Top Navbar ──────────────────────────────────────────
 
 .navbar {
-  background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%) !important;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%) !important;
   border-bottom: 2px solid #e5e7eb;
   position: sticky;
   top: 0;
@@ -17,7 +17,7 @@
 .brand {
   font-size: 1.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #3b82f6, #10b981);
+  background: linear-gradient(135deg, #2563eb, #2563eb);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -48,8 +48,8 @@
   transition: color 0.22s ease, background 0.22s ease, transform 0.18s ease;
 
   &:hover {
-    color: #10b981 !important;
-    background: #f0fdf4;
+    color: #2563eb !important;
+    background: #d1fae5;
     transform: translateY(-1px);
   }
 
@@ -61,7 +61,7 @@
 .userInfo {
   margin-left: 2rem;
   padding: 0.5rem 1rem;
-  background-color: #ecfdf5;
+  background-color: #d1fae5;
   color: #065f46;
   border-radius: 20px;
   font-size: 0.9rem;
@@ -79,7 +79,7 @@
   border-radius: 50%;
   object-fit: cover;
   object-position: center;
-  border: 2px solid #10b981;
+  border: 2px solid #2563eb;
   flex-shrink: 0;
   display: block;
 }
@@ -121,7 +121,7 @@
 
     &:hover:not(:disabled) {
       background-color: #f3f4f6;
-      color: #10b981;
+      color: #2563eb;
     }
 
     &:disabled {
@@ -149,7 +149,7 @@
   margin-left: 1rem;
   padding: 0.3rem 0.6rem;
   border-radius: 7px;
-  color: #9ca3af;
+  color: #6b7280;
   text-decoration: none;
   transition: color 0.2s, background 0.2s;
   flex-shrink: 0;
@@ -220,7 +220,7 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: #2563eb;
   color: #ffffff;
   border: 2px solid #ffffff;
   cursor: pointer;
@@ -228,7 +228,7 @@
   align-items: center;
   justify-content: center;
   z-index: 1002;
-  box-shadow: 0 2px 10px rgba(59, 130, 246, 0.55);
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.55);
   padding: 0;
   font-size: 1rem;
   line-height: 1;
@@ -254,7 +254,7 @@
   border-bottom: 1px solid #f3f4f6;
   text-decoration: none;
   overflow: hidden;
-  background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+  background: linear-gradient(135deg, #dbeafe 0%, #d1fae5 100%);
   flex-shrink: 0;
 }
 
@@ -286,17 +286,17 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: #10b981;
+    background: #2563eb;
     opacity: 0;
     transition: opacity 0.22s ease;
     pointer-events: none;
   }
 
   &:hover {
-    background: #f0fdf4;
-    color: #10b981;
+    background: #d1fae5;
+    color: #2563eb;
     text-decoration: none;
-    border-left-color: #6ee7b7;
+    border-left-color: #d1fae5;
 
     .sidebarIcon {
       transform: scale(1.15);
@@ -309,9 +309,9 @@
 }
 
 .sidebarItemActive {
-  background: #ecfdf5;
+  background: #d1fae5;
   color: #059669;
-  border-left-color: #10b981;
+  border-left-color: #2563eb;
 
   .sidebarIcon {
     filter: none;
@@ -361,7 +361,7 @@
   overflow: hidden;
   min-height: 56px;
   padding: 8px 0;
-  background: #f9fafb;
+  background: #f8fafc;
 }
 
 .sidebarPhoto {
@@ -372,7 +372,7 @@
   border-radius: 50%;
   object-fit: cover;
   object-position: center;
-  border: 2px solid #10b981;
+  border: 2px solid #2563eb;
   margin: 0 12px;
   flex-shrink: 0;
   display: block;
@@ -432,7 +432,7 @@
   }
 
   &:active:not(:disabled) {
-    background: #fecaca;
+    background: #fee2e2;
   }
 
   &:disabled {

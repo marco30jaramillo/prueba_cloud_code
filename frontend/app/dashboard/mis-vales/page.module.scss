@@ -5,7 +5,7 @@
 .title {
   font-weight: 800;
   font-size: 2rem;
-  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  background: linear-gradient(135deg, #059669 0%, #2563eb 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -36,7 +36,7 @@
 
 .table {
   margin-bottom: 0;
-  thead { background: #f9fafb; th { padding: 1rem; font-weight: 600; color: #1f2937; border: none; } }
+  thead { background: #f8fafc; th { padding: 1rem; font-weight: 600; color: #1f2937; border: none; } }
   tbody tr { border-bottom: 1px solid #e5e7eb; td { padding: 0.85rem 1rem; vertical-align: middle; } }
 }
 
