@@ -1,5 +1,8 @@
 # Sistema de Gestión de Tokens
 
+> **Acceso:** `GET /tokens/stats` y `POST /tokens/clean` requieren sesión de superusuario o
+> administrador (sin token: 401; otro rol: 403). Solo `GET /health` es público.
+
 ## 📋 Arquitectura
 
 El sistema mantiene **dos listas de tokens** para un control seguro. Son dos tablas de SQL
