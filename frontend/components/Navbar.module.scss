@@ -62,6 +62,8 @@
 .userInfo {
   margin-left: 0.75rem;
   max-width: 18rem;
+  min-width: 0;
+  flex-shrink: 1;
   padding: 0.5rem 1rem;
   background-color: #d1fae5;
   color: #065f46;

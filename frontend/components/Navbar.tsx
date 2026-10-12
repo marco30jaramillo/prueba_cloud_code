@@ -112,7 +112,7 @@ export const Navbar: React.FC = () => {
         expand="xxl"
         className={`${styles.navbar} ${useSidebar ? styles.navbarHidden : ''} shadow-sm`}
       >
-        <Container>
+        <Container fluid className="px-4">
           <BSNavbar.Brand as={Link} href="/" className={styles.brand}>
             <Logo variante="horizontal" alto={28} />
           </BSNavbar.Brand>
