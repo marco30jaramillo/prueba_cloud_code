@@ -95,6 +95,37 @@
   }
 }
 
+.userDropdown .userInfo {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  white-space: nowrap;
+}
+
+// Menú colapsado (< 1400 px): el usuario ocupa una fila y su menú se abre dentro de la lista,
+// sin posición fija, para que no se salga de la pantalla.
+@media (max-width: 1399.98px) {
+  .userDropdown {
+    width: 100%;
+    margin: 0.5rem 0;
+  }
+
+  .userDropdown .userInfo {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+  }
+
+  .userDropdown :global(.dropdown-menu) {
+    position: static !important;
+    transform: none !important;
+    inset: auto !important;
+    width: 100%;
+    margin-top: 0.5rem;
+    box-shadow: none;
+  }
+}
+
 .userInfo span {
   overflow: hidden;
   text-overflow: ellipsis;
