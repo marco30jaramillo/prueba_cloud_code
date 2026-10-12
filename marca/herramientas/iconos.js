@@ -11,6 +11,8 @@ const c = (cx, cy, r) => `<circle cx="${cx}" cy="${cy}" r="${r}"/>`;
 // nombre -> { desc, nodos }
 const ICONOS = {
   // ---- Set base (tarea 2) ----
+  'cuaderno': { desc: 'Cuaderno abierto: dos hojas con el lomo al centro y renglones', nodos: [
+    p('M12 7c-1.5-1.5-4-2-9-2v14c5 0 7.5.5 9 2 1.5-1.5 4-2 9-2V5c-5 0-7.5.5-9 2z'), p('M12 7v14'), p('M6 9.5h3M6 13h3M15 9.5h3M15 13h3')] },
   'vale': { desc: 'Vale: recibo alargado con borde dentado y tres renglones', nodos: [
     p('M6 3h12v18l-3-2-3 2-3-2-3 2z'), p('M9 8h6M9 12h6M9 16h3')] },
   'abono': { desc: 'Abono: billete ancho con una moneda con signo más dentro', nodos: [

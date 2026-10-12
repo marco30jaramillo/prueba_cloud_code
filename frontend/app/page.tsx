@@ -103,7 +103,7 @@ export default function Home() {
         <Container>
           <Row className="align-items-center g-4">
             <Col lg={5} className="text-center">
-              <div className={styles.notebookIcon}><Icon name="vale" /></div>
+              <div className={styles.notebookIcon}><Icon name="cuaderno" size="1em" /></div>
             </Col>
             <Col lg={7}>
               <p className={styles.problemEyebrow}>El problema de hoy</p>
