@@ -14,7 +14,7 @@ class Tienda {
     const tienda = {
       id: crypto.randomUUID(), nombre: data.nombre.trim(),
       descripcion: data.descripcion || '', direccion: data.direccion || '',
-      ciudad: data.ciudad || 'Cartagena', telefono: data.telefono || '',
+      ciudad: data.ciudad || '', telefono: data.telefono || '',
       logo: data.logo || '', isActive: true,
       createdAt: new Date().toISOString(), createdBy
     };

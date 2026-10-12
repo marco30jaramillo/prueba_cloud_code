@@ -78,7 +78,7 @@ export default function CarteraScreen() {
       setKpis([
         { label: 'Por cobrar', value: formatCOP(totalPendiente), color: '#dc2626', bg: '#fee2e2' },
         { label: 'Vales activos', value: totalActivos, color: '#2563eb', bg: '#dbeafe' },
-        { label: 'Vencidos', value: totalVencidos, color: '#d97706', bg: '#fef3c7' },
+        { label: 'Vencidos', value: totalVencidos, color: '#b45309', bg: '#fef3c7' },
         { label: 'Clientes', value: sorted.length, color: '#2563eb', bg: '#dbeafe' },
       ]);
     } catch {

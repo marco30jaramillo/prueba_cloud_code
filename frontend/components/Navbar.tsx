@@ -193,7 +193,7 @@ export const Navbar: React.FC = () => {
                       id="logout-dropdown"
                       disabled={isLoggingOut}
                     >
-                      Logout
+                      Cerrar sesión
                     </Dropdown.Toggle>
                     <Dropdown.Menu align="end">
                       <Dropdown.Item onClick={handleLogoutClick} disabled={isLoggingOut}>

@@ -596,9 +596,9 @@ function TiendaContent() {
                     <Card.Header className={styles.cardHeader}><strong>Distribución de vales</strong></Card.Header>
                     <Card.Body>
                       {[
-                        { key: 'pendiente', label: 'Pendientes', color: '#d97706' },
+                        { key: 'pendiente', label: 'Pendientes', color: '#b45309' },
                         { key: 'parcial',   label: 'Abonados parcial', color: '#2563eb' },
-                        { key: 'pagado',    label: 'Pagados',   color: '#059669' },
+                        { key: 'pagado',    label: 'Pagados',   color: '#047857' },
                         { key: 'anulado',   label: 'Anulados',  color: '#6b7280' },
                       ].map(({ key, label, color }) => {
                         const count = byEstado[key] || 0;

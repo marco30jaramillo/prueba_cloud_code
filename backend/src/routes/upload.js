@@ -72,10 +72,10 @@ router.post('/photo', authMiddleware, (req, res, next) => {
       if (err.code === 'LIMIT_FILE_SIZE') {
         return ResponseFormatter.badRequest(res, 'El archivo supera el límite de 10 MB');
       }
-      return ResponseFormatter.badRequest(res, `Error al recibir el archivo: ${err.message}`);
+      return ResponseFormatter.badRequest(res, "No pudimos recibir el archivo. Intenta de nuevo");
     }
     if (err) {
-      return ResponseFormatter.badRequest(res, err.message || 'Solo se permiten imágenes');
+      return ResponseFormatter.badRequest(res, "Solo se permiten imágenes");
     }
     next();
   });

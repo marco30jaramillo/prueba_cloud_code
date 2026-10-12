@@ -57,7 +57,7 @@ router.post('/', authMiddleware, roleMiddleware.requirePermission('admin:manage-
   const VALID_LEVELS = new Set(['read', 'write', 'full']);
   for (const entry of moduleAccess) {
     if (!VALID_LEVELS.has(entry.level)) {
-      return ResponseFormatter.badRequest(res, `Nivel no válido: ${entry.level}. Usa read, write o full`);
+      return ResponseFormatter.badRequest(res, `Elige un nivel de acceso válido para cada módulo`);
     }
   }
 
@@ -109,7 +109,7 @@ router.patch('/:roleId', authMiddleware, roleMiddleware.requirePermission('admin
   if (moduleAccess) {
     for (const entry of moduleAccess) {
       if (!VALID_LEVELS.has(entry.level)) {
-        return ResponseFormatter.badRequest(res, `Nivel no válido: ${entry.level}. Usa read, write o full`);
+        return ResponseFormatter.badRequest(res, `Elige un nivel de acceso válido para cada módulo`);
       }
     }
   }

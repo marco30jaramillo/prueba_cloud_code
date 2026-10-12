@@ -62,7 +62,7 @@ $border: 1px solid #e5e7eb;
   span   { font-size: 0.78rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; }
   strong { font-size: 1.8rem; font-weight: 800; color: #1f2937; line-height: 1; }
 }
-.statOk   { border-left-color: #2563eb; strong { color: #059669; } }
+.statOk   { border-left-color: #2563eb; strong { color: #047857; } }
 .statFail { border-left-color: #dc2626; strong { color: #dc2626; } }
 .statFiltered { border-left-color: #2563eb; strong { color: #2563eb; } }
 
@@ -168,7 +168,7 @@ $border: 1px solid #e5e7eb;
   align-items: center;
   gap: 0.4rem;
   transition: all 0.2s;
-  &:hover { border-color: #dc2626; color: #dc2626; background: #fee2e2; }
+  &:hover { border-color: #dc2626; color: #991b1b; background: #fee2e2; }
 }
 
 .advBtn {
@@ -187,7 +187,7 @@ $border: 1px solid #e5e7eb;
 }
 .advBtnActive {
   border-color: #2563eb;
-  color: #2563eb;
+  color: #1e40af;
   background: #dbeafe;
 }
 
@@ -390,7 +390,7 @@ $border: 1px solid #e5e7eb;
 }
 
 .resultCell { text-align: center; }
-.ok   { color: #059669; font-weight: 700; font-size: 1rem; }
+.ok   { color: #047857; font-weight: 700; font-size: 1rem; }
 .fail { color: #dc2626; font-weight: 700; font-size: 1rem; }
 
 .reason {

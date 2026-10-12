@@ -235,7 +235,7 @@ app.use((err, req, res, next) => {
   // fragmento del cuerpo) ni `err.body` ni el objeto completo: pueden contener un token.
   const type = (err && (err.type || err.code || err.name)) || 'error';
   console.error('🔴 Error no capturado: tipo=' + String(type).replace(/[^A-Za-z0-9_.:-]/g, '').slice(0, 60));
-  ResponseFormatter.internalError(res, err.message || 'Algo salió mal. Intenta de nuevo en unos minutos');
+  ResponseFormatter.internalError(res, 'Algo salió mal. Intenta de nuevo en unos minutos');
 });
 
 const os = require('os');

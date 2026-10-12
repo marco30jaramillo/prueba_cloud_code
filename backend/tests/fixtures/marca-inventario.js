@@ -96,7 +96,8 @@ function listar(dir, extensiones) {
 }
 
 function alcance() {
-  const web = ['app', 'components', 'hooks', 'lib', 'styles', 'types'].flatMap((d) => listar(rel('frontend', d), /\.(tsx?|scss|css)$/));
+  // `lib/marca-datos.ts` es un archivo generado con SVG (no es texto de pantalla): no se mide.
+  const web = ['app', 'components', 'hooks', 'lib', 'styles', 'types'].flatMap((d) => listar(rel('frontend', d), /\.(tsx?|scss|css)$/)).filter((f) => path.basename(f) !== 'marca-datos.ts');
   for (const f of ['middleware.ts']) if (fs.existsSync(rel('frontend', f))) web.push(rel('frontend', f));
   const movil = ['app', 'lib'].flatMap((d) => listar(rel('mobile', d), /\.(tsx?|scss|css)$/));
   const movilConfig = ['app.json'].map((f) => rel('mobile', f)).filter((f) => fs.existsSync(f));

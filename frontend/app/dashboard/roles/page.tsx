@@ -131,7 +131,7 @@ function CreateRoleModal({ modules, onClose, onCreated }: CreateModalProps) {
             placeholder="ej. supervisor"
             autoFocus
           />
-          <span className={styles.formHint}>Se guardará en minúsculas con guión bajo. Ejemplo: "supervisor_ventas"</span>
+          <span className={styles.formHint}>Escríbelo en minúsculas y sin espacios. Ejemplo: supervisor</span>
         </div>
 
         <div className={styles.formField}>

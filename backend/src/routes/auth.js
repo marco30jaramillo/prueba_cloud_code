@@ -101,7 +101,7 @@ router.post('/register', mailRequestLimiter.middleware, async (req, res) => {
       const context = requestContext(req);
       inBackground('reenvío de activación (registro)', () => resendActivation(existingUser, context));
     }
-    return ResponseFormatter.conflict(res, `El email ${normalizedEmail} ya está registrado`);
+    return ResponseFormatter.conflict(res, `El correo ${normalizedEmail} ya está registrado`);
   }
 
   // Toda cuenta nace pendiente y con cambio de contraseña forzado (también el autorregistro).
@@ -368,7 +368,7 @@ router.post('/bootstrap-superuser', async (req, res) => {
 
   const existingUser = await User.findByEmail(email);
   if (existingUser) {
-    return ResponseFormatter.conflict(res, `El email ${email} ya está registrado`);
+    return ResponseFormatter.conflict(res, `El correo ${email} ya está registrado`);
   }
 
   // Único caso de cuenta que nace activada y sin correo: el primer superusuario del arranque.
@@ -426,7 +426,7 @@ router.post('/create-user', authMiddleware, async (req, res) => {
 
   const existingUser = await User.findByEmail(email);
   if (existingUser) {
-    return ResponseFormatter.conflict(res, `El email ${email} ya está registrado`);
+    return ResponseFormatter.conflict(res, `El correo ${email} ya está registrado`);
   }
 
   // Cuenta pendiente y con cambio forzado; no se devuelve sesión de la cuenta creada.

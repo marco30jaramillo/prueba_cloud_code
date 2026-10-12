@@ -1,7 +1,7 @@
 {
   "descripcion": "Línea base del inventario de marca (requerimiento 008, tarea 5). Medida sobre el estado de partida de la rama req/008-definicion-e-implementacion-de-marca(KAN-75), antes de implementar. Las pruebas de objetivo están pendientes (todo T-27) mientras estricto sea false.",
   "fecha": "2026-10-12",
-  "estricto": false,
+  "estricto": true,
   "alcance": {
     "web": 58,
     "movil": 13,

@@ -6,10 +6,10 @@ import { useAuthStore, isAdminRole, ROLE_LABEL } from '@/lib/store';
 import { Icon, type NombreIcono } from '@/components/Icon';
 const ACTIONS_ALL: { icon: NombreIcono; label: string; desc: string; route: string; color: string; bg: string }[] = [
   { icon: 'agregar', label: 'Nuevo Vale', desc: 'Registrar un crédito nuevo', route: '/vale-nuevo', color: '#2563eb', bg: '#dbeafe' },
-  { icon: 'vale', label: 'Mis Vales', desc: 'Consultar y gestionar vales', route: '/(tabs)/vales', color: '#059669', bg: '#d1fae5' },
+  { icon: 'vale', label: 'Mis Vales', desc: 'Consultar y gestionar vales', route: '/(tabs)/vales', color: '#047857', bg: '#d1fae5' },
 ];
 const ACTIONS_ADMIN: typeof ACTIONS_ALL = [
-  { icon: 'cartera', label: 'Cartera', desc: 'Panel de indicadores', route: '/(tabs)/cartera', color: '#d97706', bg: '#fef3c7' },
+  { icon: 'cartera', label: 'Cartera', desc: 'Panel de indicadores', route: '/(tabs)/cartera', color: '#b45309', bg: '#fef3c7' },
   { icon: 'equipo', label: 'Equipo', desc: 'Gestionar personas y roles', route: '/(tabs)/equipo', color: '#2563eb', bg: '#dbeafe' },
 ];
 

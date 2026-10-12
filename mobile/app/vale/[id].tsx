@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
   amountRow: { flexDirection: 'row', gap: 8, marginTop: 14, borderTopWidth: 1, borderTopColor: '#f3f4f6', paddingTop: 14 },
   amountBox: { flex: 1, alignItems: 'center' },
   amountLabel: { fontSize: 11, color: '#6b7280', fontFamily: 'PlusJakartaSans-SemiBold', marginBottom: 3 },
-  amountValue: { fontSize: 16, fontFamily: 'PlusJakartaSans-ExtraBold' },
+  amountValue: { fontVariant: ['tabular-nums'], fontSize: 16, fontFamily: 'PlusJakartaSans-ExtraBold' },
   fechaVenc: { fontSize: 13, color: '#6b7280', marginTop: 10 },
   meta: { fontSize: 12, color: '#6b7280', marginTop: 4 },
 
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
   },
   abonoAnulado: { opacity: 0.6 },
   abonoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  abonoMonto: { fontSize: 17, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#059669' },
+  abonoMonto: { fontSize: 17, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#047857' },
   lineThrough: { textDecorationLine: 'line-through', color: '#6b7280' },
   anuladoTag: { fontSize: 11, color: '#dc2626', fontFamily: 'PlusJakartaSans-SemiBold', marginTop: 2 },
   abonoNotas: { fontSize: 12, color: '#6b7280', marginTop: 3 },

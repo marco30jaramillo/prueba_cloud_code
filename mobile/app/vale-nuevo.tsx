@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#f3f4f6' },
   container: { padding: 20, paddingBottom: 48 },
   label: { fontSize: 13, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#374151', marginBottom: 6, marginTop: 16 },
-  noTiendas: { fontSize: 13, color: '#dc2626', padding: 12, backgroundColor: '#fee2e2', borderRadius: 10 },
+  noTiendas: { fontSize: 13, color: '#991b1b', padding: 12, backgroundColor: '#fee2e2', borderRadius: 10 },
   chipScroll: { marginBottom: 4 },
   chip: {
     paddingHorizontal: 14,
