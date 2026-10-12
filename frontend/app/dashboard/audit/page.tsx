@@ -384,11 +384,11 @@ function AuditPageContent() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th style={{ width: 148 }}>Fecha y hora</th>
+                <th style={{ width: 120 }}>Fecha y hora</th>
                 <th style={{ width: 180 }}>Evento</th>
                 <th>Actor</th>
                 <th>Afectado</th>
-                <th style={{ width: 130 }}>IP</th>
+                <th style={{ width: 110 }}>IP</th>
                 <th style={{ width: 80 }}>Resultado</th>
                 <th>Detalle</th>
               </tr>
