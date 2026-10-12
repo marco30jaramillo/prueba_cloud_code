@@ -6,6 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { authAPI } from '@/lib/api';
 import { Logo } from '@/components/Logo';
+import { CampoContrasena } from '@/components/CampoContrasena';
 import { useAuthStore } from '@/lib/store';
 
 export default function LoginScreen() {
@@ -79,16 +80,17 @@ export default function LoginScreen() {
           />
 
           <Text style={styles.label}>Contraseña</Text>
-          <TextInput
-            style={styles.input}
+          <CampoContrasena
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
             placeholder="••••••••"
-            placeholderTextColor="#6b7280"
             returnKeyType="done"
             onSubmitEditing={handleLogin}
           />
+
+          <TouchableOpacity style={styles.olvido} onPress={() => router.push('/forgot-password')}>
+            <Text style={styles.olvidoText}>¿Olvidaste tu contraseña?</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.btn, loading && styles.btnDisabled]}
@@ -142,6 +144,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 28,
   },
+  olvido: { alignSelf: 'flex-end', paddingVertical: 12 },
+  olvidoText: { color: '#2563eb', fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 14 },
   btnDisabled: { opacity: 0.6 },
   btnText: { color: '#ffffff', fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 16 },
 });

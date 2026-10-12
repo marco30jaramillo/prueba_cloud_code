@@ -16,10 +16,11 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    const inAuth = segments[0] === 'login';
-    if (!user && !inAuth) {
+    const seccion = segments[0] as string;
+    const publica = ['login', 'forgot-password', 'reset-password'].includes(seccion);
+    if (!user && !publica) {
       router.replace('/login');
-    } else if (user && inAuth) {
+    } else if (user && (seccion === 'login' || seccion === 'forgot-password')) {
       router.replace('/(tabs)');
     }
   }, [user, isLoaded, segments]);
@@ -29,6 +30,8 @@ export default function RootLayout() {
   return (
     <Stack>
       <Stack.Screen name="login" options={{ headerShown: false }} />
+      <Stack.Screen name="forgot-password" options={{ title: 'Recuperar contraseña', headerTintColor: colores.azul, headerShadowVisible: false }} />
+      <Stack.Screen name="reset-password" options={{ title: 'Nueva contraseña', headerTintColor: colores.azul, headerShadowVisible: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen
         name="vale-nuevo"

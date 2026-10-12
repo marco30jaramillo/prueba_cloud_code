@@ -15,6 +15,7 @@ function ResetPasswordContent() {
   // Se guarda en memoria y se quita de la barra de direcciones de inmediato.
   const [token, setToken] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
+  const [esCelular, setEsCelular] = useState(false);
 
   useEffect(() => {
     const fromHash = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('token');
@@ -22,6 +23,11 @@ function ResetPasswordContent() {
     if (found) {
       window.history.replaceState(null, '', window.location.pathname);
       setToken(found);
+      // En un celular se intenta abrir la app de Mi Valecito con el mismo enlace.
+      if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        setEsCelular(true);
+        window.location.href = `mivalecito://reset-password?token=${encodeURIComponent(found)}`;
+      }
     }
     setChecked(true);
   }, []);
@@ -67,6 +73,13 @@ function ResetPasswordContent() {
             <h1 className={styles.title}>Restablecer Contraseña</h1>
             <p className={styles.subtitle}>Crea una nueva contraseña segura</p>
           </div>
+
+          {esCelular && (
+            <Alert variant="info" className="mb-3">
+              ¿Tienes la app de Mi Valecito?{' '}
+              <a href={`mivalecito://reset-password?token=${encodeURIComponent(token)}`}>Abrir en la app</a>
+            </Alert>
+          )}
 
           <AuthForm type="reset-password" onSubmit={onSubmit} />
         </Col>
