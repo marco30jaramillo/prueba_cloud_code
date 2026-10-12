@@ -28,10 +28,10 @@ const BTN_ACTIVE_CLASS: Record<Level, string> = {
 
 interface ModuleDef {
   id: string;
+  name: string;
   description: string;
   icon: string;
   href?: string;
-  icon: string;
   permRead: string[];
   permWrite: string[];
   permFull: string[];
