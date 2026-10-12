@@ -3,6 +3,10 @@
     "descripcion": "Cuaderno abierto: dos hojas con el lomo al centro y renglones",
     "nodos": "<path d=\"M12 7c-1.5-1.5-4-2-9-2v14c5 0 7.5.5 9 2 1.5-1.5 4-2 9-2V5c-5 0-7.5.5-9 2z\"/><path d=\"M12 7v14\"/><path d=\"M6 9.5h3M6 13h3M15 9.5h3M15 13h3\"/>"
   },
+  "panel": {
+    "descripcion": "Panel: cuadrícula de tres por tres cuadros",
+    "nodos": "<path d=\"M4 4h2v2H4zM11 4h2v2h-2zM18 4h2v2h-2zM4 11h2v2H4zM11 11h2v2h-2zM18 11h2v2h-2zM4 18h2v2H4zM11 18h2v2h-2zM18 18h2v2h-2z\"/>"
+  },
   "vale": {
     "descripcion": "Vale: recibo alargado con borde dentado y tres renglones",
     "nodos": "<path d=\"M6 3h12v18l-3-2-3 2-3-2-3 2z\"/><path d=\"M9 8h6M9 12h6M9 16h3\"/>"

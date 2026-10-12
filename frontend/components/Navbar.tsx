@@ -132,7 +132,7 @@ export const Navbar: React.FC = () => {
               ) : (
                 <>
                   <Nav.Link as={Link} href="/dashboard" className={styles.navLink}>
-                    <Icon name="grafica" /> Panel
+                    <Icon name="panel" /> Panel
                   </Nav.Link>
                   {navModules.filter(mod => mod.href !== '/dashboard/profile').map(mod => (
                     <Nav.Link key={mod.id} as={Link} href={mod.href} className={styles.navLink}>

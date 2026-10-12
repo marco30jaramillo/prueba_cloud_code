@@ -35,6 +35,7 @@ export const ICONOS = {
   "nota": "<path d=\"M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z\"/><path d=\"M14 3v5h5\"/><path d=\"M9 13h6M9 17h4\"/>",
   "nube": "<path d=\"M7 19a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17.2 9.9 4.6 4.6 0 0 1 17 19z\"/>",
   "ocultar": "<path d=\"M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z\"/><path d=\"M4 4l16 16\"/>",
+  "panel": "<path d=\"M4 4h2v2H4zM11 4h2v2h-2zM18 4h2v2h-2zM4 11h2v2H4zM11 11h2v2h-2zM18 11h2v2h-2zM4 18h2v2H4zM11 18h2v2h-2zM18 18h2v2h-2z\"/>",
   "saldo": "<circle cx=\"9\" cy=\"7\" r=\"3.5\"/><path d=\"M18 10V3M15 6l3-3 3 3\"/><path d=\"M2 15h4l3.5-1.5 5 .5a1.5 1.5 0 0 1 0 3H11M2 20h5l4 1.5h5l5-4.5a1.5 1.5 0 0 0-2-2L17 17\"/>",
   "siguiente": "<path d=\"M5 12h14M13 6l6 6-6 6\"/>",
   "subir": "<path d=\"M12 15V4M7 8.5l5-5 5 5\"/><path d=\"M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3\"/>",

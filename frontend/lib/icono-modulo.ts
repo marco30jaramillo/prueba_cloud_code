@@ -1,7 +1,7 @@
 import { ICONOS, type NombreIcono } from '@/lib/marca-datos';
 
 const ICONO_POR_RUTA: Record<string, NombreIcono> = {
-  '/dashboard': 'grafica',
+  '/dashboard': 'panel',
   '/dashboard/cartera': 'cartera',
   '/dashboard/mis-vales': 'vale',
   '/dashboard/vale-nuevo': 'agregar',
