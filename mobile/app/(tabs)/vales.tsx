@@ -4,7 +4,7 @@ import {
   RefreshControl, ActivityIndicator, TextInput,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { valesAPI, tiendasAPI } from '@/lib/api';
+import { valesAPI, tiendasAPI, pick } from '@/lib/api';
 import { useAuthStore, isAdminRole, formatCOP } from '@/lib/store';
 
 import { Icon } from '@/components/Icon';
@@ -39,14 +39,14 @@ export default function ValesScreen() {
       let list: Vale[] = [];
       if (canAdmin) {
         const tiRes = await tiendasAPI.getMisTiendas();
-        const tiendas: any[] = tiRes?.data ?? [];
+        const tiendas: any[] = pick(tiRes, 'tiendas');
         if (tiendas.length > 0) {
           const vRes = await valesAPI.getCartera(tiendas[0].id);
-          list = vRes?.data ?? [];
+          list = pick(vRes, 'vales');
         }
       } else {
         const vRes = await valesAPI.getMisVales();
-        list = vRes?.data ?? [];
+        list = pick(vRes, 'vales');
       }
       setVales(list);
     } catch {

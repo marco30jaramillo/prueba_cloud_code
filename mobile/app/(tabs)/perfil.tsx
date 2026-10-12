@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Alert,
-  TextInput, ScrollView, ActivityIndicator,
+  TextInput, ScrollView, ActivityIndicator, Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuthStore, ROLE_LABEL } from '@/lib/store';
 import { authAPI } from '@/lib/api';
-import { WEB_URL } from '@/lib/config';
+import { API_URL, WEB_URL } from '@/lib/config';
 
 import { Icon } from '@/components/Icon';
 export default function PerfilScreen() {
@@ -21,6 +22,45 @@ export default function PerfilScreen() {
   const [changingPwd, setChangingPwd] = useState(false);
   const [pwdForm, setPwdForm] = useState({ current: '', next: '', confirm: '' });
   const [savingPwd, setSavingPwd] = useState(false);
+  const [verPwd, setVerPwd] = useState({ current: false, next: false, confirm: false });
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
+
+  const fotoUrl = user?.photo
+    ? (user.photo.startsWith('http') ? user.photo : `${API_URL}${user.photo}`)
+    : null;
+
+  const handleCambiarFoto = async () => {
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) {
+      Alert.alert('Permiso necesario', 'Permite el acceso a tus fotos para elegir una imagen.');
+      return;
+    }
+    const sel = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (sel.canceled || !sel.assets?.[0]) return;
+    const foto = sel.assets[0];
+    setSubiendoFoto(true);
+    try {
+      const subida = await authAPI.uploadPhoto(foto.uri, foto.mimeType);
+      const url: string | undefined = subida?.photo ?? subida?.url;
+      if (!url) throw new Error('sin url');
+      const res = await authAPI.updateProfile(user!.name, url);
+      if (res?.status == 'success') {
+        setUser({ ...user!, photo: res?.user?.photo ?? url });
+        Alert.alert('Listo', 'Foto actualizada.');
+      } else {
+        Alert.alert('Error', res?.message ?? 'No pudimos guardar la foto.');
+      }
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.message ?? 'No pudimos subir la foto. Intenta de nuevo.');
+    } finally {
+      setSubiendoFoto(false);
+    }
+  };
 
   const handleSaveName = async () => {
     if (!newName.trim()) return;
@@ -92,9 +132,16 @@ export default function PerfilScreen() {
     <ScrollView style={styles.root} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       {/* Avatar + info */}
       <View style={styles.profileBox}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initial}</Text>
-        </View>
+        <TouchableOpacity style={styles.avatarWrap} onPress={handleCambiarFoto} disabled={subiendoFoto} activeOpacity={0.8}
+          accessibilityLabel="Cambiar foto">
+          <View style={styles.avatar}>
+            {fotoUrl
+              ? <Image source={{ uri: fotoUrl }} style={styles.avatarImg} />
+              : <Text style={styles.avatarText}>{initial}</Text>}
+            {subiendoFoto && <View style={styles.avatarLoading}><ActivityIndicator color="#ffffff" /></View>}
+          </View>
+          <Text style={styles.avatarHint}>Cambiar foto</Text>
+        </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.name}>{user?.name}</Text>
           <Text style={styles.email}>{user?.email}</Text>
@@ -107,21 +154,24 @@ export default function PerfilScreen() {
       {/* Edit name */}
       <SectionCard title="Nombre">
         {editingName ? (
-          <View style={styles.editRow}>
+          <View>
             <TextInput
-              style={[styles.input, { flex: 1, marginBottom: 0 }]}
+              style={[styles.input, styles.inputNombre]}
               value={newName}
               onChangeText={setNewName}
               autoFocus
+              multiline
               placeholder="Nombre completo"
               placeholderTextColor="#6b7280"
             />
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSaveName} disabled={savingName}>
-              {savingName ? <ActivityIndicator color="#ffffff" size="small" /> : <Text style={styles.saveBtnText}>Guardar</Text>}
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => { setEditingName(false); setNewName(user?.name ?? ''); }}>
-              <Text style={styles.cancelBtnText}>Cancelar</Text>
-            </TouchableOpacity>
+            <View style={styles.editRow}>
+              <TouchableOpacity style={[styles.saveBtn, { flex: 1 }]} onPress={handleSaveName} disabled={savingName}>
+                {savingName ? <ActivityIndicator color="#ffffff" size="small" /> : <Text style={styles.saveBtnText}>Guardar</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => { setEditingName(false); setNewName(user?.name ?? ''); }}>
+                <Text style={styles.cancelBtnText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : (
           <TouchableOpacity style={styles.editTrigger} onPress={() => { setEditingName(true); setNewName(user?.name ?? ''); }}>
@@ -135,9 +185,24 @@ export default function PerfilScreen() {
       <SectionCard title="Contraseña">
         {changingPwd ? (
           <>
-            <TextInput style={styles.input} value={pwdForm.current} onChangeText={v => setPwdForm(f => ({ ...f, current: v }))} secureTextEntry placeholder="Contraseña actual" placeholderTextColor="#6b7280" />
-            <TextInput style={styles.input} value={pwdForm.next} onChangeText={v => setPwdForm(f => ({ ...f, next: v }))} secureTextEntry placeholder="Nueva contraseña" placeholderTextColor="#6b7280" />
-            <TextInput style={styles.input} value={pwdForm.confirm} onChangeText={v => setPwdForm(f => ({ ...f, confirm: v }))} secureTextEntry placeholder="Confirmar contraseña" placeholderTextColor="#6b7280" />
+            <View style={styles.pwdRow}>
+              <TextInput style={[styles.input, styles.pwdInput]} value={pwdForm.current} onChangeText={v => setPwdForm(f => ({ ...f, current: v }))} secureTextEntry={!verPwd.current} autoCapitalize="none" autoCorrect={false} placeholder="Contraseña actual" placeholderTextColor="#6b7280" />
+              <TouchableOpacity style={styles.eyeBtn} onPress={() => setVerPwd(v => ({ ...v, current: !v.current }))} accessibilityLabel={verPwd.current ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+                <Icon name={verPwd.current ? 'ocultar' : 'ver'} size={22} color="#4b5563" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.pwdRow}>
+              <TextInput style={[styles.input, styles.pwdInput]} value={pwdForm.next} onChangeText={v => setPwdForm(f => ({ ...f, next: v }))} secureTextEntry={!verPwd.next} autoCapitalize="none" autoCorrect={false} placeholder="Nueva contraseña" placeholderTextColor="#6b7280" />
+              <TouchableOpacity style={styles.eyeBtn} onPress={() => setVerPwd(v => ({ ...v, next: !v.next }))} accessibilityLabel={verPwd.next ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+                <Icon name={verPwd.next ? 'ocultar' : 'ver'} size={22} color="#4b5563" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.pwdRow}>
+              <TextInput style={[styles.input, styles.pwdInput]} value={pwdForm.confirm} onChangeText={v => setPwdForm(f => ({ ...f, confirm: v }))} secureTextEntry={!verPwd.confirm} autoCapitalize="none" autoCorrect={false} placeholder="Confirmar contraseña" placeholderTextColor="#6b7280" />
+              <TouchableOpacity style={styles.eyeBtn} onPress={() => setVerPwd(v => ({ ...v, confirm: !v.confirm }))} accessibilityLabel={verPwd.confirm ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+                <Icon name={verPwd.confirm ? 'ocultar' : 'ver'} size={22} color="#4b5563" />
+              </TouchableOpacity>
+            </View>
             <View style={styles.editRow}>
               <TouchableOpacity style={[styles.saveBtn, { flex: 1 }]} onPress={handleChangePwd} disabled={savingPwd}>
                 {savingPwd ? <ActivityIndicator color="#ffffff" size="small" /> : <Text style={styles.saveBtnText}>Cambiar</Text>}
@@ -222,6 +287,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  avatarWrap: { alignItems: 'center' },
+  avatarImg: { width: 56, height: 56, borderRadius: 28 },
+  avatarLoading: { position: 'absolute', inset: 0, borderRadius: 28, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', alignItems: 'center' },
+  avatarHint: { fontSize: 11, color: '#2563eb', fontFamily: 'PlusJakartaSans-SemiBold', marginTop: 4 },
+  inputNombre: { minHeight: 48, textAlignVertical: 'top' },
+  pwdRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+  pwdInput: { flex: 1 },
+  eyeBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   avatarText: { fontSize: 24, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#1e40af' },
   name: { fontSize: 17, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#1f2937' },
   email: { fontSize: 13, color: '#6b7280', marginTop: 2 },

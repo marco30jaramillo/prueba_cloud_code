@@ -23,6 +23,13 @@ api.interceptors.response.use(
   (error) => Promise.reject(error)
 );
 
+/**
+ * El backend responde `{ status, <clave>: ... }` (p. ej. `tiendas`, `vales`, `usuarios`).
+ * Se acepta también el formato antiguo `{ data: ... }`.
+ */
+export const pick = <T = any>(res: any, key: string, vacio: any = []): T =>
+  (res?.[key] ?? res?.data?.[key] ?? (Array.isArray(vacio) ? (Array.isArray(res?.data) ? res.data : undefined) : res?.data) ?? vacio) as T;
+
 // ─── Auth ────────────────────────────────────────────────────────────────────
 export const authAPI = {
   login: async (email: string, password: string) => {
@@ -42,8 +49,21 @@ export const authAPI = {
     });
     return data;
   },
-  updateProfile: async (name: string) => {
-    const { data } = await api.patch('/auth/profile', { name });
+  updateProfile: async (name: string, photo?: string) => {
+    const { data } = await api.patch('/auth/profile', photo ? { name, photo } : { name });
+    return data;
+  },
+  /** Sube la foto (el servidor la recorta y comprime) y devuelve la URL guardada. */
+  uploadPhoto: async (uri: string, mimeType?: string) => {
+    const form = new FormData();
+    const tipo = mimeType || 'image/jpeg';
+    const ext = tipo.split('/')[1] || 'jpg';
+    form.append('photo', { uri, name: `foto.${ext}`, type: tipo } as any);
+    const { data } = await api.post('/upload/photo', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 30000,
+      transformRequest: (d) => d,
+    });
     return data;
   },
 };

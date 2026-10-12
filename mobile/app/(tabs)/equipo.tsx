@@ -4,7 +4,7 @@ import {
   ActivityIndicator, Alert, TouchableOpacity,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
-import { tiendasAPI } from '@/lib/api';
+import { tiendasAPI, pick } from '@/lib/api';
 import { useAuthStore, ROLE_LABEL } from '@/lib/store';
 
 import { Icon } from '@/components/Icon';
@@ -30,7 +30,7 @@ export default function EquipoScreen() {
   const load = useCallback(async () => {
     try {
       const tiRes = await tiendasAPI.getMisTiendas();
-      const tiendas: any[] = tiRes?.data ?? [];
+      const tiendas: any[] = pick(tiRes, 'tiendas');
       if (tiendas.length === 0) {
         setLoading(false);
         setRefreshing(false);
@@ -40,7 +40,7 @@ export default function EquipoScreen() {
       setTienda({ id: t.id, nombre: t.nombre ?? t.name ?? 'Tienda' });
 
       const uRes = await tiendasAPI.getUsuarios(t.id);
-      setMiembros(uRes?.data ?? []);
+      setMiembros(pick(uRes, 'usuarios'));
     } catch {
       setMiembros([]);
     } finally {

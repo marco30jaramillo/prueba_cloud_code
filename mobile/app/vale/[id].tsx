@@ -4,7 +4,7 @@ import {
   Alert, ActivityIndicator, TextInput, RefreshControl,
 } from 'react-native';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
-import { valesAPI } from '@/lib/api';
+import { valesAPI, pick } from '@/lib/api';
 import { useAuthStore, isAdminRole, formatCOP } from '@/lib/store';
 
 interface Abono {
@@ -56,8 +56,8 @@ export default function ValeDetailScreen() {
         valesAPI.getById(id),
         valesAPI.getAbonos(id),
       ]);
-      const v: Vale = vRes?.data ?? vRes;
-      const a: Abono[] = aRes?.data ?? aRes ?? [];
+      const v: Vale = vRes?.vale ?? vRes?.data ?? vRes;
+      const a: Abono[] = pick(aRes, 'abonos');
       setVale(v);
       setAbonos(a);
       navigation.setOptions({ title: v.clienteNombre ?? v.clienteName ?? 'Vale' });

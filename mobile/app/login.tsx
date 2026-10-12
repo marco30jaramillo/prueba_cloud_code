@@ -38,8 +38,13 @@ export default function LoginScreen() {
         );
         return;
       }
-      const msg = e?.response?.data?.message || 'No pudimos conectarnos. Revisa tu internet e intenta de nuevo.';
-      Alert.alert('Error de conexión', msg);
+      if (e?.response) {
+        // El servidor respondió: no es un problema de conexión (credenciales, bloqueo, etc.).
+        const msg = e.response.data?.message || 'No pudimos iniciar sesión. Intenta de nuevo.';
+        Alert.alert(e.response.status === 429 ? 'Demasiados intentos' : 'No pudimos iniciar sesión', msg);
+      } else {
+        Alert.alert('Sin conexión', 'No pudimos conectarnos. Revisa tu internet e intenta de nuevo.');
+      }
     } finally {
       setLoading(false);
     }

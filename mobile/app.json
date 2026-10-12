@@ -24,7 +24,8 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      ["expo-image-picker", { "photosPermission": "Mi Valecito necesita acceder a tus fotos para que elijas tu foto de perfil." }]
     ],
     "scheme": "mivalecito",
     "extra": {

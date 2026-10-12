@@ -4,8 +4,8 @@ import {
   ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { valesAPI, tiendasAPI, usersAPI } from '@/lib/api';
-import { useAuthStore, isAdminRole } from '@/lib/store';
+import { valesAPI, tiendasAPI, usersAPI, pick } from '@/lib/api';
+import { useAuthStore, isAdminRole, verTodasLasTiendas } from '@/lib/store';
 
 interface Tienda { id: string; nombre?: string; name?: string }
 interface Cliente { id: string; nombre?: string; name?: string; email?: string }
@@ -30,10 +30,10 @@ export default function ValeNuevoScreen() {
   useEffect(() => {
     const loadTiendas = async () => {
       try {
-        const res = canAdmin
+        const res = verTodasLasTiendas(user?.role)
           ? await tiendasAPI.getAll()
           : await tiendasAPI.getMisTiendas();
-        const list: Tienda[] = res?.data ?? [];
+        const list: Tienda[] = pick(res, 'tiendas');
         setTiendas(list);
         if (list.length > 0) setTiendaId(list[0].id);
       } catch {
@@ -41,7 +41,7 @@ export default function ValeNuevoScreen() {
       }
     };
     loadTiendas();
-  }, [canAdmin]);
+  }, [user?.role]);
 
   const buscarCliente = async (q: string) => {
     setClienteSearch(q);
@@ -50,7 +50,7 @@ export default function ValeNuevoScreen() {
     setSearching(true);
     try {
       const res = await usersAPI.buscarClientes(q);
-      setClienteResults(res?.data ?? []);
+      setClienteResults(pick(res, 'clientes'));
     } catch {
       setClienteResults([]);
     } finally {

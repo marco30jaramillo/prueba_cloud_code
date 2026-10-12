@@ -61,6 +61,9 @@ export const useAuthStore = create<AuthStore>((set) => ({
 export const isAdminRole = (role?: string) =>
   ['superuser', 'administrador', 'tendero'].includes(role ?? '');
 
+/** Superusuario y administrador operan en cualquier tienda; el resto, solo en las suyas. */
+export const verTodasLasTiendas = (role?: string) => ['superuser', 'administrador'].includes(role ?? '');
+
 export const ROLE_LABEL: Record<string, string> = {
   superuser: 'Superusuario',
   administrador: 'Administrador',

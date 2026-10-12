@@ -4,7 +4,7 @@ import {
   RefreshControl, ActivityIndicator, ScrollView,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
-import { valesAPI, tiendasAPI } from '@/lib/api';
+import { valesAPI, tiendasAPI, pick } from '@/lib/api';
 import { formatCOP } from '@/lib/store';
 
 import { Icon } from '@/components/Icon';
@@ -40,7 +40,7 @@ export default function CarteraScreen() {
   const load = useCallback(async () => {
     try {
       const tiRes = await tiendasAPI.getMisTiendas();
-      const tiendas: any[] = tiRes?.data ?? [];
+      const tiendas: any[] = pick(tiRes, 'tiendas');
       if (tiendas.length === 0) {
         setLoading(false);
         setRefreshing(false);
@@ -50,7 +50,7 @@ export default function CarteraScreen() {
       setTiendaNombre(tienda.nombre ?? tienda.name ?? '');
 
       const vRes = await valesAPI.getCartera(tienda.id);
-      const vales: Vale[] = vRes?.data ?? [];
+      const vales: Vale[] = pick(vRes, 'vales');
 
       // Aggregate per client
       const map = new Map<string, ClienteSummary>();
