@@ -15,11 +15,18 @@ Escanea el QR con **Expo Go** (SDK 57) en tu dispositivo.
 
 ## Configuración
 
-```ts
-// mobile/lib/config.ts
-export const API_URL = 'https://app-backend-mivalencito-b3hycrgxaef2bjhn.brazilsouth-01.azurewebsites.net';
-export const WEB_URL = 'https://app-frontend-mivalencito-gkf5bncwcpbkascb.brazilsouth-01.azurewebsites.net/dashboard';
-```
+`lib/config.ts` decide a qué servidor apunta la app:
+
+| Situación | Backend | Web |
+|---|---|---|
+| Desarrollo (`npx expo start`) | `http://<IP de tu máquina>:3001` | `http://<IP de tu máquina>:3000/dashboard` |
+| Compilación de producción | Azure (QA/producción) | Azure |
+| Con `EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_WEB_URL` (ver `.env.example`) | el valor definido | el valor definido |
+
+En desarrollo la IP sale de la dirección con la que Expo sirve la app. Para que el celular llegue
+a tu computador: misma red Wi-Fi, el backend (`backend/`) y, si usas «Abrir versión web», la web
+(`frontend/`) corriendo, y el firewall de Windows permitiendo los puertos 3001 y 3000. Después de
+cambiar la configuración, reinicia con `npx expo start -c`.
 
 ## Generar APK (Android)
 
