@@ -119,7 +119,8 @@ export const Navbar: React.FC = () => {
 
           <BSNavbar.Toggle aria-controls="basic-navbar-nav" />
           <BSNavbar.Collapse id="basic-navbar-nav">
-            <Nav className={isAuthenticated ? 'me-auto' : 'ms-auto'}>
+            {isAuthenticated && <div className={styles.navSpacer} />}
+            <Nav className={isAuthenticated ? styles.navCenter : 'ms-auto'}>
               {!isAuthenticated ? (
                 <>
                   <Nav.Link as={Link} href="/login" className={styles.navLink}>
@@ -143,7 +144,7 @@ export const Navbar: React.FC = () => {
               )}
             </Nav>
             {isAuthenticated && (
-              <Nav className="ms-auto">
+              <Nav className={styles.navUser}>
                   <Dropdown className={styles.userDropdown} align="end">
                     <Dropdown.Toggle as="button" id="user-dropdown" className={styles.userInfo} disabled={isLoggingOut}>
                       <img

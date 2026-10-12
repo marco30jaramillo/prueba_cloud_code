@@ -473,3 +473,26 @@
     cursor: not-allowed;
   }
 }
+
+// Barra expandida (>= 1400 px): logo a la izquierda, enlaces centrados, usuario a la derecha.
+.navSpacer {
+  display: none;
+}
+
+@media (min-width: 1400px) {
+  .navSpacer {
+    display: block;
+    flex: 1 1 0;
+  }
+
+  .navCenter {
+    flex: 0 0 auto;
+    margin-inline: auto;
+    justify-content: center;
+  }
+
+  .navUser {
+    flex: 1 1 0;
+    justify-content: flex-end;
+  }
+}
