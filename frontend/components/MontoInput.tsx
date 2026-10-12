@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Form } from 'react-bootstrap';
+import { soloDigitos, formatearMonto } from '@/lib/monto';
 
 interface Props {
   /** Valor sin formato: cadena de dígitos ("25000"). */
@@ -23,7 +24,7 @@ interface Props {
 export default function MontoInput({
   value, onChange, placeholder = '$ 0', required, disabled, className, style,
 }: Props) {
-  const formateado = value ? '$ ' + parseInt(value, 10).toLocaleString('es-CO') : '';
+  const formateado = formatearMonto(value);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     onChange(e.target.value.replace(/[^\d]/g, ''));
