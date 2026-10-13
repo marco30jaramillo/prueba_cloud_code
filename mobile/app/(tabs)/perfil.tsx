@@ -367,5 +367,5 @@ const styles = StyleSheet.create({
     borderColor: '#fee2e2',
   },
   logoutText: { color: '#dc2626', fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 15 },
-  envNote: { textAlign: 'center', color: '#b45309', fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 12, marginTop: 12 },
+  envNote: { textAlign: 'center', color: '#92400e', fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 12, marginTop: 12 },
 });

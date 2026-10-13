@@ -98,6 +98,16 @@ export const tiendasAPI = {
     const { data } = await api.delete(`/tiendas/${id}/usuarios/${userId}`);
     return data;
   },
+  /** Suma al equipo un vendedor ya registrado, por su correo exacto (propietario o admin). */
+  agregarVendedor: async (id: string, email: string) => {
+    const { data } = await api.post(`/tiendas/${id}/vendedores`, { email });
+    return data;
+  },
+  /** Crea la cuenta de un vendedor (recibe correo de activación) y lo deja en la tienda. */
+  crearVendedor: async (id: string, name: string, email: string) => {
+    const { data } = await api.post(`/tiendas/${id}/vendedores/nuevo`, { name, email });
+    return data;
+  },
 };
 
 // ─── Vales ───────────────────────────────────────────────────────────────────
@@ -137,6 +147,11 @@ export const valesAPI = {
   },
   getAbonos: async (valeId: string) => {
     const { data } = await api.get(`/vales/${valeId}/abonos`);
+    return data;
+  },
+  /** Reparte un pago entre los vales indicados de un cliente, del más antiguo al más reciente. */
+  pagoIntegral: async (body: { clienteId: string; monto: number; valeIds: string[] }) => {
+    const { data } = await api.post('/vales/pago-integral', body);
     return data;
   },
   anularAbono: async (valeId: string, abonoId: string) => {

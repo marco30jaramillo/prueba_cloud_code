@@ -6,6 +6,8 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import { valesAPI, tiendasAPI, pick } from '@/lib/api';
 import { useAuthStore, isAdminRole, formatCOP } from '@/lib/store';
+import { ETIQUETA_ESTADO, esCobrable, estadoVisible } from '@/lib/estado-vale';
+import { colorEstado } from '@/lib/tema';
 
 import { Icon } from '@/components/Icon';
 interface Vale {
@@ -67,7 +69,7 @@ export default function ValesScreen() {
   const filtered = vales.filter((v) => {
     const name = (v.clienteNombre || v.clienteName || '').toLowerCase();
     const matchSearch = !search || name.includes(search.toLowerCase()) || v.descripcion?.toLowerCase().includes(search.toLowerCase());
-    const matchTab = tab === 'todos' || v.estado === 'activo';
+    const matchTab = tab === 'todos' || esCobrable(v.estado);
     return matchSearch && matchTab;
   });
 
@@ -143,9 +145,9 @@ export default function ValesScreen() {
 
 function ValeCard({ vale, onPress }: { vale: Vale; onPress: () => void }) {
   const name = vale.clienteNombre || vale.clienteName || 'Cliente';
-  const isVencido = vale.estado === 'activo' && vale.fechaVencimiento && new Date(vale.fechaVencimiento) < new Date();
-  const badgeColor = vale.estado === 'anulado' ? '#6b7280' : isVencido ? '#dc2626' : '#059669';
-  const badgeLabel = vale.estado === 'anulado' ? 'Anulado' : isVencido ? 'Vencido' : 'Activo';
+  const estado = estadoVisible(vale.estado, vale.fechaVencimiento);
+  const badgeColor = colorEstado[estado];
+  const badgeLabel = ETIQUETA_ESTADO[estado];
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>

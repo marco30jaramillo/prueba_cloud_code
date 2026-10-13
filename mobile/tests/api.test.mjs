@@ -111,6 +111,28 @@ test('RN-21 · removeUsuario usa DELETE sobre la asignación de la tienda', asyn
   assert.equal(ultima().url, '/tiendas/t-1/usuarios/u-1');
 });
 
+test('RN-11 · pagoIntegral envía POST /vales/pago-integral con cliente, monto y vales', async () => {
+  const body = { clienteId: 'c-1', monto: 25000, valeIds: ['v-1', 'v-2'] };
+  await valesAPI.pagoIntegral(body);
+  assert.equal(ultima().method, 'post');
+  assert.equal(ultima().url, '/vales/pago-integral');
+  assert.deepEqual(cuerpo(ultima()), body);
+});
+
+test('Equipo · agregarVendedor envía el correo a POST /tiendas/:id/vendedores', async () => {
+  await tiendasAPI.agregarVendedor('t-1', 'vera@ejemplo.com');
+  assert.equal(ultima().method, 'post');
+  assert.equal(ultima().url, '/tiendas/t-1/vendedores');
+  assert.deepEqual(cuerpo(ultima()), { email: 'vera@ejemplo.com' });
+});
+
+test('Equipo · crearVendedor envía nombre y correo a POST /tiendas/:id/vendedores/nuevo', async () => {
+  await tiendasAPI.crearVendedor('t-1', 'Nico', 'nico@ejemplo.com');
+  assert.equal(ultima().method, 'post');
+  assert.equal(ultima().url, '/tiendas/t-1/vendedores/nuevo');
+  assert.deepEqual(cuerpo(ultima()), { name: 'Nico', email: 'nico@ejemplo.com' });
+});
+
 test('RN-17 · buscarClientes envía q como parámetro de consulta', async () => {
   await usersAPI.buscarClientes('ana');
   assert.equal(ultima().url, '/users/clientes/buscar');

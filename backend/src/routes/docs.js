@@ -189,6 +189,10 @@ router.get('/tiendas', (req, res) => {
       endpoint('POST', '/tiendas/:id/usuarios', 'Asignar tendero/vendedor a tienda', 'tienda:administrar',
         { userId: 'string', esPropietario: 'boolean (opcional)' }),
       endpoint('DELETE', '/tiendas/:id/usuarios/:userId', 'Quitar usuario de la tienda', 'tienda:administrar'),
+      endpoint('POST', '/tiendas/:id/vendedores', 'Agregar al equipo un vendedor ya registrado, por su correo exacto (propietario de la tienda o admin)', 'tienda:ver',
+        { email: 'string' }),
+      endpoint('POST', '/tiendas/:id/vendedores/nuevo', 'Crear la cuenta de un vendedor y sumarlo a la tienda; recibe correo de activación (propietario de la tienda o admin)', 'tienda:ver',
+        { name: 'string', email: 'string' }),
     ],
   });
 });

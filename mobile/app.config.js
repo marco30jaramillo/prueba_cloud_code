@@ -17,7 +17,7 @@ const VARIANTES = {
   qa: {
     nombre: 'Mi Valecito QA',
     identificador: 'com.mivalecito.app.qa',
-    color: '#f59e0b',
+    color: '#D97706',
     // Sin valor por defecto a propósito: una build de QA sin URL debe fallar, no apuntar a producción.
     apiUrl: process.env.API_URL,
     webUrl: process.env.WEB_URL,

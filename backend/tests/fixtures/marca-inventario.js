@@ -100,7 +100,7 @@ function alcance() {
   const web = ['app', 'components', 'hooks', 'lib', 'styles', 'types'].flatMap((d) => listar(rel('frontend', d), /\.(tsx?|scss|css)$/)).filter((f) => path.basename(f) !== 'marca-datos.ts');
   for (const f of ['middleware.ts']) if (fs.existsSync(rel('frontend', f))) web.push(rel('frontend', f));
   const movil = ['app', 'lib'].flatMap((d) => listar(rel('mobile', d), /\.(tsx?|scss|css)$/));
-  const movilConfig = ['app.json'].map((f) => rel('mobile', f)).filter((f) => fs.existsSync(f));
+  const movilConfig = ['app.json', 'app.config.js'].map((f) => rel('mobile', f)).filter((f) => fs.existsSync(f));
   const src = rel('backend', 'src');
   const correos = [rel('backend', 'src', 'mail', 'layout.js'), rel('backend', 'src', 'mail', 'accountMail.js'),
     ...listar(rel('backend', 'src', 'mail', 'templates'), /\.js$/)].filter((f) => fs.existsSync(f));
@@ -686,7 +686,11 @@ function medirFuente() {
     movilTabular: hallazgos(todoMovil, /tabular-nums|tabularNums/i),
     movilIcono: (() => {
       try {
-        const e = JSON.parse(leer(rel('mobile', 'app.json'))).expo || {};
+        // app.config.js (variantes QA/producción) reemplaza a app.json; se mide la de producción.
+        const dinamica = rel('mobile', 'app.config.js');
+        const e = (fs.existsSync(dinamica)
+          ? require(dinamica)
+          : JSON.parse(leer(rel('mobile', 'app.json')))).expo || {};
         return { icon: !!e.icon, splashImage: !!(e.splash && e.splash.image), adaptiveForeground: !!(e.android && e.android.adaptiveIcon && e.android.adaptiveIcon.foregroundImage) };
       } catch { return { icon: false, splashImage: false, adaptiveForeground: false }; }
     })(),

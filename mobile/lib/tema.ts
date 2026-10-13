@@ -22,6 +22,15 @@ export const colores = {
   gris: '#F3F4F6',
 } as const;
 
+/** Color de cada estado visible del vale (lib/estado-vale.ts). */
+export const colorEstado: Record<string, string> = {
+  pendiente: colores.ambar,
+  parcial: colores.azul,
+  pagado: colores.verde,
+  anulado: colores.textoMinimo,
+  mora: colores.rojo,
+};
+
 export const fuentes = {
   regular: 'PlusJakartaSans-Regular',
   semibold: 'PlusJakartaSans-SemiBold',

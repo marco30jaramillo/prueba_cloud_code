@@ -7,6 +7,8 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { valesAPI, pick } from '@/lib/api';
 import { useAuthStore, isAdminRole, formatCOP } from '@/lib/store';
+import { ETIQUETA_ESTADO, esCobrable, estadoVisible } from '@/lib/estado-vale';
+import { colorEstado } from '@/lib/tema';
 
 interface Abono {
   id: string;
@@ -141,11 +143,12 @@ export default function ValeDetailScreen() {
     return <View style={styles.center}><Text style={styles.errorText}>Vale no encontrado.</Text></View>;
   }
 
-  const isVencido = vale.estado === 'activo' && vale.fechaVencimiento && new Date(vale.fechaVencimiento) < new Date();
-  const estadoColor = vale.estado === 'anulado' ? '#6b7280' : isVencido ? '#dc2626' : '#059669';
-  const estadoLabel = vale.estado === 'anulado' ? 'Anulado' : isVencido ? 'Vencido' : 'Activo';
-  const canRegisterAbono = vale.estado === 'activo' && Number(vale.saldoPendiente) > 0;
-  const canAnular = vale.estado === 'activo' && canAdmin;
+  const estado = estadoVisible(vale.estado, vale.fechaVencimiento);
+  const isVencido = estado === 'mora';
+  const estadoColor = colorEstado[estado];
+  const estadoLabel = ETIQUETA_ESTADO[estado];
+  const canRegisterAbono = esCobrable(vale.estado) && Number(vale.saldoPendiente) > 0;
+  const canAnular = esCobrable(vale.estado) && canAdmin;
   const abonosActivos = abonos.filter(a => a.estado !== 'anulado');
 
   return (

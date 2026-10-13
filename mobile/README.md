@@ -67,8 +67,8 @@ mobile/
 │       ├── _layout.tsx        # Tab Navigator (oculta tabs por rol)
 │       ├── index.tsx          # Inicio — panel de acceso
 │       ├── vales.tsx          # Mis Vales / Cartera según rol
-│       ├── cartera.tsx        # KPIs de cartera (admin/tendero)
-│       ├── equipo.tsx         # Gestión de equipo (admin/tendero)
+│       ├── cartera.tsx        # KPIs, buscar cliente, sus vales y pago (admin/tendero)
+│       ├── equipo.tsx         # Equipo; el propietario agrega o crea vendedores
 │       └── perfil.tsx         # Perfil, contraseña, abrir web
 └── lib/
     ├── api.ts                 # Axios + interceptor Bearer token
@@ -90,8 +90,8 @@ mobile/
 | login | todos | JWT login |
 | index | todos | Panel de acceso con tarjetas de módulos |
 | vales | todos | Lista de vales (mis-vales o cartera según rol) |
-| cartera | admin/tendero | KPIs: total pendiente, en mora, abonado |
-| equipo | admin/tendero | Usuarios de la tienda |
+| cartera | admin/tendero | KPIs; buscar cliente por nombre o correo; sus vales por cobrar con selección; «Pagar seleccionados» o «Pago integral» (del más antiguo al más reciente) |
+| equipo | admin/tendero | Usuarios de la tienda; el propietario (y admin) agrega un vendedor registrado por su correo exacto o crea uno nuevo, que recibe correo de activación |
 | perfil | todos | Nombre, contraseña, abrir versión web |
 | vale-nuevo | admin/tendero/vendedor | Formulario crear vale |
 | vale/[id] | todos | Detalle + historial de abonos + registrar abono |
