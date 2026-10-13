@@ -28,7 +28,7 @@
       "autoIncrement": true,
       "env": {
         "APP_VARIANT": "production",
-        "API_URL": "backend-mi-valecito-prod-a0cefyetcwfsabbk.brazilsouth-01.azurewebsites.net",
+        "API_URL": "https://backend-mi-valecito-prod-a0cefyetcwfsabbk.brazilsouth-01.azurewebsites.net",
         "WEB_URL": "https://mi-valecito-hwerd7f0cfena5hx.brazilsouth-01.azurewebsites.net/dashboard"
       },
       "android": {
