@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Build autocontenida (.next/standalone): server.js y solo las dependencias que usa. Es lo que
+  // se sube a Azure App Service (ver desplegar-release.yml), no la carpeta completa.
+  output: 'standalone',
   swcMinify: true,
   images: {
     remotePatterns: [
