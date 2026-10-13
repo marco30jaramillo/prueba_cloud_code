@@ -7,6 +7,8 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useRouter } from 'expo-router';
 import { valesAPI, tiendasAPI, usersAPI, pick } from '@/lib/api';
 import { useAuthStore, isAdminRole, verTodasLasTiendas } from '@/lib/store';
+import { aISO, unMesDespues } from '@/lib/fechas';
+import { CampoFecha } from '@/components/CampoFecha';
 
 interface Tienda { id: string; nombre?: string; name?: string }
 interface Cliente { id: string; nombre?: string; name?: string; email?: string }
@@ -24,7 +26,8 @@ export default function ValeNuevoScreen() {
   const [searching, setSearching] = useState(false);
   const [descripcion, setDescripcion] = useState('');
   const [monto, setMonto] = useState('');
-  const [fechaVencimiento, setFechaVencimiento] = useState('');
+  // Por defecto vence en un mes; el selector no deja elegir días anteriores a hoy.
+  const [fechaVencimiento, setFechaVencimiento] = useState<Date | null>(() => unMesDespues());
   const [notas, setNotas] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -81,7 +84,7 @@ export default function ValeNuevoScreen() {
         montoTotal: montoNum,
       };
       if (notas.trim()) body.notas = notas.trim();
-      if (fechaVencimiento.trim()) body.fechaVencimiento = fechaVencimiento.trim();
+      if (fechaVencimiento) body.fechaVencimiento = aISO(fechaVencimiento);
 
       const res = await valesAPI.crear(body);
       if (res?.status == 'success') {
@@ -184,14 +187,7 @@ export default function ValeNuevoScreen() {
 
         {/* Fecha vencimiento */}
         <Label text="Fecha de vencimiento (opcional)" />
-        <TextInput
-          style={styles.input}
-          value={fechaVencimiento}
-          onChangeText={setFechaVencimiento}
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor="#6b7280"
-          keyboardType="numeric"
-        />
+        <CampoFecha value={fechaVencimiento} onChange={setFechaVencimiento} opcional />
 
         {/* Notas */}
         <Label text="Notas (opcional)" />

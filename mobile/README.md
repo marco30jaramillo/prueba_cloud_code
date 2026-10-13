@@ -117,6 +117,7 @@ if (res?.status == 'success') {
 | axios | ^1.7.7 | HTTP client |
 | react-native-safe-area-context | ~5.7.0 | Safe area |
 | react-native-keyboard-controller | 1.21.9 | Formularios suben sobre el teclado (`KeyboardAwareScrollView`); requiere reanimated + worklets |
+| @react-native-community/datetimepicker | 9.1.0 | Calendario del sistema para fechas (`components/CampoFecha.tsx`) |
 
 ## Notas
 

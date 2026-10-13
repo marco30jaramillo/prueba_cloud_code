@@ -10,6 +10,20 @@ const router = express.Router();
 
 const isAdmin = role => role === 'superuser' || role === 'administrador';
 
+/**
+ * Fecha de vencimiento válida: vacía, o un día que no sea anterior a hoy. Se compara por día
+ * ("YYYY-MM-DD"), con un día de margen respecto a UTC para no rechazar el "hoy" de un teléfono
+ * cuya zona horaria va detrás del servidor (Colombia es UTC-5).
+ */
+function vencimientoInvalido(fecha) {
+  if (fecha === undefined || fecha === null || fecha === '') return null;
+  const d = new Date(fecha);
+  if (typeof fecha !== 'string' || Number.isNaN(d.getTime())) return 'La fecha de vencimiento no es válida';
+  const minimo = new Date(Date.now() - 24 * 3600 * 1000).toISOString().slice(0, 10);
+  if (d.toISOString().slice(0, 10) < minimo) return 'La fecha de vencimiento no puede ser anterior a hoy';
+  return null;
+}
+
 async function tiendaAcceso(userId, role, tiendaId) {
   if (isAdmin(role)) return true;
   return Tienda.hasAcceso(tiendaId, userId);
@@ -24,6 +38,8 @@ router.post('/', authMiddleware, requirePermission('vale:crear'), async (req, re
     return ResponseFormatter.badRequest(res, 'Faltan la tienda, el cliente, la descripción o el monto del vale');
   if (parseFloat(montoTotal) <= 0)
     return ResponseFormatter.badRequest(res, 'El monto debe ser mayor a 0');
+  const errorFecha = vencimientoInvalido(req.body.fechaVencimiento);
+  if (errorFecha) return ResponseFormatter.badRequest(res, errorFecha);
   try {
     if (!await tiendaAcceso(req.user.userId, req.user.role, tiendaId))
       return ResponseFormatter.forbidden(res, 'No tienes acceso a esta tienda');
