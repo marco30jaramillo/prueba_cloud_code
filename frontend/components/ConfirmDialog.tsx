@@ -100,6 +100,6 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
 
 export function useConfirm(): Confirmar {
   const confirmar = useContext(ConfirmContext);
-  if (!confirmar) throw new Error('useConfirm debe usarse dentro de <ConfirmProvider>');
+  if (!confirmar) throw new Error('Falta <ConfirmProvider> en app/layout.tsx');
   return confirmar;
 }
