@@ -20,7 +20,8 @@ Escanea el QR con **Expo Go** (SDK 57) en tu dispositivo.
 | Situación | Backend | Web |
 |---|---|---|
 | Desarrollo (`npx expo start`) | `http://<IP de tu máquina>:3001` | `http://<IP de tu máquina>:3000/dashboard` |
-| Compilación de producción | Azure (QA/producción) | Azure |
+| Build `qa` / `qa-tiendas` (EAS) | `API_URL` del perfil en `eas.json` | `WEB_URL` del perfil |
+| Build `production` (EAS) | Azure producción (`app.config.js`) | Azure producción |
 | Con `EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_WEB_URL` (ver `.env.example`) | el valor definido | el valor definido |
 
 En desarrollo la IP sale de la dirección con la que Expo sirve la app. Para que el celular llegue
@@ -28,21 +29,34 @@ a tu computador: misma red Wi-Fi, el backend (`backend/`) y, si usas «Abrir ver
 (`frontend/`) corriendo, y el firewall de Windows permitiendo los puertos 3001 y 3000. Después de
 cambiar la configuración, reinicia con `npx expo start -c`.
 
-## Generar APK (Android)
+## Variantes QA y producción
+
+`app.config.js` genera dos apps desde el mismo código, según `APP_VARIANT` (lo fija el perfil de `eas.json`):
+
+| Variante | Nombre | Identificador |
+|---|---|---|
+| `production` (por defecto) | Mi Valecito | `com.mivalecito.app` |
+| `qa` | Mi Valecito QA | `com.mivalecito.app.qa` |
+
+Se pueden instalar las dos a la vez; la de QA lo indica en Perfil. Ambas usan el scheme `mivalecito`.
+
+## Generar builds y publicar
 
 ```bash
-# Requiere cuenta Expo + EAS CLI
-npm install -g eas-cli
-eas login
-eas build -p android --profile preview
+npm install -g eas-cli && eas login
+eas build -p android --profile qa           # APK de QA para instalar directo
+eas build -p android --profile production   # AAB para Google Play
+eas build -p ios --profile production       # IPA para App Store / TestFlight
 ```
 
-El perfil `preview` en `eas.json` genera un APK instalable directamente.
+El paso a paso completo (Google Play, App Store, credenciales) está en [PUBLICACION.md](PUBLICACION.md).
 
 ## Estructura
 
 ```
 mobile/
+├── app.config.js              # Variantes QA / producción (nombre, identificador, URLs)
+├── eas.json                   # Perfiles de build: qa, qa-tiendas, production
 ├── app/
 │   ├── _layout.tsx            # Root: init auth, redirección login/tabs
 │   ├── login.tsx              # Pantalla de login
@@ -59,7 +73,7 @@ mobile/
 └── lib/
     ├── api.ts                 # Axios + interceptor Bearer token
     ├── store.ts               # Zustand — token + user en SecureStore
-    └── config.ts              # API_URL, WEB_URL
+    └── config.ts              # API_URL, WEB_URL, APP_VARIANT
 ```
 
 ## Autenticación
@@ -102,6 +116,7 @@ if (res?.status == 'success') {
 | zustand | ^4.5.5 | Estado global |
 | axios | ^1.7.7 | HTTP client |
 | react-native-safe-area-context | ~5.7.0 | Safe area |
+| react-native-keyboard-controller | 1.21.9 | Formularios suben sobre el teclado (`KeyboardAwareScrollView`); requiere reanimated + worklets |
 
 ## Notas
 

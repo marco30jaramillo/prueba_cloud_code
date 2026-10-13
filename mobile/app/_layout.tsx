@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useFonts } from 'expo-font';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { useAuthStore } from '@/lib/store';
 import { archivosFuentes, colores } from '@/lib/tema';
 
@@ -28,29 +29,31 @@ export default function RootLayout() {
   if (!fuentesListas) return null;
 
   return (
-    <Stack>
-      <Stack.Screen name="login" options={{ headerShown: false }} />
-      <Stack.Screen name="forgot-password" options={{ title: 'Recuperar contraseña', headerTintColor: colores.azul, headerShadowVisible: false }} />
-      <Stack.Screen name="reset-password" options={{ title: 'Nueva contraseña', headerTintColor: colores.azul, headerShadowVisible: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="vale-nuevo"
-        options={{
-          presentation: 'modal',
-          title: 'Nuevo vale',
-          headerTintColor: colores.azul,
-          headerStyle: { backgroundColor: colores.superficie },
-        }}
-      />
-      <Stack.Screen
-        name="vale/[id]"
-        options={{
-          title: 'Detalle del vale',
-          headerTintColor: colores.azul,
-          headerStyle: { backgroundColor: colores.superficie },
-          headerShadowVisible: false,
-        }}
-      />
-    </Stack>
+    <KeyboardProvider>
+      <Stack>
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="forgot-password" options={{ title: 'Recuperar contraseña', headerTintColor: colores.azul, headerShadowVisible: false }} />
+        <Stack.Screen name="reset-password" options={{ title: 'Nueva contraseña', headerTintColor: colores.azul, headerShadowVisible: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="vale-nuevo"
+          options={{
+            presentation: 'modal',
+            title: 'Nuevo vale',
+            headerTintColor: colores.azul,
+            headerStyle: { backgroundColor: colores.superficie },
+          }}
+        />
+        <Stack.Screen
+          name="vale/[id]"
+          options={{
+            title: 'Detalle del vale',
+            headerTintColor: colores.azul,
+            headerStyle: { backgroundColor: colores.superficie },
+            headerShadowVisible: false,
+          }}
+        />
+      </Stack>
+    </KeyboardProvider>
   );
 }

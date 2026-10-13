@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Alert,
-  TextInput, ScrollView, ActivityIndicator, Image,
+  TextInput, ActivityIndicator, Image,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuthStore, ROLE_LABEL } from '@/lib/store';
 import { authAPI } from '@/lib/api';
-import { API_URL, WEB_URL } from '@/lib/config';
+import { API_URL, APP_VARIANT, WEB_URL } from '@/lib/config';
 
 import { Icon } from '@/components/Icon';
 export default function PerfilScreen() {
@@ -129,7 +130,12 @@ export default function PerfilScreen() {
   const initial = user?.name?.[0]?.toUpperCase() ?? '?';
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollView
+      style={styles.root}
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      bottomOffset={24}
+    >
       {/* Avatar + info */}
       <View style={styles.profileBox}>
         <TouchableOpacity style={styles.avatarWrap} onPress={handleCambiarFoto} disabled={subiendoFoto} activeOpacity={0.8}
@@ -234,7 +240,9 @@ export default function PerfilScreen() {
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
         <Text style={styles.logoutText}>Cerrar sesión</Text>
       </TouchableOpacity>
-    </ScrollView>
+
+      {APP_VARIANT === 'qa' && <Text style={styles.envNote}>Ambiente de pruebas (QA)</Text>}
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -359,4 +367,5 @@ const styles = StyleSheet.create({
     borderColor: '#fee2e2',
   },
   logoutText: { color: '#dc2626', fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 15 },
+  envNote: { textAlign: 'center', color: '#b45309', fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 12, marginTop: 12 },
 });

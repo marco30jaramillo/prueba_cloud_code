@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, ScrollView,
+  Alert, ActivityIndicator,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { authAPI } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
@@ -60,8 +61,12 @@ export default function ResetPasswordScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollView
+      style={styles.root}
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      bottomOffset={90}
+    >
         <View style={styles.card}>
           <Text style={styles.titulo}>Crea tu contraseña nueva</Text>
           <Text style={styles.texto}>Usa al menos 8 caracteres, con mayúscula, minúscula, número y un carácter especial (como ! o @).</Text>
@@ -73,8 +78,7 @@ export default function ResetPasswordScreen() {
             {loading ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.btnText}>Cambiar contraseña</Text>}
           </TouchableOpacity>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 
