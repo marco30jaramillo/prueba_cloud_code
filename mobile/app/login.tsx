@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, ScrollView,
+  Alert, ActivityIndicator,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useRouter } from 'expo-router';
 import { authAPI } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
@@ -45,11 +46,13 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
+    // Desplaza el formulario por encima del teclado; bottomOffset deja visible también el botón Ingresar.
+    <KeyboardAwareScrollView
       style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      bottomOffset={90}
     >
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.hero}>
           <Text style={styles.logo}>🧾</Text>
           <Text style={styles.appName}>Mi Valecito</Text>
@@ -96,8 +99,7 @@ export default function LoginScreen() {
             }
           </TouchableOpacity>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 

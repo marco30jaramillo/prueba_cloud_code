@@ -105,6 +105,7 @@ if (res?.status == 'success') {
 | zustand | ^4.5.5 | Estado global |
 | axios | ^1.7.7 | HTTP client |
 | react-native-safe-area-context | ~5.7.0 | Safe area |
+| react-native-keyboard-controller | 1.21.9 | Formularios suben sobre el teclado (`KeyboardAwareScrollView`); requiere reanimated + worklets |
 
 ## Notas
 

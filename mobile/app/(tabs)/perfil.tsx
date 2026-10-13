@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Alert,
-  TextInput, ScrollView, ActivityIndicator,
+  TextInput, ActivityIndicator,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuthStore, ROLE_LABEL } from '@/lib/store';
@@ -88,7 +89,12 @@ export default function PerfilScreen() {
   const initial = user?.name?.[0]?.toUpperCase() ?? '?';
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollView
+      style={styles.root}
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      bottomOffset={24}
+    >
       {/* Avatar + info */}
       <View style={styles.profileBox}>
         <View style={styles.avatar}>
@@ -170,7 +176,7 @@ export default function PerfilScreen() {
       </TouchableOpacity>
 
       {APP_VARIANT === 'qa' && <Text style={styles.envNote}>Ambiente de pruebas (QA)</Text>}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

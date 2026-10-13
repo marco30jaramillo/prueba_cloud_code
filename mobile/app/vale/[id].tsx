@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity,
   Alert, ActivityIndicator, TextInput, RefreshControl,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { valesAPI } from '@/lib/api';
 import { useAuthStore, isAdminRole, formatCOP } from '@/lib/store';
@@ -148,9 +149,11 @@ export default function ValeDetailScreen() {
   const abonosActivos = abonos.filter(a => a.estado !== 'anulado');
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       style={styles.root}
       contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      bottomOffset={24}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor="#3b82f6" />}
     >
       {/* Header card */}
@@ -254,7 +257,7 @@ export default function ValeDetailScreen() {
           </View>
         ))
       }
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, StyleSheet, TouchableOpacity,
-  ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, FlatList,
+  ScrollView, Alert, ActivityIndicator, FlatList,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useRouter } from 'expo-router';
 import { valesAPI, tiendasAPI, usersAPI } from '@/lib/api';
 import { useAuthStore, isAdminRole } from '@/lib/store';
@@ -101,8 +102,12 @@ export default function ValeNuevoScreen() {
   const cNombre = (c: Cliente) => c.nombre ?? c.name ?? '';
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={styles.root} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollView
+      style={styles.root}
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      bottomOffset={24}
+    >
 
         {/* Tienda */}
         <Label text="Tienda" />
@@ -212,8 +217,7 @@ export default function ValeNuevoScreen() {
             : <Text style={styles.submitText}>✓ Crear Vale</Text>
           }
         </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 

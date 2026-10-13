@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { useAuthStore } from '@/lib/store';
 
 export default function RootLayout() {
@@ -22,27 +23,29 @@ export default function RootLayout() {
   }, [user, isLoaded, segments]);
 
   return (
-    <Stack>
-      <Stack.Screen name="login" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="vale-nuevo"
-        options={{
-          presentation: 'modal',
-          title: 'Nuevo Vale',
-          headerTintColor: '#3b82f6',
-          headerStyle: { backgroundColor: '#fff' },
-        }}
-      />
-      <Stack.Screen
-        name="vale/[id]"
-        options={{
-          title: 'Detalle del Vale',
-          headerTintColor: '#3b82f6',
-          headerStyle: { backgroundColor: '#fff' },
-          headerShadowVisible: false,
-        }}
-      />
-    </Stack>
+    <KeyboardProvider>
+      <Stack>
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="vale-nuevo"
+          options={{
+            presentation: 'modal',
+            title: 'Nuevo Vale',
+            headerTintColor: '#3b82f6',
+            headerStyle: { backgroundColor: '#fff' },
+          }}
+        />
+        <Stack.Screen
+          name="vale/[id]"
+          options={{
+            title: 'Detalle del Vale',
+            headerTintColor: '#3b82f6',
+            headerStyle: { backgroundColor: '#fff' },
+            headerShadowVisible: false,
+          }}
+        />
+      </Stack>
+    </KeyboardProvider>
   );
 }
