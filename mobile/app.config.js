@@ -21,8 +21,10 @@ const VARIANTES = {
 
 // Sin valores por defecto a propósito: una build sin sus URLs falla en vez de apuntar al
 // ambiente equivocado.
-const apiUrl = process.env.API_URL || undefined;
-const webUrl = process.env.WEB_URL || undefined;
+// Sin «/» final: la app pega rutas que empiezan con «/» (`${API_URL}/datos/...`).
+const sinBarraFinal = (url) => (url ? url.trim().replace(/\/+$/, '') : undefined) || undefined;
+const apiUrl = sinBarraFinal(process.env.API_URL);
+const webUrl = sinBarraFinal(process.env.WEB_URL);
 
 const variante = process.env.APP_VARIANT || 'production';
 const v = VARIANTES[variante];

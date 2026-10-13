@@ -39,6 +39,12 @@ test('producción toma sus URLs del perfil de eas.json', () => {
   assert.equal(c.extra.webUrl, PROD.WEB_URL);
 });
 
+test('las URLs quedan sin «/» final aunque el perfil la traiga', () => {
+  const c = cargar({ ...PROD, API_URL: 'https://api.example.com/', WEB_URL: 'https://web.example.com/dashboard//' });
+  assert.equal(c.extra.apiUrl, 'https://api.example.com');
+  assert.equal(c.extra.webUrl, 'https://web.example.com/dashboard');
+});
+
 test('una build de producción sin URLs falla (también en los servidores de EAS)', () => {
   falla({ APP_VARIANT: 'production' }, /API_URL/);
   falla({ EAS_BUILD: 'true' }, /API_URL/);
