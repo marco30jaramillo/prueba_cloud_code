@@ -92,6 +92,8 @@ router.post('/:id/usuarios', authMiddleware, requirePermission('tienda:administr
     if (!user) return ResponseFormatter.notFound(res, 'No encontramos a esa persona');
     if (!['tendero', ...ROLES_EQUIPO].includes(user.role))
       return ResponseFormatter.badRequest(res, 'Solo tenderos, encargados y vendedores pueden asignarse a una tienda');
+    if (esPropietario && user.role !== 'tendero')
+      return ResponseFormatter.badRequest(res, 'Solo un tendero puede ser dueño de la tienda');
     const entry = await Tienda.addUsuario(req.params.id, userId, esPropietario, req.user.userId);
     return ResponseFormatter.success(res, { entry, message: 'Persona asignada a la tienda' }, 201);
   } catch (err) {

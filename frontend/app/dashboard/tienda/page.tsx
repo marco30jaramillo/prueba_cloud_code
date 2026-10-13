@@ -185,7 +185,7 @@ function TiendaContent() {
     setAddingUser(true);
     setDetailError('');
     try {
-      await tiendasAPI.addUsuario(vistaDetalle, selectedUser.id, esPropietario);
+      await tiendasAPI.addUsuario(vistaDetalle, selectedUser.id, esPropietario && selectedUser.role === 'tendero');
       await openDetalle(vistaDetalle);
       setShowAddUser(false);
       setUserQuery('');
@@ -635,7 +635,7 @@ function TiendaContent() {
         </Modal.Header>
         <Modal.Body>
           <Form.Group className="mb-3">
-            <Form.Label className={styles.label}>Buscar tendero o vendedor</Form.Label>
+            <Form.Label className={styles.label}>Buscar tendero, encargado o vendedor</Form.Label>
             <div className={styles.searchWrapper}>
               <Form.Control
                 placeholder="Nombre o correo..."
@@ -660,11 +660,13 @@ function TiendaContent() {
               )}
             </div>
           </Form.Group>
+          {/* Solo un tendero puede ser dueño; el servidor también lo exige. */}
           <Form.Check
             type="switch"
             label="Es propietario (tendero dueño)"
-            checked={esPropietario}
+            checked={esPropietario && selectedUser?.role === 'tendero'}
             onChange={e => setEsPropietario(e.target.checked)}
+            disabled={!!selectedUser && selectedUser.role !== 'tendero'}
           />
         </Modal.Body>
         <Modal.Footer>

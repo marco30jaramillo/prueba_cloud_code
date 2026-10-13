@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const express = require('express');
 const User = require('../models/User');
 const Role = require('../models/Role');
@@ -397,20 +398,25 @@ router.post('/bootstrap-superuser', async (req, res) => {
   }, 201);
 });
 
+// La contraseña es opcional: la cuenta nace pendiente y al activarla con el enlace del correo
+// la persona define la suya (cambio forzado). Sin contraseña se usa una aleatoria que nadie
+// conoce; si se envía una (scripts y pruebas), debe tener al menos 8 caracteres.
 router.post('/create-user', authMiddleware, async (req, res) => {
-  const { email, password, name, role: targetRole } = req.body;
+  const { email, name, role: targetRole } = req.body;
   const creatorRole = req.user.role;
+  const password = req.body.password === undefined || req.body.password === null || req.body.password === ''
+    ? crypto.randomBytes(32).toString('base64url')
+    : req.body.password;
 
-  if (!email || !password || !name || !targetRole) {
+  if (!email || !name || !targetRole) {
     return ResponseFormatter.badRequest(res, 'Campos requeridos faltantes', {
       email: email ? 'ok' : 'es obligatorio',
-      password: password ? 'ok' : 'es obligatorio',
       name: name ? 'ok' : 'es obligatorio',
       role: targetRole ? 'ok' : 'es obligatorio'
     });
   }
 
-  if (password.length < 8) {
+  if (typeof password !== 'string' || password.length < 8) {
     return ResponseFormatter.badRequest(res, 'La contraseña debe tener al menos 8 caracteres', {
       password: `${password.length}/8 caracteres`
     });

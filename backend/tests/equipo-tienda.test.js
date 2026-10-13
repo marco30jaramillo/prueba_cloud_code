@@ -88,7 +88,11 @@ User.create = async (email, password, name, role, photo, options) => {
   usuarios.set(email, u);
   return u;
 };
-User.findById = async (id) => ({ id, isActive: true, mustChangePassword: false });
+User.findById = async (id) => {
+  const u = [...usuarios.values()].find((x) => x.id === id);
+  return u ? { ...u, mustChangePassword: false } : { id, isActive: true, mustChangePassword: false };
+};
+Role.canCreateRole = async (creador, rol) => creador === 'superuser' || (creador === 'tendero' && rol === 'cliente');
 accountMail.sendActivation = async (user, token, opts) => { correos.push({ user, token, opts }); return { ok: true }; };
 auditMiddleware.logUserCreation = async (...args) => { auditorias.push(args); };
 // Permisos efectivos por defecto (alters/005): el dueño gestiona su equipo; el encargado y el
@@ -282,4 +286,32 @@ test('encargado, vendedor o tendero de otra tienda no quitan -> 403', async () =
   assert.equal((await quitar(TIENDA, 'u-vend', 'vendedor')).status, 403);
   assert.equal((await quitar(TIENDA, 'u-vend', 'tendero', 'u-otro-tendero')).status, 403);
   assert.equal(quitados.length, 0);
+});
+
+// ── Crear usuarios sin contraseña y dueño solo tendero ──────────────────────
+
+test('create-user sin contraseña: cuenta pendiente con contraseña aleatoria y correo de activación', async () => {
+  reset();
+  const r = await post('/auth/create-user', 'superuser', { email: 'nueva@ejemplo.com', name: 'Nueva Persona', role: 'encargado' });
+  assert.equal(r.status, 201);
+  assert.equal(creados.length, 1);
+  assert.ok(creados[0].password.length >= 32, 'contraseña aleatoria larga');
+  assert.deepEqual(creados[0].options, { pending: true, mustChangePassword: true });
+  assert.equal(correos.length, 1);
+});
+
+test('create-user con contraseña corta -> 400 (scripts que la envían)', async () => {
+  reset();
+  assert.equal((await post('/auth/create-user', 'superuser', { email: 'x@ejemplo.com', name: 'X Y', role: 'cliente', password: 'corta' })).status, 400);
+  assert.equal(creados.length, 0);
+});
+
+test('asignar a la tienda: solo un tendero puede quedar como dueño', async () => {
+  reset();
+  const asignar = (userId, esPropietario) => post(`/tiendas/${TIENDA}/usuarios`, 'administrador', { userId, esPropietario });
+  assert.equal((await asignar('u-enc', true)).status, 400);
+  assert.equal((await asignar('u-vend', true)).status, 400);
+  assert.equal(asignaciones.size, 0);
+  assert.equal((await asignar('u-enc', false)).status, 201);
+  assert.equal((await asignar('u-ten2', true)).status, 201);
 });

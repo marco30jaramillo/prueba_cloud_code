@@ -65,7 +65,7 @@ function UsersPageContent() {
   // ── Create user modal ────────────────────────────────────────
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [creatableRoles, setCreatableRoles] = useState<string[]>(['cliente']);
-  const [createFormData, setCreateFormData] = useState({ email: '', password: '', name: '', role: 'cliente' });
+  const [createFormData, setCreateFormData] = useState({ email: '', name: '', role: 'cliente' });
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
@@ -177,13 +177,8 @@ function UsersPageContent() {
   };
 
   const handleCreateUser = async () => {
-    if (!createFormData.email || !createFormData.password || !createFormData.name) {
-      setMessage({ type: 'error', text: 'Completa todos los campos' });
-      return;
-    }
-
-    if (createFormData.password.length < 8) {
-      setMessage({ type: 'error', text: 'La contraseña debe tener al menos 8 caracteres' });
+    if (!createFormData.email || !createFormData.name) {
+      setMessage({ type: 'error', text: 'Completa el nombre y el correo' });
       return;
     }
 
@@ -191,16 +186,15 @@ function UsersPageContent() {
     try {
       await authAPI.createUser(
         createFormData.email,
-        createFormData.password,
         createFormData.name,
         createFormData.role
       );
       setMessage({
         type: 'primary',
-        text: `Usuario ${createFormData.email} creado. Le enviamos un correo para activar la cuenta; hasta entonces no podrá entrar.`
+        text: `Usuario ${createFormData.email} creado. Le enviamos un correo para activar la cuenta y crear su contraseña; hasta entonces no podrá entrar.`
       });
       setShowCreateUser(false);
-      setCreateFormData({ email: '', password: '', name: '', role: 'cliente' });
+      setCreateFormData({ email: '', name: '', role: 'cliente' });
       loadUsers();
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || 'No pudimos crear a la persona';
@@ -620,19 +614,9 @@ function UsersPageContent() {
                 disabled={isCreating}
               />
             </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Contraseña inicial</Form.Label>
-              <Form.Control
-                type="password"
-                value={createFormData.password}
-                onChange={(e) => setCreateFormData(prev => ({ ...prev, password: e.target.value }))}
-                placeholder="Mínimo 8 caracteres"
-                disabled={isCreating}
-              />
-              <Form.Text className="text-muted">
-                La persona recibirá un correo para activar su cuenta y deberá definir su propia contraseña al ingresar.
-              </Form.Text>
-            </Form.Group>
+            <Form.Text className="text-muted d-block mb-3">
+              La persona recibirá un correo para activar su cuenta y ahí creará su propia contraseña.
+            </Form.Text>
             <Form.Group className="mb-3">
               <Form.Label>Rol</Form.Label>
               <Form.Select
