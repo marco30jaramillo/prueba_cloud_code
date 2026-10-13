@@ -4,10 +4,12 @@ import {
   RefreshControl, ActivityIndicator, TextInput,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { valesAPI, tiendasAPI } from '@/lib/api';
-import { useAuthStore, isAdminRole, formatCOP } from '@/lib/store';
+import { valesAPI, tiendasAPI, pick } from '@/lib/api';
+import { useAccesos, formatCOP } from '@/lib/store';
+import { ETIQUETA_ESTADO, esCobrable, estadoVisible } from '@/lib/estado-vale';
+import { colorEstado } from '@/lib/tema';
 
+import { Icon } from '@/components/Icon';
 interface Vale {
   id: string;
   clienteNombre?: string;
@@ -30,23 +32,24 @@ export default function ValesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<TabFilter>('activos');
-  const { user } = useAuthStore();
   const router = useRouter();
-  const canAdmin = isAdminRole(user?.role);
+  // Personal de la tienda (con módulo de cartera o de nuevo vale) ve los vales de su tienda;
+  // el cliente, los suyos.
+  const { valesDeTienda: canAdmin, nuevoVale: puedeCrear } = useAccesos();
 
   const loadVales = useCallback(async () => {
     try {
       let list: Vale[] = [];
       if (canAdmin) {
         const tiRes = await tiendasAPI.getMisTiendas();
-        const tiendas: any[] = tiRes?.data ?? [];
+        const tiendas: any[] = pick(tiRes, 'tiendas');
         if (tiendas.length > 0) {
           const vRes = await valesAPI.getCartera(tiendas[0].id);
-          list = vRes?.data ?? [];
+          list = pick(vRes, 'vales');
         }
       } else {
         const vRes = await valesAPI.getMisVales();
-        list = vRes?.data ?? [];
+        list = pick(vRes, 'vales');
       }
       setVales(list);
     } catch {
@@ -67,14 +70,14 @@ export default function ValesScreen() {
   const filtered = vales.filter((v) => {
     const name = (v.clienteNombre || v.clienteName || '').toLowerCase();
     const matchSearch = !search || name.includes(search.toLowerCase()) || v.descripcion?.toLowerCase().includes(search.toLowerCase());
-    const matchTab = tab === 'todos' || v.estado === 'activo';
+    const matchTab = tab === 'todos' || esCobrable(v.estado);
     return matchSearch && matchTab;
   });
 
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="large" color="#2563eb" />
       </View>
     );
   }
@@ -83,13 +86,13 @@ export default function ValesScreen() {
     <View style={styles.root}>
       {/* Search */}
       <View style={styles.searchWrap}>
-        <Ionicons name="search-outline" size={16} color="#9ca3af" style={{ marginRight: 8 }} />
+        <View style={{ marginRight: 8 }}><Icon name="buscar" size={16} color="#6b7280" /></View>
         <TextInput
           style={styles.searchInput}
           value={search}
           onChangeText={setSearch}
           placeholder="Buscar por cliente o descripción…"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor="#6b7280"
           clearButtonMode="while-editing"
         />
       </View>
@@ -103,7 +106,7 @@ export default function ValesScreen() {
             onPress={() => setTab(t)}
           >
             <Text style={[styles.tabLabel, tab === t && styles.tabLabelActive]}>
-              {t === 'activos' ? '🟢 Activos' : 'Todos'}
+              {t === 'activos' ? 'Activos' : 'Todos'}
             </Text>
           </TouchableOpacity>
         ))}
@@ -119,12 +122,12 @@ export default function ValesScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => { setRefreshing(true); loadVales(); }}
-            tintColor="#3b82f6"
+            tintColor="#2563eb"
           />
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>📋</Text>
+            <View style={{ marginBottom: 12 }}><Icon name="vale" size={48} color="#6b7280" /></View>
             <Text style={styles.emptyText}>
               {search ? 'Sin resultados' : 'No hay vales'}
             </Text>
@@ -134,18 +137,20 @@ export default function ValesScreen() {
       />
 
       {/* FAB */}
-      <TouchableOpacity style={styles.fab} onPress={() => router.push('/vale-nuevo')} activeOpacity={0.85}>
-        <Ionicons name="add" size={30} color="#fff" />
-      </TouchableOpacity>
+      {puedeCrear && (
+        <TouchableOpacity style={styles.fab} onPress={() => router.push('/vale-nuevo')} activeOpacity={0.85}>
+          <Icon name="agregar" size={30} color="#ffffff" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
 
 function ValeCard({ vale, onPress }: { vale: Vale; onPress: () => void }) {
   const name = vale.clienteNombre || vale.clienteName || 'Cliente';
-  const isVencido = vale.estado === 'activo' && vale.fechaVencimiento && new Date(vale.fechaVencimiento) < new Date();
-  const badgeColor = vale.estado === 'anulado' ? '#6b7280' : isVencido ? '#ef4444' : '#10b981';
-  const badgeLabel = vale.estado === 'anulado' ? 'Anulado' : isVencido ? 'Vencido' : 'Activo';
+  const estado = estadoVisible(vale.estado, vale.fechaVencimiento);
+  const badgeColor = colorEstado[estado];
+  const badgeLabel = ETIQUETA_ESTADO[estado];
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
@@ -164,7 +169,7 @@ function ValeCard({ vale, onPress }: { vale: Vale; onPress: () => void }) {
         </View>
         <View style={{ alignItems: 'flex-end' }}>
           <Text style={styles.amountLabel}>Pendiente</Text>
-          <Text style={[styles.amountValue, { color: Number(vale.saldoPendiente) > 0 ? '#ef4444' : '#10b981' }]}>
+          <Text style={[styles.amountValue, { color: Number(vale.saldoPendiente) > 0 ? '#dc2626' : '#059669' }]}>
             {formatCOP(vale.saldoPendiente)}
           </Text>
         </View>
@@ -179,7 +184,7 @@ const styles = StyleSheet.create({
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     margin: 16,
     marginBottom: 8,
     borderRadius: 12,
@@ -188,7 +193,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 44,
   },
-  searchInput: { flex: 1, fontSize: 14, color: '#111827' },
+  searchInput: { flex: 1, fontSize: 14, color: '#1f2937' },
   tabRow: {
     flexDirection: 'row',
     marginHorizontal: 16,
@@ -198,11 +203,11 @@ const styles = StyleSheet.create({
     padding: 3,
   },
   tabBtn: { flex: 1, paddingVertical: 7, borderRadius: 8, alignItems: 'center' },
-  tabBtnActive: { backgroundColor: '#fff' },
-  tabLabel: { fontSize: 13, color: '#6b7280', fontWeight: '500' },
-  tabLabelActive: { color: '#111827', fontWeight: '700' },
+  tabBtnActive: { backgroundColor: '#ffffff' },
+  tabLabel: { fontSize: 13, color: '#6b7280', fontFamily: 'PlusJakartaSans-SemiBold' },
+  tabLabelActive: { color: '#1f2937', fontFamily: 'PlusJakartaSans-ExtraBold' },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     borderRadius: 14,
     padding: 14,
     shadowColor: '#000',
@@ -212,17 +217,17 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
-  clienteName: { fontSize: 15, fontWeight: '700', color: '#111827', flex: 1, marginRight: 8 },
+  clienteName: { fontSize: 15, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#1f2937', flex: 1, marginRight: 8 },
   badge: { borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
-  badgeText: { fontSize: 12, fontWeight: '600' },
+  badgeText: { fontSize: 12, fontFamily: 'PlusJakartaSans-SemiBold' },
   tienda: { fontSize: 12, color: '#6b7280', marginBottom: 2 },
   desc: { fontSize: 13, color: '#6b7280', marginBottom: 10 },
   amounts: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#f3f4f6', paddingTop: 8 },
-  amountLabel: { fontSize: 11, color: '#9ca3af', fontWeight: '500', marginBottom: 2 },
-  amountValue: { fontSize: 16, fontWeight: '700', color: '#111827' },
+  amountLabel: { fontSize: 11, color: '#6b7280', fontFamily: 'PlusJakartaSans-SemiBold', marginBottom: 2 },
+  amountValue: { fontSize: 16, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#1f2937' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
   emptyIcon: { fontSize: 48, marginBottom: 12 },
-  emptyText: { color: '#9ca3af', fontSize: 16 },
+  emptyText: { color: '#6b7280', fontSize: 16 },
   fab: {
     position: 'absolute',
     bottom: 24,
@@ -230,10 +235,10 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#2563eb',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#3b82f6',
+    shadowColor: '#2563eb',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 10,

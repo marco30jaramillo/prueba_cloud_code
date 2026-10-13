@@ -1,10 +1,10 @@
 .home {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafb 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
 }
 
 .hero {
   padding: 60px 0 80px;
-  background: linear-gradient(135deg, #f0fdf4 0%, #ecf9f4 100%);
+  background: linear-gradient(135deg, #d1fae5 0%, #d1fae5 100%);
   border-bottom: 2px solid #d1fae5;
 }
 
@@ -17,14 +17,14 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #10b981;
+  color: #2563eb;
   margin-bottom: 1rem;
 }
 
 .title {
   font-size: 2.75rem;
   font-weight: 800;
-  color: #064e3b;
+  color: #065f46;
   margin-bottom: 1.5rem;
   line-height: 1.2;
   text-wrap: balance;
@@ -64,25 +64,25 @@
 }
 
 .btnPrimary {
-  background-color: #10b981;
-  border-color: #10b981;
+  background-color: #2563eb;
+  border-color: #2563eb;
 
   &:hover {
-    background-color: #059669;
-    border-color: #059669;
+    background-color: #047857;
+    border-color: #047857;
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
   }
 }
 
 .btnSecondary {
-  color: #10b981;
-  border-color: #10b981;
+  color: #2563eb;
+  border-color: #2563eb;
 
   &:hover {
     color: #ffffff;
-    background-color: #059669;
-    border-color: #059669;
+    background-color: #047857;
+    border-color: #047857;
     transform: translateY(-2px);
   }
 }
@@ -108,12 +108,12 @@
   border: 1px solid #d1fae5;
   border-radius: 12px;
   padding: 1.25rem 1.5rem;
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.12);
-  border-left: 4px solid #f59e0b;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.12);
+  border-left: 4px solid #d97706;
 }
 
 .illustrationCardPaid {
-  border-left-color: #10b981;
+  border-left-color: #2563eb;
 }
 
 .illustrationLabel {
@@ -121,7 +121,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #9ca3af;
+  color: #6b7280;
   margin: 0 0 0.25rem;
 }
 
@@ -135,7 +135,7 @@
 .illustrationAmount {
   font-size: 1.5rem;
   font-weight: 800;
-  color: #064e3b;
+  color: #065f46;
   font-variant-numeric: tabular-nums;
   margin: 0 0 0.25rem;
 }
@@ -150,13 +150,15 @@
 
 .problem {
   padding: 80px 0;
-  background: #fffbeb;
-  border-top: 1px solid #fde68a;
-  border-bottom: 1px solid #fde68a;
+  background: #fef3c7;
+  border-top: 1px solid #fef3c7;
+  border-bottom: 1px solid #fef3c7;
 }
 
 .notebookIcon {
   font-size: 8rem;
+  color: #2563eb;
+  line-height: 1;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.08));
 }
 
@@ -165,7 +167,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #d97706;
+  color: #b45309;
   margin-bottom: 0.75rem;
 }
 
@@ -184,13 +186,13 @@
   margin-bottom: 1rem;
 
   strong {
-    color: #064e3b;
+    color: #065f46;
   }
 }
 
 .features {
   padding: 80px 0;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafb 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
 }
 
 .sectionTitle {
@@ -208,14 +210,14 @@
 
 .featureCard {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   border: 1px solid #e5e7eb;
   border-radius: 12px;
 
   &:hover {
     transform: translateY(-8px);
-    box-shadow: 0 20px 40px rgba(16, 185, 129, 0.15);
-    border-color: #10b981;
+    box-shadow: 0 20px 40px rgba(37, 99, 235, 0.15);
+    border-color: #2563eb;
   }
 }
 
@@ -245,7 +247,7 @@
 
 .roles {
   padding: 80px 0;
-  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  background: linear-gradient(135deg, #d1fae5 0%, #d1fae5 100%);
   border-top: 1px solid #d1fae5;
 }
 
@@ -281,23 +283,23 @@
 }
 
 .superuser {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  color: #78350f;
+  background: linear-gradient(135deg, #fef3c7 0%, #fef3c7 100%);
+  color: #92400e;
 }
 
 .admin {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  color: #1e3a8a;
+  background: linear-gradient(135deg, #dbeafe 0%, #dbeafe 100%);
+  color: #1e40af;
 }
 
 .vendor {
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #166534;
+  background: linear-gradient(135deg, #d1fae5 0%, #d1fae5 100%);
+  color: #065f46;
 }
 
 .client {
-  background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
-  color: #581c87;
+  background: linear-gradient(135deg, #dbeafe 0%, #dbeafe 100%);
+  color: #1e40af;
 }
 
 .tenderoHint {
@@ -307,7 +309,7 @@
 }
 
 .tenderoLink {
-  color: #059669;
+  color: #047857;
   font-weight: 600;
   text-decoration: none;
 
@@ -319,7 +321,7 @@
 
 .cta {
   padding: 80px 0;
-  background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #2563eb 100%);
   color: white;
 }
 
@@ -377,14 +379,14 @@
 
 .ctaBtn {
   background-color: white;
-  color: #10b981;
+  color: #2563eb;
   border: none;
   transition: all 0.3s ease;
   font-weight: 600;
   width: 100%;
 
   &:hover {
-    background-color: #f0fdf4;
+    background-color: #d1fae5;
     transform: translateY(-2px);
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   }

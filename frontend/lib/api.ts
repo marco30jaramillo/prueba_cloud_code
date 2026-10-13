@@ -133,10 +133,10 @@ export const authAPI = {
     return data;
   },
 
-  createUser: async (email: string, password: string, name: string, role: string) => {
+  /** Crea la cuenta pendiente; la persona define su contraseña al activarla con el correo. */
+  createUser: async (email: string, name: string, role: string) => {
     const { data } = await apiClient.post<AuthResponse>('/auth/create-user', {
       email,
-      password,
       name,
       role
     });
@@ -225,6 +225,11 @@ export const usersAPI = {
 
   generatePassword: async (userId: string) => {
     const { data } = await apiClient.post(`/users/${userId}/generate-password`, {});
+    return data;
+  },
+
+  revokeSessions: async (userId: string) => {
+    const { data } = await apiClient.post(`/users/${userId}/revoke-sessions`, {});
     return data;
   },
 

@@ -89,8 +89,11 @@ Vale.findById = async (id) => {
   return null;
 };
 Tienda.hasAcceso = async (tiendaId, userId) => tiendaId === TIENDA_PROPIA && userId === 'u-tendero';
+// tienda:administrar («Mi tienda» en total) da acceso a cualquier tienda (alters/005).
 const PERMISOS = {
-  tendero: ['abono:anular'], administrador: ['abono:anular'], superuser: ['abono:anular'],
+  tendero: ['abono:anular'],
+  administrador: ['abono:anular', 'tienda:administrar'],
+  superuser: ['abono:anular', 'tienda:administrar'],
   vendedor: [], cliente: [],
 };
 Role.hasPermission = async (role, permiso) => (PERMISOS[role] || []).includes(permiso);

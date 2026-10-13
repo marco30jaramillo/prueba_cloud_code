@@ -23,10 +23,25 @@ api.interceptors.response.use(
   (error) => Promise.reject(error)
 );
 
+/**
+ * El backend responde `{ status, <clave>: ... }` (p. ej. `tiendas`, `vales`, `usuarios`).
+ * Se acepta también el formato antiguo `{ data: ... }`.
+ */
+export const pick = <T = any>(res: any, key: string, vacio: any = []): T =>
+  (res?.[key] ?? res?.data?.[key] ?? (Array.isArray(vacio) ? (Array.isArray(res?.data) ? res.data : undefined) : res?.data) ?? vacio) as T;
+
 // ─── Auth ────────────────────────────────────────────────────────────────────
 export const authAPI = {
   login: async (email: string, password: string) => {
     const { data } = await api.post('/auth/login', { email, password });
+    return data;
+  },
+  forgotPassword: async (email: string) => {
+    const { data } = await api.post('/auth/forgot-password', { email });
+    return data;
+  },
+  resetPassword: async (token: string, newPassword: string) => {
+    const { data } = await api.post('/auth/reset-password', { token, newPassword });
     return data;
   },
   validate: async () => {
@@ -42,8 +57,30 @@ export const authAPI = {
     });
     return data;
   },
-  updateProfile: async (name: string) => {
-    const { data } = await api.patch('/auth/profile', { name });
+  updateProfile: async (name: string, photo?: string) => {
+    const { data } = await api.patch('/auth/profile', photo ? { name, photo } : { name });
+    return data;
+  },
+  /** Sube la foto (el servidor la recorta y comprime) y devuelve la URL guardada. */
+  uploadPhoto: async (uri: string, mimeType?: string) => {
+    const form = new FormData();
+    const tipo = mimeType || 'image/jpeg';
+    const ext = tipo.split('/')[1] || 'jpg';
+    form.append('photo', { uri, name: `foto.${ext}`, type: tipo } as any);
+    const { data } = await api.post('/upload/photo', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 30000,
+      transformRequest: (d) => d,
+    });
+    return data;
+  },
+};
+
+// ─── Módulos ─────────────────────────────────────────────────────────────────
+export const modulesAPI = {
+  /** Módulos del rol de la sesión, según sus permisos (los mismos del menú web). */
+  getMios: async () => {
+    const { data } = await api.get('/modules');
     return data;
   },
 };
@@ -68,6 +105,21 @@ export const tiendasAPI = {
   },
   removeUsuario: async (id: string, userId: string) => {
     const { data } = await api.delete(`/tiendas/${id}/usuarios/${userId}`);
+    return data;
+  },
+  /** Suma al equipo un vendedor o encargado ya registrado, por su correo exacto (dueño o admin). */
+  agregarAlEquipo: async (id: string, email: string) => {
+    const { data } = await api.post(`/tiendas/${id}/equipo`, { email });
+    return data;
+  },
+  /** Crea la cuenta (vendedor o encargado; recibe correo de activación) y la deja en la tienda. */
+  crearMiembro: async (id: string, name: string, email: string, rol: 'vendedor' | 'encargado') => {
+    const { data } = await api.post(`/tiendas/${id}/equipo/nuevo`, { name, email, rol });
+    return data;
+  },
+  /** Quita a un vendedor o encargado de la tienda (dueño o admin). */
+  quitarDelEquipo: async (id: string, userId: string) => {
+    const { data } = await api.delete(`/tiendas/${id}/equipo/${userId}`);
     return data;
   },
 };
@@ -109,6 +161,11 @@ export const valesAPI = {
   },
   getAbonos: async (valeId: string) => {
     const { data } = await api.get(`/vales/${valeId}/abonos`);
+    return data;
+  },
+  /** Reparte un pago entre los vales indicados de un cliente, del más antiguo al más reciente. */
+  pagoIntegral: async (body: { clienteId: string; monto: number; valeIds: string[] }) => {
+    const { data } = await api.post('/vales/pago-integral', body);
     return data;
   },
   anularAbono: async (valeId: string, abonoId: string) => {

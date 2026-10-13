@@ -42,8 +42,8 @@ const dias = n => {
 // ── Dataset ───────────────────────────────────────────────────
 
 const TIENDAS = [
-  { nombre: 'Tienda La Esquina',     descripcion: 'Tienda de barrio clásica', ciudad: 'Cartagena', telefono: '3001111001' },
-  { nombre: 'Mercado El Progreso',   descripcion: 'Surtido completo de víveres', ciudad: 'Cartagena', telefono: '3002222002' },
+  { nombre: 'Tienda La Esquina',     descripcion: 'Tienda de barrio clásica', ciudad: '', telefono: '3001111001' },
+  { nombre: 'Mercado El Progreso',   descripcion: 'Surtido completo de víveres', ciudad: '', telefono: '3002222002' },
   { nombre: 'Minimarket San José',   descripcion: 'Tu tienda de confianza 24h', ciudad: 'Barranquilla', telefono: '3003333003' },
 ];
 

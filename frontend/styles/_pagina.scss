@@ -1,0 +1,48 @@
+// Estructura común de las pantallas del panel: mismo ancho, mismo margen y mismo encabezado.
+// Uso en un módulo SCSS:
+//   @use '../../../styles/pagina' as p;
+//   .container { @include p.contenedor; }
+//   .header    { @include p.cabecera; }
+//   .title     { @include p.titulo; }
+//   .subtitle  { @include p.subtitulo; }
+
+@mixin contenedor {
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  min-height: 100vh;
+}
+
+@mixin cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+@mixin titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 0.25rem;
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #1f2937;
+  text-align: left;
+
+  svg {
+    color: #2563eb;
+    flex-shrink: 0;
+  }
+}
+
+@mixin subtitulo {
+  margin: 0;
+  font-size: 1rem;
+  color: #4b5563;
+}

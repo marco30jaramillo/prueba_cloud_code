@@ -19,6 +19,16 @@ NEXT_PUBLIC_API_URL=http://localhost:3001
 # NEXT_PUBLIC_API_URL=https://app-backend-mivalencito-b3hycrgxaef2bjhn.brazilsouth-01.azurewebsites.net
 ```
 
+## Pruebas
+
+| Comando | Qué hace |
+|---|---|
+| `npm test` | Lógica pura (montos, pago integral). Sin servidor ni navegador. |
+| `npm run test:web` en `backend/` | Recorrido en navegador (Playwright, Edge): crea la base de pruebas, el backend en `127.0.0.1:3101` y la web en `127.0.0.1:3100`, y lo elimina todo al terminar. Solo local. |
+
+`npm run test:e2e` no se ejecuta solo: lo lanza `test:web`, que le entrega las credenciales efímeras de la corrida.
+El recorrido ya no forma parte de `npm run test:db` (que queda solo con pruebas de API).
+
 ## Estructura
 
 ```

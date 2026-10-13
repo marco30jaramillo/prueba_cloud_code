@@ -117,6 +117,25 @@ const auditMiddleware = {
     await AuditLog.create(log);
   },
 
+  async logUserSessionsClosed(adminId, targetUserId, closedCount, ipAddress, userAgent) {
+    const actor = await lookupUser(adminId);
+    const target = await lookupUser(targetUserId);
+    const log = new AuditLog({
+      action: 'user_sessions_closed',
+      actorId: adminId,
+      actorEmail: actor.email,
+      actorName: actor.name,
+      targetId: targetUserId,
+      targetEmail: target.email,
+      ipAddress,
+      userAgent,
+      success: true,
+      details: { closedCount },
+      method: 'admin'
+    });
+    await AuditLog.create(log);
+  },
+
   async logPasswordGeneration(adminId, targetUserId, ipAddress, userAgent) {
     const actor = await lookupUser(adminId);
     const target = await lookupUser(targetUserId);

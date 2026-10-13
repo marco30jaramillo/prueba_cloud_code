@@ -22,7 +22,7 @@ class ResponseFormatter {
       statusCode: 401,
       error: 'UNAUTHORIZED',
       message: reason,
-      hint: 'Verifica que hayas incluido un token válido en el header Authorization',
+      hint: 'Inicia sesión de nuevo e intenta otra vez',
       example: 'Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGc...',
       timestamp: new Date().toISOString()
     });
@@ -71,7 +71,7 @@ class ResponseFormatter {
     });
   }
 
-  static internalError(res, message = 'Error interno del servidor') {
+  static internalError(res, message = 'Algo salió mal. Intenta de nuevo en unos minutos') {
     return res.status(500).json({
       status: 'error',
       statusCode: 500,

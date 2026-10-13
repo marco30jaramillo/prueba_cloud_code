@@ -9,6 +9,7 @@ const ACTION_LABELS = {
   user_enable:                'Usuario habilitado',
   user_disable:               'Usuario deshabilitado',
   password_generated:         'Contraseña generada por admin',
+  user_sessions_closed:       'Sesiones de usuario cerradas por admin',
   failed_login_attempt:       'Intento de acceso fallido',
   password_reset_requested:   'Solicitud de recuperación de contraseña',
   superuser_created:          'Superusuario creado',

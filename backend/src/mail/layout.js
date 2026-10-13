@@ -9,8 +9,8 @@
 const BRAND = 'Mi Valecito';
 const SIGNATURE = 'Atentamente, el equipo de soporte';
 const FOOTER_LINES = [
-  'Este correo es autogenerado; por favor no lo responda.',
-  'Sus datos personales serán tratados conforme a la normativa colombiana de protección de datos personales.',
+  'Este correo es autogenerado; por favor no lo respondas.',
+  'Tratamos tus datos personales conforme a la normativa colombiana de protección de datos personales.',
 ];
 
 function escapeHtml(value) {
@@ -64,13 +64,13 @@ function renderLayout({ name, paragraphs = [], action = null, after = [], prehea
   const url = action ? assertHttpUrl(action.url) : null;
 
   const p = (text) =>
-    `<p style="margin:0 0 16px 0;font-size:16px;line-height:1.5;color:#1f2933;">${escapeHtml(text)}</p>`;
+    `<p style="margin:0 0 16px 0;font-size:16px;line-height:1.5;color:#1f2937;">${escapeHtml(text)}</p>`;
 
   const button = action
     ? `<p style="margin:24px 0;text-align:center;">
-        <a href="${escapeHtml(url)}" style="display:inline-block;background:#1a7f5a;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:14px 28px;border-radius:6px;">${escapeHtml(action.label)}</a>
+        <a href="${escapeHtml(url)}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:14px 28px;border-radius:6px;">${escapeHtml(action.label)}</a>
       </p>
-      <p style="margin:0 0 16px 0;font-size:13px;line-height:1.5;color:#52606d;word-break:break-all;">Si el botón no funciona, copie y pegue este enlace en su navegador:<br>${escapeHtml(url)}</p>`
+      <p style="margin:0 0 16px 0;font-size:13px;line-height:1.5;color:#4b5563;word-break:break-all;">Si el botón no funciona, copia y pega este enlace en tu navegador:<br>${escapeHtml(url)}</p>`
     : '';
 
   const html = `<!DOCTYPE html>
@@ -80,20 +80,20 @@ function renderLayout({ name, paragraphs = [], action = null, after = [], prehea
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(BRAND)}</title>
 </head>
-<body style="margin:0;padding:0;background:#f3f5f7;font-family:Arial,Helvetica,sans-serif;">
+<body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;">
 <span style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(singleLine(preheader, 140))}</span>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f5f7;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;">
   <tr><td align="center" style="padding:16px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:8px;">
-      <tr><td style="padding:20px 24px;background:#1a7f5a;border-radius:8px 8px 0 0;font-size:20px;font-weight:bold;color:#ffffff;">${escapeHtml(BRAND)}</td></tr>
+      <tr><td style="padding:20px 24px;background:#2563eb;border-radius:8px 8px 0 0;font-size:20px;font-weight:bold;color:#ffffff;">${escapeHtml(BRAND)}</td></tr>
       <tr><td style="padding:24px;">
-        <p style="margin:0 0 16px 0;font-size:18px;font-weight:bold;color:#1f2933;">${escapeHtml(greeting)}</p>
+        <p style="margin:0 0 16px 0;font-size:18px;font-weight:bold;color:#1f2937;">${escapeHtml(greeting)}</p>
         ${paragraphs.map(p).join('\n        ')}
         ${button}
         ${after.map(p).join('\n        ')}
-        <p style="margin:24px 0 0 0;font-size:16px;line-height:1.5;color:#1f2933;">${escapeHtml(SIGNATURE)}</p>
+        <p style="margin:24px 0 0 0;font-size:16px;line-height:1.5;color:#1f2937;">${escapeHtml(SIGNATURE)}</p>
       </td></tr>
-      <tr><td style="padding:16px 24px;border-top:1px solid #e4e7eb;font-size:12px;line-height:1.5;color:#7b8794;">
+      <tr><td style="padding:16px 24px;border-top:1px solid #e5e7eb;font-size:12px;line-height:1.5;color:#6b7280;">
         ${FOOTER_LINES.map((line) => `<p style="margin:0 0 6px 0;">${escapeHtml(line)}</p>`).join('\n        ')}
       </td></tr>
     </table>
