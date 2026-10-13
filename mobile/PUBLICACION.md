@@ -25,6 +25,7 @@ Perfiles de `eas.json`:
 - `qa`: APK para instalar directo en los teléfonos de prueba (sin tienda).
 - `qa-tiendas`: la app de QA como AAB/IPA para la pista interna de Play o TestFlight.
 - `production`: la app real, AAB para Play e IPA para App Store. El número de build sube solo (`autoIncrement`).
+- `production-apk`: la misma app real, en APK para compartir sin Play (ver 1b).
 
 ---
 
@@ -58,6 +59,29 @@ el comando. No hace falta pasar por Google Play.
 
 La primera vez, EAS pregunta si genera la llave de firma (keystore): responde **sí**. EAS la guarda en tu
 cuenta. No la borres ni la pierdas: es la que identifica tu app.
+
+## 1b. Producción sin Google Play (APK para un grupo de usuarios)
+
+Mientras no se publique en Play, la app de producción también se reparte como APK:
+
+```bash
+eas build -p android --profile production-apk
+```
+
+Es la misma app que la de Play (nombre "Mi Valecito", `com.mivalecito.app`, URLs del perfil
+`production`, misma llave de firma), solo que en APK. EAS da un enlace que cualquiera con el
+enlace puede abrir para instalar, sin cuenta de Expo.
+
+- **Actualizar:** cada build nueva sube el `versionCode` sola. Las personas descargan el APK nuevo
+  del enlace y lo instalan encima; conservan su sesión y sus datos. No hay aviso automático de
+  actualización: hay que avisarles.
+- **Android pide permiso** para instalar apps de origen desconocido, y Play Protect puede mostrar
+  una advertencia la primera vez; se continúa con «Instalar de todos modos».
+- **Si más adelante se publica en Play:** al crear la app en Play Console, en «Firma de apps»,
+  usar la **misma llave** de EAS como clave de firma (no la que genera Google). Así quienes ya
+  tienen el APK reciben las actualizaciones de Play sin desinstalar. Si Play firma con otra clave,
+  tendrían que desinstalar el APK primero.
+- Respaldar la llave: `eas credentials` → Android → `com.mivalecito.app` → descargar el keystore.
 
 ---
 
