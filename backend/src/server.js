@@ -18,8 +18,11 @@ const tiendasRoutes     = require('./routes/tiendas');
 const valesRoutes       = require('./routes/vales');
 const docsRoutes        = require('./routes/docs');
 const TokenCleaner = require('./scripts/cleanExpiredTokens');
+const PendingAccountPurger = require('./scripts/purgePendingAccounts');
 const TokenManager = require('./utils/tokenManager');
 const ResponseFormatter = require('./utils/responseFormatter');
+const { authMiddleware } = require('./middleware/auth');
+const roleMiddleware = require('./middleware/roleMiddleware');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -47,7 +50,7 @@ const corsOptions = {
     if (!origin || allowedOriginPatterns.some(r => r.test(origin))) {
       callback(null, true);
     } else {
-      callback(new Error('CORS policy: solicitud no permitida'), false);
+      callback(new Error('Solicitud no permitida'), false);
     }
   },
   credentials: true,
@@ -71,36 +74,29 @@ app.use('/docs', docsRoutes);
 
 app.get('/health', (req, res) => {
   ResponseFormatter.success(res, {
-    message: 'Servidor operacional',
+    message: 'Todo funciona',
     status: 'healthy',
     timestamp: new Date().toISOString()
   });
 });
 
-app.get('/debug/headers', (req, res) => {
-  ResponseFormatter.success(res, {
-    message: 'Headers recibidos',
-    authorization: {
-      header: req.headers.authorization || '❌ NO INCLUIDO',
-      status: req.headers.authorization ? '✅ Presente' : '❌ Faltante'
-    },
-    allHeaders: req.headers
-  });
-});
+// Operaciones de sistema: solo superusuario y administrador (req. 005, S-06). Se usa el rol
+// y no un permiso porque no son operaciones de una tienda. `/health` es la única pública.
+const soloAdministracion = [authMiddleware, roleMiddleware.requireRole('superuser', 'administrador')];
 
-app.get('/tokens/stats', (req, res) => {
+app.get('/tokens/stats', ...soloAdministracion, (req, res) => {
   const tokenManager = new TokenManager();
   const stats = tokenManager.getStats();
   ResponseFormatter.success(res, {
-    message: 'Estadísticas de tokens',
+    message: 'Estadísticas de sesiones',
     stats
   });
 });
 
-app.post('/tokens/clean', (req, res) => {
+app.post('/tokens/clean', ...soloAdministracion, (req, res) => {
   const deleted = TokenCleaner.run();
   ResponseFormatter.success(res, {
-    message: 'Limpieza de tokens ejecutada',
+    message: 'Limpieza de sesiones ejecutada',
     tokensEliminados: deleted
   });
 });
@@ -201,18 +197,21 @@ app.get('/docs', (req, res) => {
           method: 'GET',
           path: '/health',
           description: 'Verificar estado del servidor',
+          auth: 'none',
           response: { status: 'healthy' }
         },
         {
           method: 'GET',
           path: '/tokens/stats',
           description: 'Ver estadísticas de tokens',
+          auth: 'required (superuser o administrador)',
           response: { stats: { totalGranted: 'number', totalRevoked: 'number' } }
         },
         {
           method: 'POST',
           path: '/tokens/clean',
           description: 'Ejecutar limpieza manual de tokens vencidos',
+          auth: 'required (superuser o administrador)',
           response: { tokensEliminados: 'number' }
         },
         {
@@ -232,8 +231,11 @@ app.get('/docs', (req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error('🔴 Error no capturado:', err);
-  ResponseFormatter.internalError(res, err.message || 'Error interno del servidor');
+  // H-5: solo el tipo del error. Ni `err.message` (el de un JSON mal formado cita un
+  // fragmento del cuerpo) ni `err.body` ni el objeto completo: pueden contener un token.
+  const type = (err && (err.type || err.code || err.name)) || 'error';
+  console.error('🔴 Error no capturado: tipo=' + String(type).replace(/[^A-Za-z0-9_.:-]/g, '').slice(0, 60));
+  ResponseFormatter.internalError(res, 'Algo salió mal. Intenta de nuevo en unos minutos');
 });
 
 const os = require('os');
@@ -277,9 +279,11 @@ app.listen(PORT, '0.0.0.0', async () => {
   }
 
   console.log(`📚 Documentación: http://localhost:${PORT}/docs`);
-  console.log(`📋 Tokens: http://localhost:${PORT}/tokens/stats`);
 
   // Iniciar limpiador de tokens automático
   console.log(`⏰ Limpiador de tokens programado...`);
   TokenCleaner.scheduleDaily();
+
+  // Limpieza de cuentas pendientes vencidas: por defecto solo simula (PENDING_ACCOUNT_PURGE).
+  PendingAccountPurger.scheduleDaily();
 });

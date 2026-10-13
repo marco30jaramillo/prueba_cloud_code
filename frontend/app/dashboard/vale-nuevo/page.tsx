@@ -5,9 +5,11 @@ import { Container, Card, Form, Button, Alert, Spinner, Row, Col, ListGroup } fr
 import { useAuthStore } from '@/lib/auth-store';
 import { tiendasAPI, valesAPI, usersAPI } from '@/lib/api';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import MontoInput from '@/components/MontoInput';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.scss';
 
+import { Icon } from '@/components/Icon';
 interface Tienda { id: string; nombre: string; }
 interface UserResult { id: string; name: string; email: string; role: string; }
 
@@ -101,7 +103,7 @@ function ValeNuevoContent() {
         ...(form.fechaVencimiento && { fechaVencimiento: form.fechaVencimiento }),
         ...(form.notas.trim() && { notas: form.notas.trim() }),
       });
-      setSuccess('¡Vale registrado exitosamente!');
+      setSuccess('Vale registrado.');
       setForm(f => ({ ...f, clienteId: '', clienteNombre: '', descripcion: '', montoTotal: '', fechaVencimiento: '', notas: '' }));
       setClienteQuery('');
       setTimeout(() => router.push('/dashboard/cartera'), 1500);
@@ -115,7 +117,7 @@ function ValeNuevoContent() {
   if (loadingTiendas) {
     return (
       <Container className={styles.container}>
-        <div className={styles.loadingCenter}><Spinner animation="border" variant="success" /></div>
+        <div className={styles.loadingCenter}><Spinner animation="border" variant="primary" /></div>
       </Container>
     );
   }
@@ -135,7 +137,7 @@ function ValeNuevoContent() {
   return (
     <Container className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>➕ Nueva Venta al Fiado</h1>
+        <h1 className={styles.title}><Icon name="agregar" /> Nuevo vale</h1>
         <p className={styles.subtitle}>Registra un vale para un cliente</p>
       </div>
 
@@ -166,7 +168,7 @@ function ValeNuevoContent() {
                   <Form.Label className={styles.label}>Cliente *</Form.Label>
                   <div className="d-flex gap-2">
                     <Form.Control
-                      placeholder="Buscar por nombre o email..."
+                      placeholder="Buscar por nombre o correo..."
                       value={clienteQuery}
                       onChange={e => handleClienteSearch(e.target.value)}
                       autoComplete="off"
@@ -174,7 +176,7 @@ function ValeNuevoContent() {
                     {searchingCliente && <Spinner size="sm" className="align-self-center" />}
                   </div>
                   {form.clienteId && (
-                    <Form.Text className="text-success">✓ Cliente seleccionado: {form.clienteNombre}</Form.Text>
+                    <Form.Text className="text-success"><Icon name="check" /> Cliente seleccionado: {form.clienteNombre}</Form.Text>
                   )}
                   {clienteResults.length > 0 && (
                     <ListGroup className={styles.searchDropdown}>
@@ -204,11 +206,10 @@ function ValeNuevoContent() {
                   <Col md={6}>
                     <Form.Group className="mb-3">
                       <Form.Label className={styles.label}>Monto total (COP) *</Form.Label>
-                      <Form.Control
-                        type="number" min="1" step="100"
-                        placeholder="0"
+                      <MontoInput
+                        placeholder="$ 0"
                         value={form.montoTotal}
-                        onChange={e => setForm(f => ({ ...f, montoTotal: e.target.value }))}
+                        onChange={v => setForm(f => ({ ...f, montoTotal: v }))}
                         required
                       />
                     </Form.Group>
@@ -239,8 +240,8 @@ function ValeNuevoContent() {
                 </Form.Group>
 
                 <div className="d-grid">
-                  <Button type="submit" variant="success" size="lg" disabled={submitting}>
-                    {submitting ? <><Spinner size="sm" className="me-2" />Registrando...</> : '🧾 Registrar Vale'}
+                  <Button type="submit" variant="primary" size="lg" disabled={submitting}>
+                    {submitting ? <><Spinner size="sm" className="me-2" />Registrando...</> : 'Registrar Vale'}
                   </Button>
                 </div>
               </Form>

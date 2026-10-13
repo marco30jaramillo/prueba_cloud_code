@@ -17,7 +17,7 @@
   font-weight: 800;
   font-size: 2rem;
   margin-bottom: 0.5rem;
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: linear-gradient(135deg, #dc2626 0%, #dc2626 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -31,14 +31,14 @@
 .card {
   border: 2px solid #fee2e2;
   border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(239, 68, 68, 0.15);
+  box-shadow: 0 10px 30px rgba(220, 38, 38, 0.15);
   animation: fadeIn 0.4s ease-out;
 }
 
 .toggleBtn {
   border: 2px solid #e5e7eb !important;
   border-left: none !important;
-  background-color: #f8fafb;
+  background-color: #f8fafc;
   color: #6b7280;
   transition: all 0.3s ease;
   padding: 0.5rem 1rem;
@@ -51,7 +51,7 @@
 
   &:focus {
     box-shadow: none;
-    border-color: #ef4444 !important;
+    border-color: #dc2626 !important;
   }
 
   &:disabled {
@@ -98,7 +98,7 @@
 }
 
 .resourcesHeader {
-  background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
   color: white;
   border-radius: 12px 12px 0 0 !important;
   padding: 1.5rem;
@@ -107,14 +107,14 @@
 .endpoint {
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  background: #f8fafb;
-  border-left: 4px solid #3b82f6;
+  background: #f8fafc;
+  border-left: 4px solid #2563eb;
   border-radius: 8px;
   transition: all 0.3s ease;
 
   &:hover {
-    background: #f0f4f9;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+    background: #f8fafc;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
   }
 
   &:last-child {
@@ -148,8 +148,8 @@
   transition: all 0.3s ease;
 
   &:hover {
-    border-color: #3b82f6;
-    box-shadow: 0 8px 16px rgba(59, 130, 246, 0.15);
+    border-color: #2563eb;
+    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.15);
     transform: translateY(-4px);
   }
 }

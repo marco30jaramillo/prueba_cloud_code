@@ -73,10 +73,64 @@ conexión, o si `DB_SERVER` no es `localhost`. Los usuarios que crea son fictici
 node --test
 ```
 
-Corre las pruebas de `tests/*.test.js` (configuración de conexión, validación de arranque y
-scripts de base de datos). No necesitan base de datos ni servidor. `tests/security_tests.js`
+Corre las pruebas de `tests/*.test.js` (configuración de conexión, validación de arranque,
+scripts de base de datos, correos y guardas del corredor de pruebas con base). **No necesitan
+base de datos ni servidor**: es lo que ejecuta el despliegue a QA. `tests/security_tests.js`
 es aparte: se ejecuta a mano contra un servidor local en marcha.
 Exige `TEST_SUPERUSER_EMAIL` y `TEST_SUPERUSER_PASSWORD` (sin valor por defecto) y admite `TEST_API_URL` (por defecto `http://localhost:3001`).
+
+**7. Pruebas de crédito con base de datos (solo en el computador local).** Dos comandos, mismo mecanismo:
+`npm run test:db` (API) y `npm run test:web` (recorrido en navegador de la web).
+
+```powershell
+npm run test:db
+```
+
+`test:db` es un solo comando, sin argumentos, solo de API: estable y rápido. Cubre la lógica de crédito por HTTP contra la API real:
+montos, abonos, anulaciones, pago integral, acceso por tienda y por rol, y la conciliación de
+saldos y cartera. Cada prueba lleva en el nombre la regla o el criterio que verifica
+(`RN-09 · …`); los defectos conocidos salen como `PENDIENTE` con su identificador del
+backlog (no cuentan como fallo).
+
+Qué hace, en orden:
+
+1. Se niega a correr si recibe argumentos, si el entorno define `AZURE_SQL_*` o una cadena de
+   conexión, o si `DB_SERVER` no es de bucle local.
+2. Descarta la base `MiValecito_Test` si quedó de una corrida interrumpida.
+3. Crea `MiValecito_Test` con `esquemas/` e `inserts/` (los mismos de `db:setup`) y da a
+   `mivalecito_app` lectura y escritura de datos, sin DDL.
+4. Arranca `src/server.js` como proceso hijo, solo en `127.0.0.1:3101`, con un secreto de firma
+   aleatorio y correo en modo `outbox` (en una carpeta temporal). Comprueba que el puerto no
+   responde por la IP de red del equipo.
+5. Crea el primer superusuario y corre `tests-db/*.dbtest.js`, de uno en uno (`test:web` corre
+   `tests-web/*.webtest.js` con los mismos pasos 1 a 4 y 6); el último archivo
+   concilia toda la base (saldo = monto − abonos, cartera = Σ saldos).
+6. Termina el servidor, **elimina `MiValecito_Test`** y borra los temporales, pasen o fallen las
+   pruebas (también ante Ctrl+C). Si no pudo eliminarla, sale con código distinto de cero.
+
+La salida termina con el total, las pruebas que pasaron, las que fallaron y las pendientes. El
+código de salida es 0 solo si ninguna falló y la base quedó eliminada.
+
+Requisitos: SQL Server local con el login `mivalecito_app` (paso 1 de este inicio rápido),
+`sqlcmd` en el PATH, una cuenta de Windows que pueda crear y eliminar bases en el servidor local
+y `DB_PASSWORD` en `backend/.env`. No usa `MiValecito_Dev`: no la lee ni la modifica. Duración
+típica: menos de un minuto.
+
+**Recorrido en navegador (`npm run test:web`).** Corre el recorrido de crédito de la web con
+Playwright (`frontend/e2e`, Edge instalado en el equipo): vale nuevo y cartera. Es un script
+aparte, con su carpeta fija `tests-web/`; no acepta argumentos ni parámetros y no forma parte de
+`test:db`. Además del backend en `127.0.0.1:3101`, levanta la web en `127.0.0.1:3100` (debe estar
+libre; no usa el 3000 de desarrollo). Compila las rutas con `next dev` (la corrida calienta las
+rutas antes de probar); si falla, imprime la salida de Playwright (ya sin secretos) con la causa.
+Requiere `npm install` en `frontend/`. Una corrida con `next build && next start` sería más
+determinista, pero exige un directorio de compilación propio (`distDir`) para no pisar el
+`.next` del desarrollo: queda como recomendación, no está hecho.
+
+Ninguno de los dos existe en QA ni en producción, y el despliegue no los ejecuta. Los archivos de
+`tests-db/` y `tests-web/` terminan en `.dbtest.js` y `.webtest.js` a propósito: ni
+`node --test tests/*.test.js` ni `node --test` los encuentran. Para agregar casos: un archivo `NN-nombre.dbtest.js` que use `crearMundo()` de
+`tests-db/helpers/fixture.js` (tiendas, usuarios y clientes propios por archivo) y concilie con
+`m.conciliar()` tras mover dinero.
 
 ## Configuración
 
@@ -90,8 +144,14 @@ Service.
 | `PORT` | 3001 en local, 8080 en Azure |
 | `NODE_ENV` | `development` en local, `production` en Azure |
 | `JWT_SECRET` | Firma de los tokens. Obligatorio, 32 caracteres o más; no tiene valor por defecto |
-| `APP_URL` | URL pública del backend (enlaces de recuperación y fotos) |
-| `FRONTEND_URL` | Origen de la web permitido por CORS |
+| `APP_URL` | URL pública del backend (URL de las fotos). **No** arma los enlaces de los correos |
+| `FRONTEND_URL` | Origen de la web: permitido por CORS y base de los enlaces de los correos (`/activar#token=...`, `/reset-password#token=...`: el token va en el fragmento de la URL, no en la query). En producción debe ser https |
+| `MAIL_TRANSPORT` | `azure` (Azure Communication Services Email) o `outbox` (escribe cada correo como archivo local; nunca sale a la red). Producción y App Service solo aceptan `azure`; sin definir, en local es `outbox` |
+| `ACS_EMAIL_CONNECTION_STRING` | Cadena de conexión de Communication Services. **Secreto**: solo en la configuración del ambiente |
+| `MAIL_FROM` | Remitente (dirección del dominio verificado en el servicio). Con dominio propio solo cambia este valor |
+| `MAIL_OUTBOX_DIR` | Carpeta del transporte `outbox` (por defecto `backend/.mail-outbox/`, ignorada por Git) |
+| `PENDING_ACCOUNT_PURGE` | Limpieza diaria de cuentas pendientes vencidas: `dry-run` (por defecto, solo cuenta), `apply` u `off`. Manual: `node src/scripts/purgePendingAccounts.js [--dry-run|--apply]` |
+| `PENDING_PURGE_MAX_PER_RUN` | Tope de cuentas por corrida de limpieza (50 por defecto); si hay más, aborta sin tocar nada |
 | `DB_SERVER`, `DB_PORT`, `DB_DATABASE`, `DB_USER`, `DB_PASSWORD` | Conexión a SQL Server local |
 | `DB_ENCRYPT`, `DB_TRUST_SERVER_CERTIFICATE` | Cifrado de la conexión local |
 | `AZURE_SQL_SERVER`, `AZURE_SQL_DATABASE`, `AZURE_SQL_USER`, `AZURE_SQL_PASSWORD` | Conexión a Azure SQL |
@@ -107,6 +167,8 @@ Reglas que el backend comprueba al arrancar, antes de abrir ninguna conexión:
   `test`, y fuera de App Service. Con `AZURE_SQL_*` la conexión va siempre cifrada y validando
   el certificado.
 - **`JWT_SECRET`** presente y de 32 caracteres o más.
+- **Correo.** En producción o App Service: `MAIL_TRANSPORT=azure`, cadena de conexión,
+  `MAIL_FROM` válido y `FRONTEND_URL` https; si falta algo, no arranca.
 
 Los mensajes de error de configuración nunca incluyen la contraseña ni la cadena de conexión.
 
@@ -169,15 +231,29 @@ backend/
 │       ├── passwordUtils.js      # PBKDF2 hash
 │       ├── passwordValidator.js
 │       ├── dataNormalizer.js
-│       ├── rateLimiter.js
-│       └── mailer.js
+│       ├── rateLimiter.js        # Intentos de login por IP
+│       ├── requestLimiter.js     # Límites por IP (correo, activación)
+│       └── clientIp.js           # IP confiable (no el primer X-Forwarded-For)
 ├── scripts/
 │   ├── db-setup.js            # npm run db:setup
+│   ├── db-test.js             # npm run test:db (corre tests-db/)
+│   ├── web-test.js            # npm run test:web (corre tests-web/)
 │   ├── seed.js                # npm run db:seed
-│   └── lib/entornoLocal.js    # Guarda: los scripts solo corren contra la base local
+│   └── lib/
+│       ├── entornoLocal.js    # Guarda: los scripts solo corren contra la base local
+│       ├── corredor.js        # Mecanismo común de test:db y test:web (base, backend, limpieza)
+│       ├── sqlcmd.js          # Ejecución con sqlcmd, compartida por db-setup y el corredor
+│       └── redactor.js        # Oculta secretos en la salida de las pruebas con base
 ├── tests/
-│   ├── *.test.js              # node --test
+│   ├── *.test.js              # node --test (sin base de datos; lo corre el despliegue)
 │   └── security_tests.js      # A mano, contra el servidor local
+├── tests-db/                  # npm run test:db (con base de datos; solo local)
+│   ├── *.dbtest.js            # Casos de crédito por HTTP
+│   ├── helpers/               # Fixture, cliente HTTP, conciliación, acceso a la base de pruebas
+│   ├── preload-local.js       # Fuerza 127.0.0.1 en el backend de pruebas
+│   └── reporter.js            # Salida: nombre, estado y duración
+├── tests-web/                 # npm run test:web (recorrido en navegador; solo local)
+│   └── *.webtest.js           # Lanza Playwright (frontend/e2e) con entorno de lista blanca
 ├── env.example
 └── .env.production.example
 ```
@@ -199,14 +275,17 @@ GET /docs/audit     → auditoría
 ### Auth (`/auth`)
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
-| POST | `/auth/register` | — | Registrar cliente |
-| POST | `/auth/login` | — | Iniciar sesión → JWT |
+| POST | `/auth/register` | — | Registrar cliente (nace pendiente de activación; **no** devuelve token, envía correo) |
+| POST | `/auth/login` | — | Iniciar sesión → JWT. Cuenta pendiente: 403 `ACCOUNT_PENDING_ACTIVATION` |
+| POST | `/auth/activate` | — | Activar con el token del enlace; inicia sesión (body `{ token }`). En la primera activación la contraseña guardada se reemplaza por una aleatoria: quien no la cambie vuelve a entrar con el enlace o con «olvidé mi contraseña» |
+| POST | `/auth/resend-activation` | — | Reenviar la activación (respuesta genérica; body `{ email }`) |
+| PATCH | `/auth/change-password-temporary` | ✅ | Primer cambio de contraseña (cuenta con cambio forzado) |
 | GET | `/auth/validate` | ✅ | Validar token activo |
 | POST | `/auth/logout` | ✅ | Revocar token |
 | POST | `/auth/logout-all` | ✅ | Revocar todos los tokens |
 | PATCH | `/auth/change-password` | ✅ | Cambiar propia contraseña |
 | PATCH | `/auth/profile` | ✅ | Actualizar nombre |
-| POST | `/auth/create-user` | ✅ admin | Crear usuario |
+| POST | `/auth/create-user` | ✅ admin | Crear usuario (pendiente de activación; **no** devuelve token) |
 | PATCH | `/auth/password/:userId` | ✅ admin | Cambiar contraseña de otro |
 | POST | `/auth/forgot-password` | — | Solicitar recuperación |
 | POST | `/auth/reset-password` | — | Restablecer con token |
@@ -281,3 +360,25 @@ En la tabla `dbo.roles`, la columna `modules` asigna módulos con nivel:
 ```
 Esto hace que el rol **herede** los permisos que la tabla `dbo.modules` define para ese nivel
 (`permRead`, `permWrite`, `permFull`). Ver `docs/diagrams/er-diagram.md`.
+
+## Correo transaccional
+
+Todo el correo sale por `src/mail/`: `mailService.send('<plantilla>', { to, data })`. `send` nunca
+lanza; deja en la auditoría tipo, destinatario y resultado (nunca el enlace ni el token).
+
+| Plantilla | Correo | Cuándo |
+|---|---|---|
+| `activationSelf` | C-1 | Autorregistro |
+| `activationByOther` | C-2 | Un tendero o administrador registra a un cliente (y reenvío a clientes) |
+| `activationStaff` | C-3 | Un administrador crea personal (y reenvío a no clientes) |
+| `passwordReset` | C-4 | `forgot-password` |
+| `passwordChanged` | C-5 | Cada cambio de contraseña, por cualquier vía |
+
+**Agregar un correo nuevo:** crear `src/mail/templates/<nombre>.js` con `{ group, subject(data), render(data) }`
+(usar `renderLayout`, que aporta firma y pie), registrarlo en `src/mail/templates/index.js` y llamar
+`mailService.send('<nombre>', { to, data })` donde corresponda.
+
+**Límites** (conteo persistente en la auditoría): 3 por hora y 10 por día por destinatario y grupo, 60 s
+entre envíos, 200 por hora en total. Superados, el envío se descarta en silencio.
+
+**En local** (`MAIL_TRANSPORT=outbox`) los correos quedan en `backend/.mail-outbox/*.json`, con el enlace completo.

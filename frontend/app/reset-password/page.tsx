@@ -1,7 +1,8 @@
 'use client';
 
-import React, { Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { Suspense, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Container, Row, Col, Alert } from 'react-bootstrap';
 import { AuthForm, AuthFormData } from '@/components/AuthForm';
 import { authAPI } from '@/lib/api';
@@ -9,8 +10,29 @@ import styles from './page.module.scss';
 
 function ResetPasswordContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  // El token viaja en el fragmento (#token=...), que el servidor nunca recibe.
+  // La query (?token=...) se acepta solo como respaldo de enlaces ya enviados.
+  // Se guarda en memoria y se quita de la barra de direcciones de inmediato.
+  const [token, setToken] = useState<string | null>(null);
+  const [checked, setChecked] = useState(false);
+  const [esCelular, setEsCelular] = useState(false);
+
+  useEffect(() => {
+    const fromHash = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('token');
+    const found = fromHash || new URLSearchParams(window.location.search).get('token');
+    if (found) {
+      window.history.replaceState(null, '', window.location.pathname);
+      setToken(found);
+      // En un celular se intenta abrir la app de Mi Valecito con el mismo enlace.
+      if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        setEsCelular(true);
+        window.location.href = `mivalecito://reset-password?token=${encodeURIComponent(found)}`;
+      }
+    }
+    setChecked(true);
+  }, []);
+
+  if (!checked) return null;
 
   if (!token) {
     return (
@@ -18,7 +40,8 @@ function ResetPasswordContent() {
         <Row className="justify-content-center">
           <Col lg={5} md={8}>
             <Alert variant="danger">
-              Token no proporcionado. Solicita un nuevo enlace de recuperación.
+              El enlace de recuperación no es válido. Solicita uno nuevo desde{' '}
+              <Link href="/forgot-password">recuperar contraseña</Link>.
             </Alert>
           </Col>
         </Row>
@@ -29,13 +52,16 @@ function ResetPasswordContent() {
   const onSubmit = async (data: AuthFormData) => {
     try {
       const result = await authAPI.resetPassword(token, data.newPassword!);
-      if (result.status === 'success') {
-        router.push('/login?message=Contraseña restablecida');
+      if (result.status === 'primary') {
+        router.push('/login?reset=1');
       }
       return { success: true, data: result };
     } catch (error: any) {
       const err = error.response?.data;
-      return { success: false, error: err?.message || 'Error al restablecer' };
+      return {
+        success: false,
+        error: err?.message || 'El enlace no es válido o ya venció. Solicita uno nuevo desde "Recuperar contraseña".'
+      };
     }
   };
 
@@ -47,6 +73,13 @@ function ResetPasswordContent() {
             <h1 className={styles.title}>Restablecer Contraseña</h1>
             <p className={styles.subtitle}>Crea una nueva contraseña segura</p>
           </div>
+
+          {esCelular && (
+            <Alert variant="info" className="mb-3">
+              ¿Tienes la app de Mi Valecito?{' '}
+              <a href={`mivalecito://reset-password?token=${encodeURIComponent(token)}`}>Abrir en la app</a>
+            </Alert>
+          )}
 
           <AuthForm type="reset-password" onSubmit={onSubmit} />
         </Col>

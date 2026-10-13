@@ -1,8 +1,10 @@
+const crypto = require('crypto');
 const express = require('express');
 const User = require('../models/User');
 const Role = require('../models/Role');
 const Permission = require('../models/Permission');
-const Mailer = require('../utils/mailer');
+const accountMail = require('../mail/accountMail');
+const mailService = require('../mail/mailService');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { tokenUtils, authMiddleware, tokenManager } = require('../middleware/auth');
 const roleMiddleware = require('../middleware/roleMiddleware');
@@ -11,20 +13,75 @@ const AuditLog = require('../models/AuditLog');
 const PasswordValidator = require('../utils/passwordValidator');
 const DataNormalizer = require('../utils/dataNormalizer');
 const rateLimiter = require('../utils/rateLimiter');
+const { createRequestLimiter } = require('../utils/requestLimiter');
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 const router = express.Router();
 
+// 20 solicitudes por hora por IP en los endpoints que pueden enviar correo (register,
+// forgot-password, resend-activation); 10 activaciones fallidas por 15 minutos por IP.
+const mailRequestLimiter = createRequestLimiter({ name: 'mail', max: 20, windowMs: 60 * 60 * 1000, mode: 'hit' });
+const activateLimiter = createRequestLimiter({ name: 'activate', max: 10, windowMs: 15 * 60 * 1000, mode: 'fail' });
 
-router.post('/register', async (req, res) => {
+const TOKEN_FORMAT = /^[0-9a-f]{64}$/i;
+const ACTIVATION_INVALID_MESSAGE = 'El enlace de activación no es válido o ya venció. Solicita que te enviemos uno nuevo.';
+const ACTIVATION_RESEND_GENERIC = {
+  message: 'Si existe una cuenta pendiente de activación con ese correo, te enviaremos un nuevo enlace.',
+  hint: 'Revisa tu bandeja de entrada y la carpeta de spam'
+};
+
+function noStore(res) {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+}
+
+/** Trabajo diferido: responde primero y no deja que un fallo llegue al proceso. */
+function inBackground(label, work) {
+  setImmediate(() => {
+    Promise.resolve().then(work).catch((err) => {
+      console.error(`[auth] ${label} falló:`, (err && (err.code || err.name)) || 'error');
+    });
+  });
+}
+
+function requestContext(req) {
+  return { ipAddress: auditMiddleware.getIpAddress(req), userAgent: auditMiddleware.getUserAgent(req) };
+}
+
+/**
+ * Reenvía la activación de una cuenta pendiente, habilitada y vigente. No rota el token si
+ * el envío se va a descartar por límite (evita invalidar el enlace de la víctima a base de
+ * solicitudes). Nunca lanza hacia la petición: se usa en trabajo diferido.
+ */
+async function resendActivation(user, context) {
+  if (!user || !user.isActive || user.activatedAt) return;
+  const template = accountMail.activationTemplate(user.role, null);
+  const verdict = await mailService.check(template, { to: user.email });
+  if (!verdict.allowed) return;
+  const rotated = await User.rotateActivationToken(user.id);
+  if (!rotated) return;
+  await accountMail.sendActivation(rotated.user, rotated.token, { context });
+}
+
+/** Respuesta 400 de contraseña que no cumple RN-43 (misma forma que el registro). */
+function weakPasswordResponse(res, validation) {
+  return ResponseFormatter.badRequest(res, 'La contraseña no cumple con los requisitos de seguridad', {
+    requirements: PasswordValidator.getPasswordRequirements().requirements,
+    errors: validation.errors
+  });
+}
+
+
+router.post('/register', mailRequestLimiter.middleware, async (req, res) => {
   const { email, password, name, photo } = req.body;
 
   if (!email || !password || !name) {
     return ResponseFormatter.badRequest(res, 'Campos requeridos faltantes', {
-      email: email ? '✅' : '❌ requerido',
-      password: password ? '✅' : '❌ requerido',
-      name: name ? '✅' : '❌ requerido'
+      email: email ? 'ok' : 'es obligatorio',
+      password: password ? 'ok' : 'es obligatorio',
+      name: name ? 'ok' : 'es obligatorio'
     });
   }
 
@@ -37,34 +94,39 @@ router.post('/register', async (req, res) => {
   }
 
   const normalizedEmail = DataNormalizer.normalizeEmail(email);
-  const existingUser = await User.findByEmail(normalizedEmail);
+  // Un correo de una cuenta deshabilitada se puede volver a registrar: solo cuenta la activa.
+  const existingUser = await User.findActiveByEmail(normalizedEmail);
   if (existingUser) {
-    return ResponseFormatter.conflict(res, `El email ${normalizedEmail} ya está registrado`);
+    // Respuesta idéntica para cuenta activa o pendiente. Si está pendiente,
+    // se le reenvía la activación a su dueño sin avisar (trabajo diferido, sujeto a límites).
+    if (existingUser.isActive && !existingUser.activatedAt) {
+      const context = requestContext(req);
+      inBackground('reenvío de activación (registro)', () => resendActivation(existingUser, context));
+    }
+    return ResponseFormatter.conflict(res, `El correo ${normalizedEmail} ya está registrado`);
   }
 
-  const user = await User.create(email, password, name, 'cliente', photo);
-  Mailer.sendWelcomeEmail(email, name);
-
-  const { token, tokenId, expiresAt } = tokenUtils.generateTokenWithId({
-    userId: user.id,
-    email: user.email,
-    role: user.role
-  });
-  await tokenManager.addGrantedToken(tokenId, user.id, email, token, expiresAt);
+  // Toda cuenta nace pendiente y con cambio de contraseña forzado (también el autorregistro).
+  const user = await User.create(email, password, name, 'cliente', photo, { pending: true, mustChangePassword: true });
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
-  await auditMiddleware.logUserCreation(user.id, user.id, email, 'cliente', ipAddress, userAgent);
+  await auditMiddleware.logUserCreation(user.id, user.id, user.email, 'cliente', ipAddress, userAgent);
+
+  await accountMail.sendActivation(user, user.activationToken, {
+    origin: 'self',
+    context: { actorId: user.id, ipAddress, userAgent }
+  });
 
   return ResponseFormatter.success(res, {
-    message: 'Usuario registrado exitosamente',
+    message: 'Registro listo. Revisa tu correo para activar tu cuenta.',
     user: {
       id: user.id,
       email: user.email,
       name: user.name,
       role: user.role
     },
-    token
+    pendingActivation: true
   }, 201);
 });
 
@@ -74,16 +136,26 @@ router.post('/login', rateLimiter.middleware, async (req, res) => {
   const userAgent = auditMiddleware.getUserAgent(req);
 
   if (!email || !password) {
-    return ResponseFormatter.badRequest(res, 'Email y contraseña son requeridos');
+    return ResponseFormatter.badRequest(res, 'Escribe tu correo y tu contraseña');
   }
 
   if (!EMAIL_REGEX.test(email)) {
-    return ResponseFormatter.badRequest(res, 'El formato del email es inválido');
+    return ResponseFormatter.badRequest(res, 'El correo no es válido');
   }
 
   const { user, reason } = await User.authenticate(email, password);
 
   if (!user) {
+    if (reason === 'pending_activation') {
+      // La contraseña es correcta: no cuenta como intento fallido. Solo puede abrir su enlace.
+      await auditMiddleware.logFailedLoginAttempt(email, ipAddress, userAgent, 'Cuenta pendiente de activación');
+      return res.status(403).json({
+        success: false,
+        message: 'Tu cuenta está pendiente de activación. Revisa tu correo (y la carpeta de spam) o solicita que te reenviemos el enlace.',
+        code: 'ACCOUNT_PENDING_ACTIVATION'
+      });
+    }
+
     await auditMiddleware.logFailedLoginAttempt(email, ipAddress, userAgent,
       reason === 'account_disabled' ? 'Cuenta deshabilitada' : 'Credenciales incorrectas'
     );
@@ -96,7 +168,7 @@ router.post('/login', rateLimiter.middleware, async (req, res) => {
         code: 'ACCOUNT_DISABLED'
       });
     }
-    return ResponseFormatter.unauthorized(res, 'Email o contraseña incorrectos. Verifica tus datos e intenta nuevamente');
+    return ResponseFormatter.unauthorized(res, 'El correo o la contraseña no coinciden. Revisa tus datos e intenta de nuevo');
   }
 
   // Login correcto: resetear contador de intentos fallidos
@@ -125,31 +197,105 @@ router.post('/login', rateLimiter.middleware, async (req, res) => {
   });
 });
 
-router.post('/forgot-password', async (req, res) => {
+router.post('/resend-activation', mailRequestLimiter.middleware, async (req, res) => {
+  const { email } = req.body || {};
+
+  if (!email || typeof email !== 'string' || !EMAIL_REGEX.test(email)) {
+    return ResponseFormatter.badRequest(res, 'El correo no es válido');
+  }
+
+  const context = requestContext(req);
+  const normalizedEmail = DataNormalizer.normalizeEmail(email);
+
+  // La solicitud se registra siempre, exista o no la cuenta; el resto es trabajo diferido,
+  // de modo que la respuesta tarda lo mismo en ambos casos.
+  await auditMiddleware.logActivationResendRequested(normalizedEmail, context.ipAddress, context.userAgent);
+  const user = await User.findByEmail(normalizedEmail);
+  if (user) {
+    inBackground('reenvío de activación', () => resendActivation(user, context));
+  }
+
+  return ResponseFormatter.success(res, ACTIVATION_RESEND_GENERIC);
+});
+
+router.post('/activate', activateLimiter.middleware, async (req, res) => {
+  noStore(res);
+  const { token } = req.body || {};
+
+  // Mismo mensaje y código para: token mal formado, inexistente, vencido, reemplazado,
+  // usado después del primer cambio de contraseña o cuenta deshabilitada.
+  const result = typeof token === 'string' && TOKEN_FORMAT.test(token)
+    ? await User.activateWithToken(token)
+    : null;
+  if (!result) {
+    activateLimiter.fail(req);
+    return ResponseFormatter.badRequest(res, ACTIVATION_INVALID_MESSAGE);
+  }
+
+  const { user, firstTime } = result;
+  const ipAddress = auditMiddleware.getIpAddress(req);
+  const userAgent = auditMiddleware.getUserAgent(req);
+
+  const session = tokenUtils.generateTokenWithId(
+    { userId: user.id, email: user.email, role: user.role },
+    24 * 3600
+  );
+  await tokenManager.addGrantedToken(session.tokenId, user.id, user.email, session.token, session.expiresAt);
+
+  if (firstTime) await auditMiddleware.logAccountActivated(user.id, ipAddress, userAgent);
+  await auditMiddleware.logLogin(user.id, ipAddress, userAgent, true);
+
+  return ResponseFormatter.success(res, {
+    message: 'Cuenta activada exitosamente',
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      photo: user.photo,
+      role: user.role,
+      mustChangePassword: user.mustChangePassword === true || user.mustChangePassword === 'true'
+    },
+    token: session.token
+  });
+});
+
+router.post('/forgot-password', mailRequestLimiter.middleware, async (req, res) => {
   const { email } = req.body;
   // Respuesta genérica siempre para evitar user enumeration
   const GENERIC_RESPONSE = {
-    message: 'Si ese email está registrado, recibirás un enlace de recuperación.',
+    message: 'Si ese correo está registrado, recibirás un enlace para recuperar tu contraseña.',
     hint: 'Revisa tu bandeja de entrada y carpeta de spam'
   };
 
-  if (!email || !EMAIL_REGEX.test(email)) {
-    return ResponseFormatter.badRequest(res, 'Email inválido');
+  if (!email || typeof email !== 'string' || !EMAIL_REGEX.test(email)) {
+    return ResponseFormatter.badRequest(res, 'El correo no es válido');
   }
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
 
-  const user = await User.findByEmail(DataNormalizer.normalizeEmail(email));
-  if (!user) {
-    // No revelar que el email no existe — respuesta idéntica al éxito
-    return ResponseFormatter.success(res, GENERIC_RESPONSE);
-  }
+  // La solicitud se registra siempre y la respuesta es idéntica exista o no la cuenta; token,
+  // envío y auditoría del envío van en trabajo diferido para que tarde lo mismo en ambos casos.
+  const normalizedEmail = DataNormalizer.normalizeEmail(email);
+  await auditMiddleware.logPasswordResetRequest(normalizedEmail, ipAddress, userAgent);
+  const user = await User.findByEmail(normalizedEmail);
 
-  const resetToken = User.generatePasswordResetToken();
-  await User.setResetToken(user.id, resetToken);
-  Mailer.sendPasswordResetEmail(email, resetToken);
-  await auditMiddleware.logPasswordResetRequest(email, ipAddress, userAgent);
+  // Una cuenta deshabilitada no restablece contraseña. Una pendiente recibe la activación,
+  // no el enlace de recuperación (evita activar por la puerta de atrás).
+  if (user && user.isActive) {
+    const context = { ipAddress, userAgent };
+    inBackground('recuperación de contraseña', async () => {
+      if (!user.activatedAt) {
+        await resendActivation(user, context);
+        return;
+      }
+      const verdict = await mailService.check('passwordReset', { to: user.email });
+      if (!verdict.allowed) return;
+      const resetToken = User.generatePasswordResetToken();
+      await User.setResetToken(user.id, resetToken);
+      await accountMail.sendPasswordReset(user, resetToken, context);
+    });
+  }
 
   return ResponseFormatter.success(res, GENERIC_RESPONSE);
 });
@@ -158,30 +304,39 @@ router.post('/reset-password', async (req, res) => {
   const { token, newPassword } = req.body;
 
   if (!token || !newPassword) {
-    return ResponseFormatter.badRequest(res, 'Token y contraseña nueva son requeridos', {
-      token: token ? '✅' : '❌ requerido',
-      newPassword: newPassword ? '✅' : '❌ requerido'
+    return ResponseFormatter.badRequest(res, 'Falta el enlace de recuperación o la contraseña nueva', {
+      token: token ? 'ok' : 'es obligatorio',
+      newPassword: newPassword ? 'ok' : 'es obligatorio'
     });
   }
 
-  if (newPassword.length < 8) {
-    return ResponseFormatter.badRequest(res, 'La contraseña debe tener al menos 8 caracteres', {
-      newPassword: `${newPassword.length}/8 caracteres`
-    });
+  if (typeof token !== 'string' || typeof newPassword !== 'string') {
+    return ResponseFormatter.badRequest(res, 'Falta el enlace de recuperación o la contraseña nueva');
   }
 
-  const user = await User.findByResetToken(token);
+  // RN-43: la complejidad completa, antes de gastar el token.
+  const passwordValidation = PasswordValidator.validatePassword(newPassword);
+  if (!passwordValidation.valid) {
+    return weakPasswordResponse(res, passwordValidation);
+  }
+
+  // Una sola sentencia: el token sirve una vez, vence en una hora, y no sirve para cuentas
+  // pendientes ni deshabilitadas.
+  const user = await User.resetPasswordWithToken(token, newPassword);
   if (!user) {
-    return ResponseFormatter.badRequest(res, 'Token de recuperación inválido o expirado', {
+    return ResponseFormatter.badRequest(res, 'El enlace de recuperación no es válido o ya venció', {
       hint: 'Solicita un nuevo enlace de recuperación'
     });
   }
 
-  await User.resetPassword(user.id, newPassword);
+  // D-5: quien restablece asume que alguien más pudo entrar; se cierran todas las sesiones.
+  await tokenManager.revokeAllUserTokens(user.id, user.email);
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
   await auditMiddleware.logPasswordChange(user.id, user.id, ipAddress, userAgent, false);
+  inBackground('aviso de contraseña cambiada', () =>
+    accountMail.notifyPasswordChanged(user, { actorId: user.id, ipAddress, userAgent }));
 
   return ResponseFormatter.success(res, {
     message: 'Contraseña restablecida exitosamente',
@@ -192,8 +347,8 @@ router.post('/reset-password', async (req, res) => {
 
 router.post('/bootstrap-superuser', async (req, res) => {
   if (await User.isSuperuserExists()) {
-    return ResponseFormatter.badRequest(res, 'Ya existe un super usuario en el sistema', {
-      hint: 'Para crear más super usuarios, necesitas tener un token de super usuario'
+    return ResponseFormatter.badRequest(res, 'Ya existe un superusuario', {
+      hint: 'Para crear más superusuarios, tu sesión debe ser de superusuario'
     });
   }
 
@@ -201,9 +356,9 @@ router.post('/bootstrap-superuser', async (req, res) => {
 
   if (!email || !password || !name) {
     return ResponseFormatter.badRequest(res, 'Campos requeridos faltantes', {
-      email: email ? '✅' : '❌ requerido',
-      password: password ? '✅' : '❌ requerido',
-      name: name ? '✅' : '❌ requerido'
+      email: email ? 'ok' : 'es obligatorio',
+      password: password ? 'ok' : 'es obligatorio',
+      name: name ? 'ok' : 'es obligatorio'
     });
   }
 
@@ -213,13 +368,13 @@ router.post('/bootstrap-superuser', async (req, res) => {
     });
   }
 
-  const existingUser = await User.findByEmail(email);
+  const existingUser = await User.findActiveByEmail(email);
   if (existingUser) {
-    return ResponseFormatter.conflict(res, `El email ${email} ya está registrado`);
+    return ResponseFormatter.conflict(res, `El correo ${email} ya está registrado`);
   }
 
+  // Único caso de cuenta que nace activada y sin correo: el primer superusuario del arranque.
   const user = await User.create(email, password, name, 'superuser');
-  Mailer.sendWelcomeEmail(email, name);
 
   const { token, tokenId, expiresAt } = tokenUtils.generateTokenWithId({
     userId: user.id,
@@ -233,7 +388,7 @@ router.post('/bootstrap-superuser', async (req, res) => {
   await auditMiddleware.logUserCreation(user.id, user.id, user.email, 'superuser', ipAddress, userAgent);
 
   return ResponseFormatter.success(res, {
-    message: 'Super usuario creado exitosamente',
+    message: 'Superusuario creado',
     user: {
       id: user.id,
       email: user.email,
@@ -244,20 +399,25 @@ router.post('/bootstrap-superuser', async (req, res) => {
   }, 201);
 });
 
+// La contraseña es opcional: la cuenta nace pendiente y al activarla con el enlace del correo
+// la persona define la suya (cambio forzado). Sin contraseña se usa una aleatoria que nadie
+// conoce; si se envía una (scripts y pruebas), debe tener al menos 8 caracteres.
 router.post('/create-user', authMiddleware, async (req, res) => {
-  const { email, password, name, role: targetRole } = req.body;
+  const { email, name, role: targetRole } = req.body;
   const creatorRole = req.user.role;
+  const password = req.body.password === undefined || req.body.password === null || req.body.password === ''
+    ? crypto.randomBytes(32).toString('base64url')
+    : req.body.password;
 
-  if (!email || !password || !name || !targetRole) {
+  if (!email || !name || !targetRole) {
     return ResponseFormatter.badRequest(res, 'Campos requeridos faltantes', {
-      email: email ? '✅' : '❌ requerido',
-      password: password ? '✅' : '❌ requerido',
-      name: name ? '✅' : '❌ requerido',
-      role: targetRole ? '✅' : '❌ requerido'
+      email: email ? 'ok' : 'es obligatorio',
+      name: name ? 'ok' : 'es obligatorio',
+      role: targetRole ? 'ok' : 'es obligatorio'
     });
   }
 
-  if (password.length < 8) {
+  if (typeof password !== 'string' || password.length < 8) {
     return ResponseFormatter.badRequest(res, 'La contraseña debe tener al menos 8 caracteres', {
       password: `${password.length}/8 caracteres`
     });
@@ -267,38 +427,39 @@ router.post('/create-user', authMiddleware, async (req, res) => {
     return ResponseFormatter.forbidden(res, `Tu rol '${creatorRole}' no puede crear usuarios con rol '${targetRole}'`, {
       your_role: creatorRole,
       target_role: targetRole,
-      allowed_roles: creatorRole === 'superuser' ? ['superuser', 'administrador', 'vendedor', 'cliente'] : ['vendedor', 'cliente']
+      allowed_roles: await Role.getManageableRoles(creatorRole)
     });
   }
 
-  const existingUser = await User.findByEmail(email);
+  const existingUser = await User.findActiveByEmail(email);
   if (existingUser) {
-    return ResponseFormatter.conflict(res, `El email ${email} ya está registrado`);
+    return ResponseFormatter.conflict(res, `El correo ${email} ya está registrado`);
   }
 
-  const user = await User.create(email, password, name, targetRole);
-  Mailer.sendWelcomeEmail(email, name);
-
-  const { token, tokenId, expiresAt } = tokenUtils.generateTokenWithId({
-    userId: user.id,
-    email: user.email,
-    role: user.role
-  });
-  await tokenManager.addGrantedToken(tokenId, user.id, email, token, expiresAt);
+  // Cuenta pendiente y con cambio forzado; no se devuelve sesión de la cuenta creada.
+  const user = await User.create(email, password, name, targetRole, null, { pending: true, mustChangePassword: true });
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
-  await auditMiddleware.logUserCreation(req.user.userId, user.id, email, targetRole, ipAddress, userAgent);
+  await auditMiddleware.logUserCreation(req.user.userId, user.id, user.email, targetRole, ipAddress, userAgent);
+
+  const mail = await accountMail.sendActivation(user, user.activationToken, {
+    origin: 'byOther',
+    context: { actorId: req.user.userId, ipAddress, userAgent }
+  });
 
   return ResponseFormatter.success(res, {
-    message: `Usuario con rol '${targetRole}' creado exitosamente`,
+    message: mail.ok === true
+      ? `Usuario con rol '${targetRole}' creado exitosamente. Se envió el correo de activación.`
+      : `Usuario con rol '${targetRole}' creado exitosamente, pero el correo de activación no pudo enviarse. Puedes reenviarlo desde el inicio de sesión (reenviar activación).`,
     user: {
       id: user.id,
       email: user.email,
       name: user.name,
       role: user.role
     },
-    token
+    pendingActivation: true,
+    activationEmailSent: mail.ok === true
   }, 201);
 });
 
@@ -308,7 +469,7 @@ router.get('/user-schema/:roleType', async (req, res) => {
 
   if (!role) {
     return ResponseFormatter.notFound(res, `Rol '${roleType}'`, {
-      available_roles: ['superuser', 'administrador', 'vendedor', 'cliente']
+      available_roles: ['superuser', 'administrador', 'tendero', 'encargado', 'vendedor', 'cliente']
     });
   }
 
@@ -326,7 +487,7 @@ router.get('/user-schema/:roleType', async (req, res) => {
       email: { type: 'string', required: true, pattern: 'email' },
       password: { type: 'string', required: true, minLength: 8 },
       name: { type: 'string', required: true, minLength: 2 },
-      role: { type: 'enum', required: false, values: ['superuser', 'administrador', 'vendedor', 'cliente'] }
+      role: { type: 'enum', required: false, values: ['superuser', 'administrador', 'tendero', 'encargado', 'vendedor', 'cliente'] }
     }
   };
 
@@ -341,7 +502,7 @@ router.get('/validate', authMiddleware, async (req, res) => {
   }
 
   return ResponseFormatter.success(res, {
-    message: 'Sesión válida ✅',
+    message: 'Tu sesión está activa',
     user: {
       id: user.id,
       email: user.email,
@@ -368,7 +529,7 @@ router.post('/logout', authMiddleware, async (req, res) => {
   return ResponseFormatter.success(res, {
     message: 'Sesión cerrada exitosamente',
     email,
-    details: 'Tu token ha sido revocado y no se puede usar más'
+    details: 'Tu sesión se cerró. Inicia sesión de nuevo'
   });
 });
 
@@ -410,6 +571,10 @@ router.patch('/change-password', authMiddleware, async (req, res) => {
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
   await auditMiddleware.logPasswordChange(userId, userId, ipAddress, userAgent, false);
+  if (result) {
+    inBackground('aviso de contraseña cambiada', () =>
+      accountMail.notifyPasswordChanged(result, { actorId: userId, ipAddress, userAgent }));
+  }
 
   return ResponseFormatter.success(res, {
     message: 'Contraseña cambiada exitosamente'
@@ -449,7 +614,7 @@ router.patch('/profile', authMiddleware, async (req, res) => {
   });
 });
 
-router.patch('/password/:userId', authMiddleware, roleMiddleware.requireRole(['superuser', 'administrador']), async (req, res) => {
+router.patch('/password/:userId', authMiddleware, roleMiddleware.requirePermission('admin:manage-users'), async (req, res) => {
   const { newPassword } = req.body;
   const { userId } = req.params;
   const requesterId = req.user.userId;
@@ -468,18 +633,22 @@ router.patch('/password/:userId', authMiddleware, roleMiddleware.requireRole(['s
   }
 
   const requester = await User.findById(requesterId);
-  if (requester.role === 'administrador' && targetUser.role === 'superuser') {
-    return ResponseFormatter.forbidden(res, 'No puedes cambiar la contraseña de un superuser');
+  if (requester.role !== 'superuser' && targetUser.role === 'superuser') {
+    return ResponseFormatter.forbidden(res, 'No puedes cambiar la contraseña de un superusuario');
   }
 
   await User.setPasswordForUser(userId, newPassword);
+  // H-2: ninguna sesión previa del dueño sobrevive al cambio hecho por un administrador.
+  await tokenManager.revokeAllUserTokens(userId, targetUser.email);
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
   await auditMiddleware.logPasswordChange(requesterId, userId, ipAddress, userAgent, true);
+  inBackground('aviso de contraseña cambiada', () =>
+    accountMail.notifyPasswordChanged(targetUser, { actorId: requesterId, ipAddress, userAgent }));
 
   return ResponseFormatter.success(res, {
-    message: 'Contraseña del usuario actualizada exitosamente',
+    message: 'Contraseña actualizada',
     userId: userId
   });
 });
@@ -492,19 +661,32 @@ router.patch('/change-password-temporary', authMiddleware, async (req, res) => {
     return ResponseFormatter.badRequest(res, 'Nueva contraseña es requerida');
   }
 
-  if (newPassword.length < 8) {
-    return ResponseFormatter.badRequest(res, 'La nueva contraseña debe tener al menos 8 caracteres');
+  if (typeof newPassword !== 'string') {
+    return ResponseFormatter.badRequest(res, 'Nueva contraseña es requerida');
   }
 
+  // RN-43: complejidad completa (función compartida con reset-password).
+  const passwordValidation = PasswordValidator.validatePassword(newPassword);
+  if (!passwordValidation.valid) {
+    return weakPasswordResponse(res, passwordValidation);
+  }
+
+  // Una sola sentencia que exige mustChangePassword = true: si no hay un cambio forzado
+  // pendiente, no cambia nada. También invalida el enlace de activación.
   const updatedUser = await User.completeTemporaryPasswordChange(userId, newPassword);
 
   if (!updatedUser) {
-    return ResponseFormatter.notFound(res, 'Usuario');
+    return ResponseFormatter.badRequest(res, 'Tu cuenta no tiene un cambio de contraseña pendiente');
   }
+
+  // Se conserva la sesión actual y se revocan todas las demás de la cuenta.
+  await tokenManager.revokeAllUserTokens(userId, updatedUser.email, req.token);
 
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
   await auditMiddleware.logPasswordChange(userId, userId, ipAddress, userAgent, false);
+  inBackground('aviso de contraseña cambiada', () =>
+    accountMail.notifyPasswordChanged(updatedUser, { actorId: userId, ipAddress, userAgent }));
 
   return ResponseFormatter.success(res, {
     message: 'Contraseña actualizada exitosamente',

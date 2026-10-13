@@ -22,21 +22,18 @@ echo "$RESPONSE" | grep -o '"token":"[^"]*"'
 TOKEN=$(echo "$RESPONSE" | grep -o '"token":"[^"]*"' | sed 's/"token":"//' | sed 's/"//')
 echo "Token extraído: ${TOKEN:0:50}..."
 
-# 2. Verificar headers
-echo -e "\n2️⃣ Probando /debug/headers SIN Authorization..."
-curl -s "$BASE_URL/debug/headers" | grep -o '"authHeader":"[^"]*"'
-
-echo -e "\n3️⃣ Probando /debug/headers CON Authorization..."
-curl -s -H "Authorization: Bearer $TOKEN" \
-  "$BASE_URL/debug/headers" | grep -o '"authHeader":"[^"]*"'
-
-# 3. Validar sesión
-echo -e "\n4️⃣ Validando sesión..."
+# 2. Validar sesión
+echo -e "\n2️⃣ Validando sesión..."
 curl -s -X GET "$BASE_URL/auth/validate" \
   -H "Authorization: Bearer $TOKEN" | grep -o '"message":"[^"]*"'
 
-# 4. Ver estadísticas
-echo -e "\n5️⃣ Ver estadísticas de tokens..."
-curl -s "$BASE_URL/tokens/stats" | grep -o '"totalGranted":[0-9]*'
+# 3. Ver estadísticas: requiere sesión de superusuario o administrador.
+# Exportar ADMIN_TOKEN con un token de esa sesión; el token del paso 1 es de cliente y daría 403.
+if [ -n "$ADMIN_TOKEN" ]; then
+  echo -e "\n3️⃣ Ver estadísticas de tokens (sesión administrativa)..."
+  curl -s -H "Authorization: Bearer $ADMIN_TOKEN" "$BASE_URL/tokens/stats" | grep -o '"stats":{[^}]*}'
+else
+  echo -e "\n3️⃣ /tokens/stats omitido: define ADMIN_TOKEN (superusuario o administrador)"
+fi
 
 echo -e "\n✅ Pruebas completadas"

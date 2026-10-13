@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity,
   Alert, ActivityIndicator, TextInput, RefreshControl,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
-import { valesAPI } from '@/lib/api';
-import { useAuthStore, isAdminRole, formatCOP } from '@/lib/store';
+import { valesAPI, pick } from '@/lib/api';
+import { useAuthStore, usePermiso, formatCOP } from '@/lib/store';
+import { ETIQUETA_ESTADO, esCobrable, estadoVisible } from '@/lib/estado-vale';
+import { colorEstado } from '@/lib/tema';
 
 interface Abono {
   id: string;
@@ -37,7 +40,10 @@ export default function ValeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const navigation = useNavigation();
   const { user } = useAuthStore();
-  const canAdmin = isAdminRole(user?.role);
+  // Cada acción, según los permisos efectivos del rol (los mismos que revisa el servidor).
+  const puedeAbonar = usePermiso('abono:crear');
+  const puedeAnularVale = usePermiso('vale:anular');
+  const puedeAnularAbono = usePermiso('abono:anular');
 
   const [vale, setVale] = useState<Vale | null>(null);
   const [abonos, setAbonos] = useState<Abono[]>([]);
@@ -56,8 +62,8 @@ export default function ValeDetailScreen() {
         valesAPI.getById(id),
         valesAPI.getAbonos(id),
       ]);
-      const v: Vale = vRes?.data ?? vRes;
-      const a: Abono[] = aRes?.data ?? aRes ?? [];
+      const v: Vale = vRes?.vale ?? vRes?.data ?? vRes;
+      const a: Abono[] = pick(aRes, 'abonos');
       setVale(v);
       setAbonos(a);
       navigation.setOptions({ title: v.clienteNombre ?? v.clienteName ?? 'Vale' });
@@ -134,24 +140,27 @@ export default function ValeDetailScreen() {
   };
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#3b82f6" /></View>;
+    return <View style={styles.center}><ActivityIndicator size="large" color="#2563eb" /></View>;
   }
   if (!vale) {
     return <View style={styles.center}><Text style={styles.errorText}>Vale no encontrado.</Text></View>;
   }
 
-  const isVencido = vale.estado === 'activo' && vale.fechaVencimiento && new Date(vale.fechaVencimiento) < new Date();
-  const estadoColor = vale.estado === 'anulado' ? '#6b7280' : isVencido ? '#ef4444' : '#10b981';
-  const estadoLabel = vale.estado === 'anulado' ? 'Anulado' : isVencido ? 'Vencido' : 'Activo';
-  const canRegisterAbono = vale.estado === 'activo' && Number(vale.saldoPendiente) > 0;
-  const canAnular = vale.estado === 'activo' && canAdmin;
+  const estado = estadoVisible(vale.estado, vale.fechaVencimiento);
+  const isVencido = estado === 'mora';
+  const estadoColor = colorEstado[estado];
+  const estadoLabel = ETIQUETA_ESTADO[estado];
+  const canRegisterAbono = puedeAbonar && esCobrable(vale.estado) && Number(vale.saldoPendiente) > 0;
+  const canAnular = esCobrable(vale.estado) && puedeAnularVale;
   const abonosActivos = abonos.filter(a => a.estado !== 'anulado');
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       style={styles.root}
       contentContainerStyle={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor="#3b82f6" />}
+      keyboardShouldPersistTaps="handled"
+      bottomOffset={24}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor="#2563eb" />}
     >
       {/* Header card */}
       <View style={styles.headerCard}>
@@ -161,19 +170,19 @@ export default function ValeDetailScreen() {
             <Text style={[styles.estadoText, { color: estadoColor }]}>{estadoLabel}</Text>
           </View>
         </View>
-        {vale.tiendaNombre && <Text style={styles.tiendaName}>📍 {vale.tiendaNombre}</Text>}
+        {vale.tiendaNombre && <Text style={styles.tiendaName}>{vale.tiendaNombre}</Text>}
         <Text style={styles.descripcion}>{vale.descripcion}</Text>
-        {vale.notas ? <Text style={styles.notasText}>📝 {vale.notas}</Text> : null}
+        {vale.notas ? <Text style={styles.notasText}>{vale.notas}</Text> : null}
 
         <View style={styles.amountRow}>
           <AmountBox label="Total" value={formatCOP(vale.montoTotal)} />
           <AmountBox label="Abonado" value={formatCOP(Number(vale.montoTotal) - Number(vale.saldoPendiente))} />
-          <AmountBox label="Pendiente" value={formatCOP(vale.saldoPendiente)} color={Number(vale.saldoPendiente) > 0 ? '#ef4444' : '#10b981'} />
+          <AmountBox label="Pendiente" value={formatCOP(vale.saldoPendiente)} color={Number(vale.saldoPendiente) > 0 ? '#dc2626' : '#059669'} />
         </View>
 
         {vale.fechaVencimiento && (
-          <Text style={[styles.fechaVenc, isVencido && { color: '#ef4444' }]}>
-            {isVencido ? '⚠️ Vencido:' : '📅 Vence:'} {new Date(vale.fechaVencimiento).toLocaleDateString('es-CO')}
+          <Text style={[styles.fechaVenc, isVencido && { color: '#dc2626' }]}>
+            {isVencido ? 'Vencido:' : 'Vence:'} {new Date(vale.fechaVencimiento).toLocaleDateString('es-CO')}
           </Text>
         )}
         {vale.registradoPorNombre && <Text style={styles.meta}>Registrado por {vale.registradoPorNombre}</Text>}
@@ -203,14 +212,14 @@ export default function ValeDetailScreen() {
             onChangeText={setAbonoMonto}
             keyboardType="numeric"
             placeholder={`Monto (máx. ${formatCOP(vale.saldoPendiente)})`}
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor="#6b7280"
           />
           <TextInput
             style={styles.input}
             value={abonoNotas}
             onChangeText={setAbonoNotas}
             placeholder="Notas (opcional)"
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor="#6b7280"
           />
           <TouchableOpacity
             style={[styles.submitAbono, savingAbono && { opacity: 0.6 }]}
@@ -218,8 +227,8 @@ export default function ValeDetailScreen() {
             disabled={savingAbono}
           >
             {savingAbono
-              ? <ActivityIndicator color="#fff" size="small" />
-              : <Text style={styles.submitAbonoText}>✓ Guardar abono</Text>
+              ? <ActivityIndicator color="#ffffff" size="small" />
+              : <Text style={styles.submitAbonoText}>Guardar abono</Text>
             }
           </TouchableOpacity>
         </View>
@@ -245,7 +254,7 @@ export default function ValeDetailScreen() {
                   {a.registradoPorNombre ? `  ·  ${a.registradoPorNombre}` : ''}
                 </Text>
               </View>
-              {canAdmin && a.estado !== 'anulado' && (
+              {puedeAnularAbono && a.estado !== 'anulado' && (
                 <TouchableOpacity onPress={() => handleAnularAbono(a)} style={styles.abonoAnularBtn}>
                   <Text style={styles.abonoAnularText}>Anular</Text>
                 </TouchableOpacity>
@@ -254,11 +263,11 @@ export default function ValeDetailScreen() {
           </View>
         ))
       }
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 
-function AmountBox({ label, value, color = '#111827' }: { label: string; value: string; color?: string }) {
+function AmountBox({ label, value, color = '#1f2937' }: { label: string; value: string; color?: string }) {
   return (
     <View style={styles.amountBox}>
       <Text style={styles.amountLabel}>{label}</Text>
@@ -274,7 +283,7 @@ const styles = StyleSheet.create({
   errorText: { color: '#6b7280', fontSize: 15 },
 
   headerCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 18,
     marginBottom: 14,
@@ -285,41 +294,41 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
-  clienteName: { fontSize: 18, fontWeight: '800', color: '#111827', flex: 1, marginRight: 8 },
+  clienteName: { fontSize: 18, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#1f2937', flex: 1, marginRight: 8 },
   estadoBadge: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-  estadoText: { fontSize: 12, fontWeight: '700' },
+  estadoText: { fontSize: 12, fontFamily: 'PlusJakartaSans-ExtraBold' },
   tiendaName: { fontSize: 12, color: '#6b7280', marginBottom: 6 },
-  descripcion: { fontSize: 15, color: '#374151', fontWeight: '500', marginBottom: 4 },
+  descripcion: { fontSize: 15, color: '#374151', fontFamily: 'PlusJakartaSans-SemiBold', marginBottom: 4 },
   notasText: { fontSize: 13, color: '#6b7280', marginBottom: 8 },
   amountRow: { flexDirection: 'row', gap: 8, marginTop: 14, borderTopWidth: 1, borderTopColor: '#f3f4f6', paddingTop: 14 },
   amountBox: { flex: 1, alignItems: 'center' },
-  amountLabel: { fontSize: 11, color: '#9ca3af', fontWeight: '500', marginBottom: 3 },
-  amountValue: { fontSize: 16, fontWeight: '800' },
+  amountLabel: { fontSize: 11, color: '#6b7280', fontFamily: 'PlusJakartaSans-SemiBold', marginBottom: 3 },
+  amountValue: { fontVariant: ['tabular-nums'], fontSize: 16, fontFamily: 'PlusJakartaSans-ExtraBold' },
   fechaVenc: { fontSize: 13, color: '#6b7280', marginTop: 10 },
-  meta: { fontSize: 12, color: '#9ca3af', marginTop: 4 },
+  meta: { fontSize: 12, color: '#6b7280', marginTop: 4 },
 
   actions: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   abonoBtn: {
     flex: 1,
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#2563eb',
     borderRadius: 12,
     padding: 13,
     alignItems: 'center',
   },
-  abonoBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  abonoBtnText: { color: '#ffffff', fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 14 },
   anularBtn: {
     flex: 1,
-    backgroundColor: '#fef2f2',
+    backgroundColor: '#fee2e2',
     borderRadius: 12,
     padding: 13,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: '#fee2e2',
   },
-  anularBtnText: { color: '#ef4444', fontWeight: '700', fontSize: 14 },
+  anularBtnText: { color: '#dc2626', fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 14 },
 
   abonoForm: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     borderRadius: 14,
     padding: 16,
     marginBottom: 16,
@@ -332,22 +341,22 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 11,
     fontSize: 14,
-    color: '#111827',
-    backgroundColor: '#fafafa',
+    color: '#1f2937',
+    backgroundColor: '#f8fafc',
     marginBottom: 10,
   },
   submitAbono: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#059669',
     borderRadius: 10,
     padding: 12,
     alignItems: 'center',
   },
-  submitAbonoText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  submitAbonoText: { color: '#ffffff', fontFamily: 'PlusJakartaSans-ExtraBold', fontSize: 14 },
 
-  sectionTitle: { fontSize: 14, fontWeight: '700', color: '#6b7280', marginBottom: 10, marginTop: 4, letterSpacing: 0.3 },
-  noAbonos: { color: '#9ca3af', fontSize: 14, textAlign: 'center', paddingVertical: 24 },
+  sectionTitle: { fontSize: 14, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#6b7280', marginBottom: 10, marginTop: 4, letterSpacing: 0.3 },
+  noAbonos: { color: '#6b7280', fontSize: 14, textAlign: 'center', paddingVertical: 24 },
   abonoCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 13,
     marginBottom: 8,
@@ -359,17 +368,17 @@ const styles = StyleSheet.create({
   },
   abonoAnulado: { opacity: 0.6 },
   abonoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  abonoMonto: { fontSize: 17, fontWeight: '700', color: '#10b981' },
-  lineThrough: { textDecorationLine: 'line-through', color: '#9ca3af' },
-  anuladoTag: { fontSize: 11, color: '#ef4444', fontWeight: '600', marginTop: 2 },
+  abonoMonto: { fontSize: 17, fontFamily: 'PlusJakartaSans-ExtraBold', color: '#047857' },
+  lineThrough: { textDecorationLine: 'line-through', color: '#6b7280' },
+  anuladoTag: { fontSize: 11, color: '#dc2626', fontFamily: 'PlusJakartaSans-SemiBold', marginTop: 2 },
   abonoNotas: { fontSize: 12, color: '#6b7280', marginTop: 3 },
-  abonoFecha: { fontSize: 11, color: '#9ca3af', marginTop: 4 },
+  abonoFecha: { fontSize: 11, color: '#6b7280', marginTop: 4 },
   abonoAnularBtn: {
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#fca5a5',
+    borderColor: '#fee2e2',
   },
-  abonoAnularText: { fontSize: 12, color: '#ef4444', fontWeight: '600' },
+  abonoAnularText: { fontSize: 12, color: '#dc2626', fontFamily: 'PlusJakartaSans-SemiBold' },
 });

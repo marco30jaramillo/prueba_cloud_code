@@ -3,11 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Table, Badge, Button, Alert, Spinner, Modal, Form } from 'react-bootstrap';
 import { useAuthStore } from '@/lib/auth-store';
-import { tiendasAPI, valesAPI, usersAPI } from '@/lib/api';
+import { tiendasAPI, valesAPI, usersAPI, modulesAPI } from '@/lib/api';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import PagoModal, { ValeActivo } from '@/components/PagoModal';
+import MontoInput from '@/components/MontoInput';
 import styles from './page.module.scss';
 
+import { Icon } from '@/components/Icon';
 interface Tienda { id: string; nombre: string; }
 interface Vale {
   id: string;
@@ -36,7 +38,7 @@ interface Abono {
 const ESTADO_CONFIG = {
   pendiente: { bg: 'warning', label: 'Pendiente' },
   parcial:   { bg: 'info',    label: 'Parcial' },
-  pagado:    { bg: 'success', label: 'Pagado' },
+  pagado:    { bg: 'primary', label: 'Pagado' },
   anulado:   { bg: 'secondary', label: 'Anulado' },
 };
 
@@ -86,6 +88,20 @@ function CarteraContent() {
   const [pagoClienteId, setPagoClienteId] = useState('');
   const [pagoClienteNombre, setPagoClienteNombre] = useState('');
   const [pagoVales, setPagoVales] = useState<ValeActivo[]>([]);
+
+  // Cada acción se muestra según los permisos efectivos del rol (GET /modules), los mismos que
+  // revisa el servidor: cobrar = abono:crear (Cartera en escritura); anular = vale:anular y
+  // abono:anular (nivel total). Sin cargar, nada.
+  const [permisos, setPermisos] = useState<string[]>([]);
+  useEffect(() => {
+    modulesAPI.getAll()
+      .then(res => setPermisos(res.permissions || []))
+      .catch(() => setPermisos([]));
+  }, []);
+  const tiene = (p: string) => permisos.includes(p) || permisos.includes('system:full-access');
+  const puedeCobrar = tiene('abono:crear');
+  const puedeAnularVale = tiene('vale:anular');
+  const puedeAnularAbono = tiene('abono:anular');
 
   useEffect(() => { loadTiendas(); }, []);
   useEffect(() => { if (tiendaId && !modoCliente) loadCartera(); }, [tiendaId, filtroEstado]);
@@ -154,7 +170,7 @@ function CarteraContent() {
       setTiendas(list);
       if (list.length > 0) setTiendaId(list[0].id);
     } catch (err: any) {
-      if (err?.response?.status === 500) setError('Error de base de datos al cargar tiendas. Verifica que la migración SQL haya sido ejecutada.');
+      if (err?.response?.status === 500) setError('No pudimos cargar las tiendas. Intenta más tarde.');
       else setError('No se pudieron cargar tus tiendas.');
     }
   }
@@ -286,8 +302,8 @@ function CarteraContent() {
   return (
     <Container className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>💼 Cartera</h1>
-        <p className={styles.subtitle}>Gestiona los vales al fiado de tu tienda</p>
+        <h1 className={styles.title}><Icon name="cartera" /> Cartera</h1>
+        <p className={styles.subtitle}>Gestiona los vales de tu tienda</p>
       </div>
 
       {error && tiendas.length === 0 && (
@@ -309,14 +325,14 @@ function CarteraContent() {
               <div className="d-flex gap-2 mb-3">
                 <Button
                   size="sm"
-                  variant={!modoCliente ? 'success' : 'outline-success'}
+                  variant={!modoCliente ? 'primary' : 'outline-primary'}
                   onClick={() => setModoCliente(false)}
                 >
                   Por tienda
                 </Button>
                 <Button
                   size="sm"
-                  variant={modoCliente ? 'success' : 'outline-success'}
+                  variant={modoCliente ? 'primary' : 'outline-primary'}
                   onClick={() => setModoCliente(true)}
                 >
                   Buscar por cliente
@@ -342,14 +358,14 @@ function CarteraContent() {
                     </Form.Select>
                   </Col>
                   <Col md={3}>
-                    <Button variant="outline-success" onClick={loadCartera} className="w-100">
+                    <Button variant="outline-primary" onClick={loadCartera} className="w-100">
                       Actualizar
                     </Button>
                   </Col>
                 </Row>
               ) : (
                 <div className={styles.clienteSearch}>
-                  <Form.Label className={styles.label}>Buscar cliente por nombre o email</Form.Label>
+                  <Form.Label className={styles.label}>Buscar cliente por nombre o correo</Form.Label>
                   <div className={styles.searchWrapper}>
                     <Form.Control
                       placeholder="Escribe al menos 2 caracteres..."
@@ -401,13 +417,13 @@ function CarteraContent() {
                           </Form.Select>
                         );
                       })()}
-                      {todosValesCliente.some(v => ['pendiente', 'parcial'].includes(v.estado)) && (
+                      {puedeCobrar && todosValesCliente.some(v => ['pendiente', 'parcial'].includes(v.estado)) && (
                         <Button
                           size="sm"
-                          variant="success"
+                          variant="primary"
                           onClick={() => abrirPagoIntegral(clienteSeleccionado.id, clienteSeleccionado.name)}
                         >
-                          💳 Registrar pago
+                          <Icon name="abono" /> Registrar pago
                         </Button>
                       )}
                     </div>
@@ -454,7 +470,7 @@ function CarteraContent() {
           </Row>
 
           {loading ? (
-            <div className={styles.loadingCenter}><Spinner animation="border" variant="success" /></div>
+            <div className={styles.loadingCenter}><Spinner animation="border" variant="primary" /></div>
           ) : vales.length === 0 ? (
             <Card className={styles.card}>
               <Card.Body className={styles.emptyState}>Sin vales con ese filtro.</Card.Body>
@@ -489,7 +505,7 @@ function CarteraContent() {
                           {modoCliente && <td className={styles.date}>{v.tiendaNombre || '—'}</td>}
                           <td>{v.descripcion}</td>
                           <td className={styles.monto}>{fmt(v.montoTotal)}</td>
-                          <td className={styles.monto}>{v.estado === 'pagado' ? <span className={styles.pagado}>✓</span> : fmt(v.saldoPendiente)}</td>
+                          <td className={styles.monto}>{v.estado === 'pagado' ? <span className={styles.pagado}><Icon name="check" /></span> : fmt(v.saldoPendiente)}</td>
                           <td>
                             <Badge bg={cfg.bg}>{cfg.label}</Badge>
                             {mora && <Badge bg="danger" className="ms-1">Mora</Badge>}
@@ -497,17 +513,17 @@ function CarteraContent() {
                           <td className={styles.date}>{fmtDate(v.fechaVale)}</td>
                           <td className={styles.date}>{fmtDate(v.fechaVencimiento)}</td>
                           <td className="d-flex gap-1 flex-wrap">
-                            <Button size="sm" variant="outline-success" onClick={() => openDetalle(v)}>
+                            <Button size="sm" variant="outline-primary" onClick={() => openDetalle(v)}>
                               Gestionar
                             </Button>
-                            {['pendiente', 'parcial'].includes(v.estado) && v.clienteId && (
+                            {puedeCobrar && ['pendiente', 'parcial'].includes(v.estado) && v.clienteId && (
                               <Button
                                 size="sm"
-                                variant="success"
+                                variant="outline-primary"
                                 onClick={() => abrirPagoIntegral(v.clienteId, v.clienteNombre || '—')}
                                 title="Pago integral del cliente"
                               >
-                                💳
+                                <Icon name="abono" />
                               </Button>
                             )}
                           </td>
@@ -535,7 +551,7 @@ function CarteraContent() {
       {/* Modal gestión */}
       <Modal show={showModal} onHide={() => { setShowModal(false); setSuccess(''); setError(''); }} size="lg">
         <Modal.Header closeButton>
-          <Modal.Title>🧾 Vale — {selectedVale?.clienteNombre}</Modal.Title>
+          <Modal.Title><Icon name="vale" /> Vale — {selectedVale?.clienteNombre}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {selectedVale && (
@@ -547,7 +563,7 @@ function CarteraContent() {
                 <Col md={6}><strong>Descripción:</strong> {selectedVale.descripcion}</Col>
                 <Col md={3}><strong>Estado:</strong> <Badge bg={ESTADO_CONFIG[selectedVale.estado].bg}>{ESTADO_CONFIG[selectedVale.estado].label}</Badge></Col>
                 <Col md={3} className="text-end">
-                  {valeActivo && (
+                  {puedeAnularVale && valeActivo && (
                     <Button size="sm" variant="outline-danger" onClick={() => handleAnularVale(selectedVale)}>
                       Anular vale
                     </Button>
@@ -559,20 +575,20 @@ function CarteraContent() {
                 <Col md={6} className="mt-2"><strong>Vence:</strong> {fmtDate(selectedVale.fechaVencimiento)}</Col>
               </Row>
 
-              {valeActivo && (
+              {puedeCobrar && valeActivo && (
                 <>
                   <hr />
                   <h6>Registrar abono</h6>
                   <Form onSubmit={handleAbono}>
                     <Row className="g-2 align-items-end">
                       <Col md={5}>
-                        <Form.Control type="number" min="1" step="100" placeholder="Monto abono" value={montoAbono} onChange={e => setMontoAbono(e.target.value)} required />
+                        <MontoInput placeholder="Monto abono" value={montoAbono} onChange={setMontoAbono} required />
                       </Col>
                       <Col md={4}>
                         <Form.Control placeholder="Nota (opcional)" value={notasAbono} onChange={e => setNotasAbono(e.target.value)} />
                       </Col>
                       <Col md={3}>
-                        <Button type="submit" variant="success" className="w-100" disabled={registrando}>
+                        <Button type="submit" variant="outline-primary" className="w-100" disabled={registrando}>
                           {registrando ? <Spinner size="sm" /> : 'Abonar'}
                         </Button>
                       </Col>
@@ -598,8 +614,8 @@ function CarteraContent() {
                         <td>{a.registradoPorNombre || '—'}</td>
                         <td>{a.anulado ? <Badge bg="secondary">Anulado</Badge> : <Badge bg="success">Activo</Badge>}</td>
                         <td>
-                          {!a.anulado && (
-                            <Button size="sm" variant="outline-danger" onClick={() => handleAnularAbono(a.id)}>✕</Button>
+                          {puedeAnularAbono && !a.anulado && (
+                            <Button size="sm" variant="outline-danger" onClick={() => handleAnularAbono(a.id)}><Icon name="cerrar" /></Button>
                           )}
                         </td>
                       </tr>

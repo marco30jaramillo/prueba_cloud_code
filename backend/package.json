@@ -7,7 +7,9 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "db:setup": "node scripts/db-setup.js",
-    "db:seed": "node scripts/seed.js"
+    "db:seed": "node scripts/seed.js",
+    "test:db": "node scripts/db-test.js",
+    "test:web": "node scripts/web-test.js"
   },
   "engines": {
     "node": ">=22"
@@ -15,6 +17,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@azure/communication-email": "1.1.0",
     "@azure/storage-blob": "^12.33.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",

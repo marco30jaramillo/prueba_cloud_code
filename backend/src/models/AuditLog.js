@@ -9,6 +9,7 @@ const ACTION_LABELS = {
   user_enable:                'Usuario habilitado',
   user_disable:               'Usuario deshabilitado',
   password_generated:         'Contraseña generada por admin',
+  user_sessions_closed:       'Sesiones de usuario cerradas por admin',
   failed_login_attempt:       'Intento de acceso fallido',
   password_reset_requested:   'Solicitud de recuperación de contraseña',
   superuser_created:          'Superusuario creado',
@@ -16,6 +17,14 @@ const ACTION_LABELS = {
   role_permissions_updated:   'Permisos de rol actualizados',
   role_modules_updated:       'Módulos de rol actualizados',
   user_role_changed:          'Rol de usuario cambiado',
+  mail_sent:                  'Correo enviado',
+  mail_failed:                'Correo no enviado (fallo)',
+  mail_throttled:             'Correo no enviado (límite de envíos)',
+  account_activated:          'Cuenta activada',
+  activation_resend_requested:'Solicitud de reenvío de activación',
+  account_pending_deleted:    'Cuenta pendiente eliminada por vencimiento',
+  account_pending_disabled:   'Cuenta pendiente deshabilitada por vencimiento',
+  pending_purge_run:          'Corrida de limpieza de cuentas pendientes',
 };
 
 function fromSql(row) {
@@ -99,6 +108,36 @@ class AuditLog {
       console.error('[AuditLog] Error writing to SQL:', err.message);
     }
     return log;
+  }
+
+  /**
+   * Conteo persistente de envíos de correo, leído de la propia auditoría (sobrevive a
+   * reinicios y es común a todas las instancias). Cuenta `mail_sent` y `mail_failed`.
+   * `group` sale del registro de plantillas (valores fijos), nunca de la petición.
+   */
+  static async countMailActivity({ to, group, gapSeconds }) {
+    const pattern = `%"group":"${String(group).replace(/[^a-z0-9_-]/gi, '')}"%`;
+    const result = await (await request())
+      .input('to', sql.NVarChar(320), String(to).toLowerCase())
+      .input('pattern', sql.NVarChar(200), pattern)
+      .input('gap', sql.Int, Math.max(0, Math.floor(gapSeconds)))
+      .query(`SELECT
+                SUM(CASE WHEN targetEmail = @to AND details LIKE @pattern
+                          AND [timestamp] >= DATEADD(SECOND, -@gap, SYSUTCDATETIME()) THEN 1 ELSE 0 END) AS inGap,
+                SUM(CASE WHEN targetEmail = @to AND details LIKE @pattern
+                          AND [timestamp] >= DATEADD(HOUR, -1, SYSUTCDATETIME()) THEN 1 ELSE 0 END)      AS lastHour,
+                SUM(CASE WHEN targetEmail = @to AND details LIKE @pattern THEN 1 ELSE 0 END)             AS lastDay,
+                SUM(CASE WHEN [timestamp] >= DATEADD(HOUR, -1, SYSUTCDATETIME()) THEN 1 ELSE 0 END)      AS globalHour
+              FROM dbo.audit_logs
+              WHERE action IN ('mail_sent','mail_failed')
+                AND [timestamp] >= DATEADD(DAY, -1, SYSUTCDATETIME())`);
+    const row = result.recordset[0] || {};
+    return {
+      inGap: Number(row.inGap || 0),
+      lastHour: Number(row.lastHour || 0),
+      lastDay: Number(row.lastDay || 0),
+      globalHour: Number(row.globalHour || 0),
+    };
   }
 
   static async getAll() {

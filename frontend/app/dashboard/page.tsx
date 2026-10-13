@@ -8,6 +8,8 @@ import { modulesAPI } from '@/lib/api';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import styles from './page.module.scss';
 
+import { Icon } from '@/components/Icon';
+import { iconoDeModulo } from '@/lib/icono-modulo';
 interface DashboardModule {
   id: string;
   name: string;
@@ -18,10 +20,12 @@ interface DashboardModule {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  superuser:     '#f59e0b',
-  administrador: '#3b82f6',
-  vendedor:      '#10b981',
-  cliente:       '#8b5cf6',
+  superuser:     '#d97706',
+  administrador: '#2563eb',
+  tendero:       '#2563eb',
+  encargado:     '#2563eb',
+  vendedor:      '#2563eb',
+  cliente:       '#2563eb',
 };
 
 function DashboardPageContent() {
@@ -85,7 +89,7 @@ function DashboardPageContent() {
               <Card className={`${styles.actionCard} h-100`}>
                 <Card.Body>
                   <Card.Title className={styles.cardTitle}>
-                    {mod.icon} {mod.name}
+                    <Icon name={iconoDeModulo(mod.icon, mod.href)} /> {mod.name}
                   </Card.Title>
                   <Card.Text>{mod.description}</Card.Text>
                   <Button

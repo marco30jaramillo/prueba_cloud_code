@@ -5,8 +5,54 @@ const ResponseFormatter  = require('../utils/responseFormatter');
 const { authMiddleware } = require('../middleware/auth');
 const roleMiddleware     = require('../middleware/roleMiddleware');
 const auditMiddleware    = require('../middleware/auditMiddleware');
+const { PERMISOS_SESION, ACCESO_TOTAL } = require('../config/permisos');
 
 const router = express.Router();
+
+const NIVELES = new Set(['read', 'write', 'full']);
+
+async function tieneAccesoTotal(roleName) {
+  const role = await Role.getByName(roleName);
+  return Boolean(role && role.permissions.includes(ACCESO_TOTAL));
+}
+
+/**
+ * Valida un cambio de rol (crear o editar). Devuelve el mensaje de error o null.
+ *  - Los permisos se conceden con módulos: como permiso directo solo se aceptan los de sesión
+ *    (se conservan los que el rol ya tenía, para poder quitarlos).
+ *  - Nadie concede el acceso total; el rol superuser y el rol propio solo los cambia quien
+ *    tiene acceso total (si no, un administrador podría darse más permisos).
+ */
+async function validarCambio(req, rolActual, { moduleAccess, directPermissions }) {
+  const total = await tieneAccesoTotal(req.user.role);
+  if (rolActual && !total) {
+    if (rolActual.name === 'superuser') return { status: 403, texto: 'Solo el superusuario puede modificar el rol superusuario' };
+    if (rolActual.name === req.user.role) return { status: 403, texto: 'No puedes modificar los permisos de tu propio rol' };
+  }
+  if (directPermissions !== undefined) {
+    if (!Array.isArray(directPermissions) || directPermissions.some(p => typeof p !== 'string'))
+      return { status: 400, texto: 'Los permisos directos deben ser una lista' };
+    const previos = new Set(rolActual ? rolActual.permissions : []);
+    if (directPermissions.includes(ACCESO_TOTAL) && rolActual?.name !== 'superuser')
+      return { status: 400, texto: 'El acceso total no se puede conceder' };
+    const nuevos = directPermissions.filter(p => p !== ACCESO_TOTAL && !PERMISOS_SESION.includes(p) && !previos.has(p));
+    if (nuevos.length)
+      return { status: 400, texto: `Estos permisos se conceden con el nivel de un módulo, no directamente: ${nuevos.join(', ')}` };
+  }
+  if (moduleAccess !== undefined) {
+    if (!Array.isArray(moduleAccess)) return { status: 400, texto: 'Los módulos deben ser una lista' };
+    const ids = new Set((await Module.getAll()).map(m => m.id));
+    for (const entry of moduleAccess) {
+      if (!entry || !NIVELES.has(entry.level)) return { status: 400, texto: 'Elige un nivel de acceso válido para cada módulo' };
+      if (!ids.has(String(entry.id))) return { status: 400, texto: 'Uno de los módulos no existe' };
+    }
+  }
+  return null;
+}
+
+function responderError(res, error) {
+  return error.status === 403 ? ResponseFormatter.forbidden(res, error.texto) : ResponseFormatter.badRequest(res, error.texto);
+}
 
 // ── GET /roles-config ─────────────────────────────────────
 router.get('/', authMiddleware, roleMiddleware.requirePermission('admin:view-roles'), async (req, res) => {
@@ -34,9 +80,13 @@ router.get('/', authMiddleware, roleMiddleware.requirePermission('admin:view-rol
   }));
 
   return ResponseFormatter.success(res, {
-    modules:        modules.map(m => m.toJSON()),
-    roles:          rolesData,
-    allModulePerms: [...modulePermSet].sort(),
+    modules:          modules.map(m => m.toJSON()),
+    roles:            rolesData,
+    allModulePerms:   [...modulePermSet].sort(),
+    // Únicos permisos que se asignan directamente; el resto lo da el nivel de cada módulo.
+    sessionPermissions: [...PERMISOS_SESION],
+    // ¿Quien consulta puede guardar cambios? (sin esto la pantalla es de solo lectura)
+    canManageRoles:   await Role.hasPermission(req.user.role, 'admin:manage-roles'),
   });
 });
 
@@ -54,12 +104,8 @@ router.post('/', authMiddleware, roleMiddleware.requirePermission('admin:manage-
     return ResponseFormatter.conflict(res, `Ya existe un rol con el nombre "${safeName}"`);
   }
 
-  const VALID_LEVELS = new Set(['read', 'write', 'full']);
-  for (const entry of moduleAccess) {
-    if (!VALID_LEVELS.has(entry.level)) {
-      return ResponseFormatter.badRequest(res, `Nivel inválido: ${entry.level}. Use read, write o full`);
-    }
-  }
+  const error = await validarCambio(req, null, { moduleAccess, directPermissions });
+  if (error) return responderError(res, error);
 
   await Role.createRole({
     name:        safeName,
@@ -100,18 +146,12 @@ router.patch('/:roleId', authMiddleware, roleMiddleware.requirePermission('admin
   const role = await Role.getById(roleId);
   if (!role) return ResponseFormatter.notFound(res, 'Rol no encontrado');
 
-  let perms = directPermissions;
-  if (role.name === 'superuser' && perms !== undefined && !perms.includes('system:full-access')) {
-    perms = ['system:full-access', ...perms];
-  }
+  const error = await validarCambio(req, role, { moduleAccess, directPermissions });
+  if (error) return responderError(res, error);
 
-  const VALID_LEVELS = new Set(['read', 'write', 'full']);
-  if (moduleAccess) {
-    for (const entry of moduleAccess) {
-      if (!VALID_LEVELS.has(entry.level)) {
-        return ResponseFormatter.badRequest(res, `Nivel inválido: ${entry.level}. Use read, write o full`);
-      }
-    }
+  let perms = directPermissions;
+  if (role.name === 'superuser' && perms !== undefined && !perms.includes(ACCESO_TOTAL)) {
+    perms = [ACCESO_TOTAL, ...perms];
   }
 
   await Role.updateRole(roleId, {

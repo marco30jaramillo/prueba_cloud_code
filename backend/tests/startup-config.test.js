@@ -153,8 +153,90 @@ test('arranque con solo AZURE_SQL_*: sin errores', () => {
     AZURE_SQL_DATABASE: 'base_ficticia',
     AZURE_SQL_USER: 'usuario_ficticio',
     AZURE_SQL_PASSWORD: 'valor-ficticio-de-prueba',
+    ...correoAzureValido(),
   });
   assert.deepEqual(errores, []);
+});
+
+// ── Correo (requerimiento 003): la validación de arranque ───────────────────
+
+const CADENA_ACS_FICTICIA = 'endpoint=https://recurso-ficticio.communication.azure.com/;accesskey=clave-ficticia-de-prueba';
+
+function correoAzureValido(extra = {}) {
+  return {
+    MAIL_TRANSPORT: 'azure',
+    ACS_EMAIL_CONNECTION_STRING: CADENA_ACS_FICTICIA,
+    MAIL_FROM: 'DoNotReply@ficticio.azurecomm.net',
+    FRONTEND_URL: 'https://web-ficticia.example.net',
+    ...extra,
+  };
+}
+
+function produccionAzureSql(extra = {}) {
+  return {
+    JWT_SECRET: SECRETO_VALIDO,
+    NODE_ENV: 'production',
+    WEBSITE_SITE_NAME: 'app-ficticia',
+    AZURE_SQL_SERVER: 'servidor-ficticio.database.windows.net',
+    AZURE_SQL_DATABASE: 'base_ficticia',
+    AZURE_SQL_USER: 'usuario_ficticio',
+    AZURE_SQL_PASSWORD: 'valor-ficticio-de-prueba',
+    ...extra,
+  };
+}
+
+test('correo: en local, sin variables de correo, arranca con outbox por defecto', () => {
+  assert.deepEqual(collectStartupErrors(baseLocal({ JWT_SECRET: SECRETO_VALIDO })), []);
+});
+
+test('correo: producción con outbox falla', () => {
+  const errores = collectStartupErrors(produccionAzureSql(correoAzureValido({ MAIL_TRANSPORT: 'outbox' })));
+  assert.equal(errores.length, 1);
+  assert.match(errores[0], /MAIL_TRANSPORT/);
+});
+
+test('correo: producción sin MAIL_TRANSPORT falla', () => {
+  const env = produccionAzureSql(correoAzureValido());
+  delete env.MAIL_TRANSPORT;
+  const errores = collectStartupErrors(env);
+  assert.ok(errores.some((e) => /MAIL_TRANSPORT es obligatorio/.test(e)));
+});
+
+test('correo: producción con azure y sin cadena de conexión falla', () => {
+  const env = produccionAzureSql(correoAzureValido());
+  delete env.ACS_EMAIL_CONNECTION_STRING;
+  const errores = collectStartupErrors(env);
+  assert.equal(errores.length, 1);
+  assert.match(errores[0], /ACS_EMAIL_CONNECTION_STRING/);
+});
+
+test('correo: azure sin MAIL_FROM o con uno inválido falla', () => {
+  const sin = produccionAzureSql(correoAzureValido());
+  delete sin.MAIL_FROM;
+  assert.ok(collectStartupErrors(sin).some((e) => /MAIL_FROM/.test(e)));
+  const malo = produccionAzureSql(correoAzureValido({ MAIL_FROM: 'no-es-un-correo' }));
+  assert.ok(collectStartupErrors(malo).some((e) => /MAIL_FROM/.test(e)));
+  const inyeccion = produccionAzureSql(correoAzureValido({ MAIL_FROM: 'a@b.co\nBcc: x@y.zz' }));
+  assert.ok(collectStartupErrors(inyeccion).some((e) => /MAIL_FROM/.test(e)));
+});
+
+test('correo: producción exige FRONTEND_URL https', () => {
+  const sin = produccionAzureSql(correoAzureValido());
+  delete sin.FRONTEND_URL;
+  assert.ok(collectStartupErrors(sin).some((e) => /FRONTEND_URL/.test(e)));
+  const http = produccionAzureSql(correoAzureValido({ FRONTEND_URL: 'http://web-ficticia.example.net' }));
+  assert.ok(collectStartupErrors(http).some((e) => /https/.test(e)));
+});
+
+test('correo: ningún mensaje de error incluye la cadena de conexión', () => {
+  const env = produccionAzureSql(correoAzureValido({ MAIL_TRANSPORT: 'outbox', MAIL_FROM: 'malo' }));
+  const texto = collectStartupErrors(env).join(' | ');
+  assert.ok(!texto.includes('clave-ficticia-de-prueba'));
+  assert.ok(!texto.includes('recurso-ficticio'));
+});
+
+test('correo: producción con azure completo arranca sin errores', () => {
+  assert.deepEqual(collectStartupErrors(produccionAzureSql(correoAzureValido())), []);
 });
 
 // ── Validación de arranque (proceso) ────────────────────────────────────────

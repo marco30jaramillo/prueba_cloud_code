@@ -1,5 +1,5 @@
 .formContainer {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafb 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   border-radius: 12px;
   padding: 2rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
@@ -32,8 +32,8 @@
   background-color: #ffffff;
 
   &:focus {
-    border-color: #10b981;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
     background-color: #ffffff;
   }
 
@@ -43,16 +43,16 @@
   }
 
   &.error {
-    border-color: #ef4444;
+    border-color: #dc2626;
 
     &:focus {
-      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+      box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
     }
   }
 }
 
 .feedback {
-  color: #ef4444;
+  color: #dc2626;
   font-size: 0.85rem;
   margin-top: 0.25rem;
   display: block;
@@ -61,7 +61,7 @@
 .toggleBtn {
   border: 2px solid #e5e7eb !important;
   border-left: none !important;
-  background-color: #f8fafb;
+  background-color: #f8fafc;
   color: #6b7280;
   transition: all 0.3s ease;
   padding: 0.5rem 1rem;
@@ -74,7 +74,7 @@
 
   &:focus {
     box-shadow: none;
-    border-color: #10b981 !important;
+    border-color: #2563eb !important;
   }
 
   &:disabled {
@@ -88,7 +88,7 @@
 
   &:focus {
     border-right: none;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
   }
 }
 
@@ -98,15 +98,15 @@
   border: none;
   border-radius: 8px;
   transition: all 0.3s ease;
-  background-color: #10b981;
+  background-color: #2563eb;
   color: white;
   font-size: 1rem;
   margin-top: 1rem;
 
   &:hover:not(:disabled) {
-    background-color: #059669;
+    background-color: #047857;
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
   }
 
   &:active:not(:disabled) {
@@ -120,7 +120,7 @@
 }
 
 .required {
-  color: #ef4444;
+  color: #dc2626;
 }
 
 .rememberRow {
@@ -133,8 +133,8 @@
   user-select: none;
 
   :global(.form-check-input:checked) {
-    background-color: #10b981;
-    border-color: #10b981;
+    background-color: #2563eb;
+    border-color: #2563eb;
   }
 }
 

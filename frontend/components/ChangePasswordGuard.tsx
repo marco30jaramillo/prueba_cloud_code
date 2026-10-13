@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '@/lib/auth-store';
+import { useAuthStore, saveAuthToStorage } from '@/lib/auth-store';
 import { useRouter } from 'next/navigation';
 import { ForceChangePasswordModal } from './ForceChangePasswordModal';
 
 export const ChangePasswordGuard: React.FC = () => {
-  const { user, logout, isInitialized } = useAuthStore();
+  const { user, token, logout, setAuth, isInitialized } = useAuthStore();
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
 
@@ -17,6 +17,12 @@ export const ChangePasswordGuard: React.FC = () => {
   }, [user, isInitialized]);
 
   const handlePasswordChanged = () => {
+    // La sesión sigue siendo la misma; solo deja de estar pendiente el cambio.
+    if (user && token) {
+      const updatedUser = { ...user, mustChangePassword: false };
+      setAuth(updatedUser, token);
+      saveAuthToStorage(updatedUser, token);
+    }
     setShowModal(false);
     router.push('/dashboard');
   };

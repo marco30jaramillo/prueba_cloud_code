@@ -40,11 +40,13 @@ class TokenManager {
     } catch (err) { console.error('[TokenManager] revokeToken error:', err.message); return false; }
   }
 
-  async revokeAllUserTokens(userId, email) {
+  // `exceptToken`: sesión que se conserva (la actual) al revocar las demás de la cuenta.
+  async revokeAllUserTokens(userId, email, exceptToken = null) {
     try {
       const db = await request();
       const found = await db.input('userId', sql.UniqueIdentifier, userId)
-        .query('SELECT tokenId,email,token,expiresAt FROM dbo.tokens_granted WHERE userId=@userId');
+        .input('except', sql.NVarChar(sql.MAX), exceptToken || '')
+        .query("SELECT tokenId,email,token,expiresAt FROM dbo.tokens_granted WHERE userId=@userId AND (@except = '' OR token <> @except)");
       if (!found.recordset.length) return 0;
       const revokedAt = new Date();
       for (const record of found.recordset) {
@@ -59,7 +61,8 @@ class TokenManager {
                   VALUES (@tokenId,@userId,@email,@token,@revokedAt,@expiresAt)`);
       }
       await (await request()).input('userId', sql.UniqueIdentifier, userId)
-        .query('DELETE FROM dbo.tokens_granted WHERE userId=@userId');
+        .input('except', sql.NVarChar(sql.MAX), exceptToken || '')
+        .query("DELETE FROM dbo.tokens_granted WHERE userId=@userId AND (@except = '' OR token <> @except)");
       return found.recordset.length;
     } catch (err) { console.error('[TokenManager] revokeAllUserTokens error:', err.message); return 0; }
   }

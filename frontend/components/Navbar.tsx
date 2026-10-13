@@ -11,6 +11,9 @@ import { useRouter } from 'next/navigation';
 import { getImageUrl } from '@/lib/image-url';
 import styles from './Navbar.module.scss';
 
+import { Icon } from './Icon';
+import { Logo } from './Logo';
+import { iconoDeModulo } from '@/lib/icono-modulo';
 interface NavModule {
   id: string;
   name: string;
@@ -21,6 +24,7 @@ interface NavModule {
 
 export const Navbar: React.FC = () => {
   const { isAuthenticated, user } = useAuthStore();
+  const mustChangePassword = !!user?.mustChangePassword;
   const { handleLogout, handleLogoutAll } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -31,7 +35,7 @@ export const Navbar: React.FC = () => {
   const [navModules, setNavModules] = useState<NavModule[]>([]);
 
   useEffect(() => {
-    const checkMobile = () => setIsNarrow(window.innerWidth < 1024);
+    const checkMobile = () => setIsNarrow(window.innerWidth < 1400);
     checkMobile();
 
     const handleScroll = () => {
@@ -50,11 +54,12 @@ export const Navbar: React.FC = () => {
 
   // Fetch accessible modules when auth state changes
   useEffect(() => {
-    if (!isAuthenticated) { setNavModules([]); return; }
+    // Con el cambio de contraseña pendiente el servidor solo permite ese cambio: no se piden módulos.
+    if (!isAuthenticated || mustChangePassword) { setNavModules([]); return; }
     modulesAPI.getAll()
       .then(res => setNavModules((res.modules || []).filter((m: NavModule) => m.showInNav)))
       .catch(() => {});
-  }, [isAuthenticated]);
+  }, [isAuthenticated, mustChangePassword]);
 
   const useSidebar = isNarrow && scrolled;
 
@@ -81,7 +86,7 @@ export const Navbar: React.FC = () => {
   };
 
   const handleLogoutAllClick = async () => {
-    if (!confirm('⚠️ Esto cerrará tu sesión en TODOS tus dispositivos. ¿Continuar?')) return;
+    if (!confirm('Esto cerrará tu sesión en TODOS tus dispositivos. ¿Continuar?')) return;
     setIsLoggingOut(true);
     try {
       await handleLogoutAll();
@@ -95,8 +100,8 @@ export const Navbar: React.FC = () => {
   const navItems = isAuthenticated
     ? navModules.map(m => ({ href: m.href, icon: m.icon, label: m.name }))
     : [
-        { href: '/login',    icon: '🔑', label: 'Iniciar Sesión' },
-        { href: '/register', icon: '📝', label: 'Registrarse'    },
+        { href: '/login',    icon: 'candado', label: 'Iniciar Sesión' },
+        { href: '/register', icon: 'nota', label: 'Registrarse'    },
       ];
 
   return (
@@ -104,35 +109,18 @@ export const Navbar: React.FC = () => {
       {/* ── Top Navbar ── */}
       <BSNavbar
         bg="light"
-        expand="lg"
+        expand="xxl"
         className={`${styles.navbar} ${useSidebar ? styles.navbarHidden : ''} shadow-sm`}
       >
-        <Container>
+        <Container fluid className="px-4">
           <BSNavbar.Brand as={Link} href="/" className={styles.brand}>
-            <span className={styles.logo}>🧾</span>
-            Mi Valecito
+            <Logo variante="horizontal" alto={28} />
           </BSNavbar.Brand>
-
-          {isAuthenticated && (
-            <Link href="/dashboard" className={styles.panelBtn} title="Panel principal">
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <rect x="0"  y="0"  width="5" height="5" rx="1" fill="currentColor"/>
-                <rect x="6.5" y="0"  width="5" height="5" rx="1" fill="currentColor"/>
-                <rect x="13" y="0"  width="5" height="5" rx="1" fill="currentColor"/>
-                <rect x="0"  y="6.5" width="5" height="5" rx="1" fill="currentColor"/>
-                <rect x="6.5" y="6.5" width="5" height="5" rx="1" fill="currentColor"/>
-                <rect x="13" y="6.5" width="5" height="5" rx="1" fill="currentColor"/>
-                <rect x="0"  y="13" width="5" height="5" rx="1" fill="currentColor"/>
-                <rect x="6.5" y="13" width="5" height="5" rx="1" fill="currentColor"/>
-                <rect x="13" y="13" width="5" height="5" rx="1" fill="currentColor"/>
-              </svg>
-              <span className={styles.panelBtnLabel}>Panel</span>
-            </Link>
-          )}
 
           <BSNavbar.Toggle aria-controls="basic-navbar-nav" />
           <BSNavbar.Collapse id="basic-navbar-nav">
-            <Nav className="ms-auto">
+            {isAuthenticated && <div className={styles.navSpacer} />}
+            <Nav className={isAuthenticated ? styles.navCenter : 'ms-auto'}>
               {!isAuthenticated ? (
                 <>
                   <Nav.Link as={Link} href="/login" className={styles.navLink}>
@@ -144,52 +132,54 @@ export const Navbar: React.FC = () => {
                 </>
               ) : (
                 <>
-                  {navModules.map(mod => (
+                  <Nav.Link as={Link} href="/dashboard" className={styles.navLink}>
+                    <Icon name="panel" /> Panel
+                  </Nav.Link>
+                  {navModules.filter(mod => mod.href !== '/dashboard/profile').map(mod => (
                     <Nav.Link key={mod.id} as={Link} href={mod.href} className={styles.navLink}>
-                      {mod.icon} {mod.name}
+                      <Icon name={iconoDeModulo(mod.icon, mod.href)} /> {mod.name}
                     </Nav.Link>
                   ))}
-                  <div className={styles.userInfo}>
-                    <img
-                      src={getImageUrl(user?.photo)}
-                      alt={user?.name}
-                      className={styles.userPhoto}
-                      onError={(e) => {
-                        const img = e.target as HTMLImageElement;
-                        if (!img.dataset.fallbackAttempted) {
-                          img.dataset.fallbackAttempted = 'true';
-                          img.src = getImageUrl(undefined);
-                        }
-                      }}
-                    />
-                    <span>{user?.name} ({user?.role})</span>
-                  </div>
-                  <Dropdown className={styles.logoutDropdown}>
-                    <Dropdown.Toggle
-                      variant="outline-danger"
-                      size="sm"
-                      id="logout-dropdown"
-                      disabled={isLoggingOut}
-                    >
-                      Logout
+                </>
+              )}
+            </Nav>
+            {isAuthenticated && (
+              <Nav className={styles.navUser}>
+                  <Dropdown className={styles.userDropdown} align="end">
+                    <Dropdown.Toggle as="button" id="user-dropdown" className={styles.userInfo} disabled={isLoggingOut}>
+                      <img
+                        src={getImageUrl(user?.photo)}
+                        alt=""
+                        className={styles.userPhoto}
+                        onError={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          if (!img.dataset.fallbackAttempted) {
+                            img.dataset.fallbackAttempted = 'true';
+                            img.src = getImageUrl(undefined);
+                          }
+                        }}
+                      />
+                      <span>{user?.name} ({user?.role})</span>
                     </Dropdown.Toggle>
-                    <Dropdown.Menu align="end">
-                      <Dropdown.Item onClick={handleLogoutClick} disabled={isLoggingOut}>
-                        🚪 Logout en este dispositivo
+                    <Dropdown.Menu popperConfig={{ strategy: 'fixed' }}>
+                      <Dropdown.Item as={Link} href="/dashboard/profile">
+                        <Icon name="cliente" /> Mi perfil
                       </Dropdown.Item>
                       <Dropdown.Divider />
+                      <Dropdown.Item onClick={handleLogoutClick} disabled={isLoggingOut}>
+                        <Icon name="cerrar-sesion" /> Cerrar sesión en este dispositivo
+                      </Dropdown.Item>
                       <Dropdown.Item
                         onClick={handleLogoutAllClick}
                         disabled={isLoggingOut}
                         className={styles.logoutAllItem}
                       >
-                        🌍 Logout en todos los dispositivos
+                        <Icon name="cerrar-sesion-todos" /> Cerrar sesión en todos tus dispositivos
                       </Dropdown.Item>
                     </Dropdown.Menu>
                   </Dropdown>
-                </>
-              )}
-            </Nav>
+              </Nav>
+            )}
           </BSNavbar.Collapse>
         </Container>
       </BSNavbar>
@@ -211,13 +201,13 @@ export const Navbar: React.FC = () => {
             onClick={() => setSidebarExpanded(v => !v)}
             aria-label={sidebarExpanded ? 'Colapsar menú' : 'Expandir menú'}
           >
-            {sidebarExpanded ? '✕' : '☰'}
+            <Icon name={sidebarExpanded ? 'cerrar' : 'siguiente'} />
           </button>
 
           <nav className={`${styles.sidebar} ${sidebarExpanded ? styles.sidebarExpanded : ''}`}>
             {/* Brand */}
             <Link href="/" className={styles.sidebarBrand} onClick={() => setSidebarExpanded(false)}>
-              <span className={styles.sidebarIcon}>🧾</span>
+              <span className={styles.sidebarIcon}><Logo variante="isotipo" alto={24} decorativo /></span>
               <span className={styles.sidebarLabel}>Mi Valecito</span>
             </Link>
 
@@ -230,7 +220,7 @@ export const Navbar: React.FC = () => {
                   className={`${styles.sidebarItem} ${pathname === item.href ? styles.sidebarItemActive : ''}`}
                   onClick={() => setSidebarExpanded(false)}
                 >
-                  <span className={styles.sidebarIcon}>{item.icon}</span>
+                  <span className={styles.sidebarIcon}><Icon name={iconoDeModulo(item.icon, item.href)} /></span>
                   <span className={styles.sidebarLabel}>{item.label}</span>
                 </Link>
               ))}
@@ -262,7 +252,7 @@ export const Navbar: React.FC = () => {
                   onClick={handleLogoutClick}
                   disabled={isLoggingOut}
                 >
-                  <span className={styles.sidebarIcon}>🚪</span>
+                  <span className={styles.sidebarIcon}><Icon name="cerrar-sesion" /></span>
                   <span className={styles.sidebarLabel}>Salir</span>
                 </button>
               </div>

@@ -50,8 +50,9 @@ apiClient.interceptors.response.use(
       const isForgotPasswordPage = typeof window !== 'undefined' && window.location.pathname === '/forgot-password';
       const isResetPasswordPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/reset-password');
       const isRegisterPage = typeof window !== 'undefined' && window.location.pathname === '/register';
+      const isActivatePage = typeof window !== 'undefined' && window.location.pathname === '/activar';
 
-      if (!isLoginPage && !isForgotPasswordPage && !isResetPasswordPage && !isRegisterPage) {
+      if (!isLoginPage && !isForgotPasswordPage && !isResetPasswordPage && !isRegisterPage && !isActivatePage) {
         console.warn('[API] Token inválido o expirado (401)');
         clearAuthStorage();
         if (typeof window !== 'undefined') {
@@ -111,6 +112,18 @@ export const authAPI = {
     return data;
   },
 
+  // Activa la cuenta con el token del correo. Responde como login (sesión incluida).
+  activate: async (token: string) => {
+    const { data } = await apiClient.post<AuthResponse>('/auth/activate', { token });
+    return data;
+  },
+
+  // Respuesta genérica: no revela si el correo existe.
+  resendActivation: async (email: string) => {
+    const { data } = await apiClient.post<AuthResponse>('/auth/resend-activation', { email });
+    return data;
+  },
+
   bootstrapSuperuser: async (email: string, password: string, name: string) => {
     const { data } = await apiClient.post<AuthResponse>('/auth/bootstrap-superuser', {
       email,
@@ -120,10 +133,10 @@ export const authAPI = {
     return data;
   },
 
-  createUser: async (email: string, password: string, name: string, role: string) => {
+  /** Crea la cuenta pendiente; la persona define su contraseña al activarla con el correo. */
+  createUser: async (email: string, name: string, role: string) => {
     const { data } = await apiClient.post<AuthResponse>('/auth/create-user', {
       email,
-      password,
       name,
       role
     });
@@ -212,6 +225,11 @@ export const usersAPI = {
 
   generatePassword: async (userId: string) => {
     const { data } = await apiClient.post(`/users/${userId}/generate-password`, {});
+    return data;
+  },
+
+  revokeSessions: async (userId: string) => {
+    const { data } = await apiClient.post(`/users/${userId}/revoke-sessions`, {});
     return data;
   },
 

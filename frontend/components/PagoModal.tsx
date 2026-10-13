@@ -3,7 +3,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Modal, Button, Form, Alert, Spinner, Table, Badge } from 'react-bootstrap';
 import { valesAPI } from '@/lib/api';
+import MontoInput from '@/components/MontoInput';
+import { valesCobrables, distribuirPago, validarPago, saldoDe, totalSaldos } from '@/lib/pago-integral';
 
+import { Icon } from './Icon';
 export interface ValeActivo {
   id: string;
   tiendaNombre?: string;
@@ -34,25 +37,11 @@ function fmtDate(s?: string) {
 
 export default function PagoModal({ show, onHide, clienteId, clienteNombre, vales, onPagoCorrecto }: Props) {
   // Solo vales activos, ordenados más viejo primero (mismo orden que el backend aplicará)
-  const valesOrdenados = useMemo(
-    () => [...vales]
-      .filter(v => ['pendiente', 'parcial'].includes(v.estado))
-      .sort((a, b) => new Date(a.fechaVale).getTime() - new Date(b.fechaVale).getTime()),
-    [vales]
-  );
+  const valesOrdenados = useMemo(() => valesCobrables([...vales]), [vales]);
 
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
   const [monto, setMonto] = useState('');   // valor numérico crudo (sin formato)
 
-  // Convierte "$ 20.000" → "20000" al escribir
-  function handleMontoChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const raw = e.target.value.replace(/[^\d]/g, '');
-    setMonto(raw);
-  }
-
-  const montoFormatted = monto
-    ? '$ ' + parseInt(monto, 10).toLocaleString('es-CO')
-    : '';
   const [notas, setNotas] = useState('');
   const [registrando, setRegistrando] = useState(false);
   const [error, setError] = useState('');
@@ -70,21 +59,15 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
   }, [show, valesOrdenados]);
 
   const valesSeleccionados = valesOrdenados.filter(v => seleccionados.has(v.id));
-  const totalSeleccionado = valesSeleccionados.reduce((s, v) => s + parseFloat(String(v.saldoPendiente)), 0);
-  const minSugerido = valesSeleccionados.length > 0 ? parseFloat(String(valesSeleccionados[0].saldoPendiente)) : 0;
+  const totalSeleccionado = totalSaldos(valesSeleccionados);
+  const minSugerido = valesSeleccionados.length > 0 ? saldoDe(valesSeleccionados[0]) : 0;
   const montoNum = parseFloat(monto) || 0;
 
   // Preview de distribución
-  const preview = useMemo(() => {
-    if (montoNum <= 0 || valesSeleccionados.length === 0) return [];
-    let restante = montoNum;
-    return valesSeleccionados.map(v => {
-      const saldo = parseFloat(String(v.saldoPendiente));
-      const aplicado = Math.min(restante, saldo);
-      restante = Math.max(0, restante - saldo);
-      return { ...v, aplicado, quedaPendiente: Math.max(0, saldo - aplicado) };
-    });
-  }, [montoNum, valesSeleccionados]);
+  const preview = useMemo(
+    () => distribuirPago(montoNum, valesSeleccionados).map(r => ({ ...r.vale, aplicado: r.aplicado, quedaPendiente: r.quedaPendiente })),
+    [montoNum, valesSeleccionados]
+  );
 
   function toggleVale(id: string) {
     setSeleccionados(prev => {
@@ -97,10 +80,12 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
 
   async function handlePagar(e: React.FormEvent) {
     e.preventDefault();
-    if (montoNum <= 0) return setError('Ingresa un monto válido.');
-    if (valesSeleccionados.length === 0) return setError('Selecciona al menos un crédito.');
-    if (montoNum > totalSeleccionado + 0.01)
+    const validacion = validarPago(montoNum, valesSeleccionados);
+    if (!validacion.ok) {
+      if (validacion.motivo === 'monto-invalido') return setError('Ingresa un monto válido.');
+      if (validacion.motivo === 'sin-seleccion') return setError('Selecciona al menos un crédito.');
       return setError(`El monto supera el total seleccionado (${fmt(totalSeleccionado)}).`);
+    }
 
     setRegistrando(true);
     setError('');
@@ -125,7 +110,7 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
   return (
     <Modal show={show} onHide={onHide} size="lg" scrollable>
       <Modal.Header closeButton>
-        <Modal.Title>💳 Pago integral — {clienteNombre}</Modal.Title>
+        <Modal.Title><Icon name="abono" /> Pago integral — {clienteNombre}</Modal.Title>
       </Modal.Header>
 
       <Modal.Body>
@@ -141,7 +126,7 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
               Créditos a incluir
             </h6>
             <Table size="sm" hover className="mb-3" style={{ fontSize: '0.9rem' }}>
-              <thead style={{ background: '#f9fafb' }}>
+              <thead style={{ background: '#f8fafc' }}>
                 <tr>
                   <th style={{ width: 36 }}>
                     <Form.Check
@@ -180,7 +165,7 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
             </Table>
 
             {/* Resumen selección */}
-            <div className="d-flex justify-content-between mb-3 p-2 rounded" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+            <div className="d-flex justify-content-between mb-3 p-2 rounded" style={{ background: '#d1fae5', border: '1px solid #d1fae5' }}>
               <span style={{ fontSize: '0.9rem' }}>
                 {valesSeleccionados.length} crédito{valesSeleccionados.length !== 1 ? 's' : ''} seleccionado{valesSeleccionados.length !== 1 ? 's' : ''}
               </span>
@@ -202,19 +187,17 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
                 Mínimo {minSugerido > 0 ? `(${fmt(minSugerido)})` : ''}
               </Button>
               <Button
-                size="sm" variant="outline-success"
+                size="sm" variant="outline-primary"
                 onClick={() => setMonto(String(Math.round(totalSeleccionado)))}
                 disabled={totalSeleccionado <= 0}
               >
                 Total {totalSeleccionado > 0 ? `(${fmt(totalSeleccionado)})` : ''}
               </Button>
             </div>
-            <Form.Control
-              type="text"
-              inputMode="numeric"
+            <MontoInput
               placeholder="$ 0"
-              value={montoFormatted}
-              onChange={handleMontoChange}
+              value={monto}
+              onChange={setMonto}
               required
               className="mb-3"
               style={{ fontSize: '1.1rem', fontWeight: 600 }}
@@ -227,7 +210,7 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
                   Distribución del pago
                 </h6>
                 <Table size="sm" className="mb-3" style={{ fontSize: '0.88rem' }}>
-                  <thead style={{ background: '#f9fafb' }}>
+                  <thead style={{ background: '#f8fafc' }}>
                     <tr>
                       <th>Crédito</th>
                       <th className="text-end">Saldo actual</th>
@@ -242,7 +225,7 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
                         <td className="text-end">{fmt(parseFloat(String(p.saldoPendiente)))}</td>
                         <td className="text-end text-success fw-bold">{p.aplicado > 0 ? fmt(p.aplicado) : '—'}</td>
                         <td className="text-end" style={{ color: p.quedaPendiente > 0 ? '#d97706' : '#059669' }}>
-                          {p.quedaPendiente > 0 ? fmt(p.quedaPendiente) : '✓ Pagado'}
+                          {p.quedaPendiente > 0 ? fmt(p.quedaPendiente) : 'Pagado'}
                         </td>
                       </tr>
                     ))}
@@ -259,7 +242,7 @@ export default function PagoModal({ show, onHide, clienteId, clienteNombre, vale
             <div className="d-grid mt-2">
               <Button
                 type="submit"
-                variant="success"
+                variant="primary"
                 size="lg"
                 disabled={registrando || valesSeleccionados.length === 0 || montoNum <= 0 || exito !== ''}
               >

@@ -8,10 +8,27 @@ const { requirePermission } = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
-const isAdmin = role => role === 'superuser' || role === 'administrador';
+const Role = require('../models/Role');
+
+// tienda:administrar («Mi tienda» en total) opera en cualquier tienda; el resto, en las suyas.
+const todasLasTiendas = role => Role.hasPermission(role, 'tienda:administrar');
+
+/**
+ * Fecha de vencimiento válida: vacía, o un día que no sea anterior a hoy. Se compara por día
+ * ("YYYY-MM-DD"), con un día de margen respecto a UTC para no rechazar el "hoy" de un teléfono
+ * cuya zona horaria va detrás del servidor (Colombia es UTC-5).
+ */
+function vencimientoInvalido(fecha) {
+  if (fecha === undefined || fecha === null || fecha === '') return null;
+  const d = new Date(fecha);
+  if (typeof fecha !== 'string' || Number.isNaN(d.getTime())) return 'La fecha de vencimiento no es válida';
+  const minimo = new Date(Date.now() - 24 * 3600 * 1000).toISOString().slice(0, 10);
+  if (d.toISOString().slice(0, 10) < minimo) return 'La fecha de vencimiento no puede ser anterior a hoy';
+  return null;
+}
 
 async function tiendaAcceso(userId, role, tiendaId) {
-  if (isAdmin(role)) return true;
+  if (await todasLasTiendas(role)) return true;
   return Tienda.hasAcceso(tiendaId, userId);
 }
 
@@ -21,23 +38,34 @@ async function tiendaAcceso(userId, role, tiendaId) {
 router.post('/', authMiddleware, requirePermission('vale:crear'), async (req, res) => {
   const { tiendaId, clienteId, descripcion, montoTotal } = req.body;
   if (!tiendaId || !clienteId || !descripcion?.trim() || !montoTotal)
-    return ResponseFormatter.badRequest(res, 'tiendaId, clienteId, descripcion y montoTotal son requeridos');
+    return ResponseFormatter.badRequest(res, 'Faltan la tienda, el cliente, la descripción o el monto del vale');
   if (parseFloat(montoTotal) <= 0)
     return ResponseFormatter.badRequest(res, 'El monto debe ser mayor a 0');
+  const errorFecha = vencimientoInvalido(req.body.fechaVencimiento);
+  if (errorFecha) return ResponseFormatter.badRequest(res, errorFecha);
   try {
     if (!await tiendaAcceso(req.user.userId, req.user.role, tiendaId))
       return ResponseFormatter.forbidden(res, 'No tienes acceso a esta tienda');
+    // El cliente debe existir y tener la cuenta activada (una cuenta pendiente de
+    // activación no recibe vales). Un id mal formado cuenta como inexistente.
+    const User = require('../models/User');
+    const cliente = await User.findById(clienteId);
+    if (!cliente)
+      return ResponseFormatter.badRequest(res, 'El cliente no existe');
+    if (!cliente.activatedAt)
+      return ResponseFormatter.badRequest(res, 'El cliente aún no activa su cuenta y no puede recibir vales');
     const vale = await Vale.create(req.body, req.user.userId);
     return ResponseFormatter.success(res, { vale, message: 'Vale registrado exitosamente' }, 201);
   } catch { return ResponseFormatter.internalError(res, 'Error al registrar el vale'); }
 });
 
-// POST /vales/pago-integral — distribuye un pago entre varios vales (más viejo primero)
+// POST /vales/pago-integral — distribuye un pago entre varios vales (más viejo primero).
+// abono:crear solo lo da Cartera en escritura (alters/005): en solo lectura no se cobra.
 router.post('/pago-integral', authMiddleware, requirePermission('abono:crear'), async (req, res) => {
   const { clienteId, monto, valeIds } = req.body;
   const montoNum = parseFloat(monto);
   if (!clienteId || !montoNum || montoNum <= 0 || !Array.isArray(valeIds) || valeIds.length === 0)
-    return ResponseFormatter.badRequest(res, 'clienteId, monto y al menos un valeId son requeridos');
+    return ResponseFormatter.badRequest(res, 'Faltan el cliente, el monto o los vales a abonar');
 
   try {
     // Carga y valida cada vale
@@ -107,7 +135,7 @@ router.get('/usuario/:userId', authMiddleware, requirePermission('vale:ver-tiend
     const targetId = req.params.userId;
 
     let tiendaIds;
-    if (!isAdmin(role)) {
+    if (!await todasLasTiendas(role)) {
       const Tienda = require('../models/Tienda');
       const misTiendas = await Tienda.getTiendasByUsuario(userId);
       tiendaIds = misTiendas.map(t => t.id);
@@ -124,7 +152,7 @@ router.get('/usuario/:userId', authMiddleware, requirePermission('vale:ver-tiend
       v.fechaVencimiento && new Date(v.fechaVencimiento) < new Date()
     ).length;
     return ResponseFormatter.success(res, { vales, totalPendiente, enMora });
-  } catch { return ResponseFormatter.internalError(res, 'Error al obtener vales del usuario'); }
+  } catch { return ResponseFormatter.internalError(res, 'No pudimos cargar los vales'); }
 });
 
 // GET /vales/tienda/:tiendaId — cartera de la tienda
@@ -210,7 +238,7 @@ router.patch('/:valeId/abonos/:abonoId/anular', authMiddleware, requirePermissio
     if (!vale) return ResponseFormatter.notFound(res, 'Vale no encontrado');
     if (!await tiendaAcceso(req.user.userId, req.user.role, vale.tiendaId))
       return ResponseFormatter.forbidden(res, 'No tienes acceso a esta tienda');
-    const result = await Abono.anular(req.params.abonoId, req.user.userId);
+    const result = await Abono.anular(req.params.abonoId, req.params.valeId, req.user.userId);
     if (!result) return ResponseFormatter.notFound(res, 'Abono no encontrado o ya anulado');
     return ResponseFormatter.success(res, { ...result, message: 'Abono anulado' });
   } catch { return ResponseFormatter.internalError(res, 'Error al anular el abono'); }
