@@ -1,0 +1,37 @@
+// Chips de estado del vale (docs/marca.md, «Estados del vale»): fondo pastel y texto oscuro.
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.2em 0.65em;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.pendiente {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.parcial {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.pagado {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.anulado {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.mora {
+  background: #fee2e2;
+  color: #991b1b;
+}

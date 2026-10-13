@@ -5,6 +5,7 @@ import { Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { getImageUrl, getBaseUrl } from '@/lib/image-url';
 import styles from './PhotoUpload.module.scss';
 
+import { Icon } from './Icon';
 interface PhotoUploadProps {
   onPhotoChange: (photoUrl: string) => void;
   currentPhoto?: string;
@@ -18,7 +19,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
 }) => {
   const [preview, setPreview] = useState(currentPhoto);
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: 'primary' | 'error'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,14 +72,14 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
       // La foto se guarda como: /datos/uploads/users/{filename}
       // Guardamos solo la ruta relativa, el frontend la construye cuando la necesita
       onPhotoChange(data.photo);
-      setMessage({ type: 'success', text: '✅ Foto subida exitosamente' });
+      setMessage({ type: 'primary', text: 'Foto subida exitosamente' });
 
       // Actualizar preview con URL completa
       if (data.url) {
         setPreview(data.url);
       }
     } catch (error: any) {
-      setMessage({ type: 'error', text: `⚠️ ${error.message}` });
+      setMessage({ type: 'error', text: `${error.message}` });
       setPreview(currentPhoto);
     } finally {
       setIsLoading(false);
@@ -89,7 +90,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
     <div className={styles.photoUpload}>
       {message && (
         <Alert
-          variant={message.type === 'success' ? 'success' : 'danger'}
+          variant={message.type === 'primary' ? 'primary' : 'danger'}
           onClose={() => setMessage(null)}
           dismissible
           className="mb-3"
@@ -141,7 +142,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
             </>
           ) : (
             <>
-              📤 Cambiar Foto
+              <Icon name="subir" /> Cambiar Foto
             </>
           )}
         </Button>

@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const express = require('express');
 const User = require('../models/User');
 const Role = require('../models/Role');
@@ -78,9 +79,9 @@ router.post('/register', mailRequestLimiter.middleware, async (req, res) => {
 
   if (!email || !password || !name) {
     return ResponseFormatter.badRequest(res, 'Campos requeridos faltantes', {
-      email: email ? '✅' : '❌ requerido',
-      password: password ? '✅' : '❌ requerido',
-      name: name ? '✅' : '❌ requerido'
+      email: email ? 'ok' : 'es obligatorio',
+      password: password ? 'ok' : 'es obligatorio',
+      name: name ? 'ok' : 'es obligatorio'
     });
   }
 
@@ -101,7 +102,7 @@ router.post('/register', mailRequestLimiter.middleware, async (req, res) => {
       const context = requestContext(req);
       inBackground('reenvío de activación (registro)', () => resendActivation(existingUser, context));
     }
-    return ResponseFormatter.conflict(res, `El email ${normalizedEmail} ya está registrado`);
+    return ResponseFormatter.conflict(res, `El correo ${normalizedEmail} ya está registrado`);
   }
 
   // Toda cuenta nace pendiente y con cambio de contraseña forzado (también el autorregistro).
@@ -117,7 +118,7 @@ router.post('/register', mailRequestLimiter.middleware, async (req, res) => {
   });
 
   return ResponseFormatter.success(res, {
-    message: 'Usuario registrado exitosamente. Revisa tu correo para activar tu cuenta.',
+    message: 'Registro listo. Revisa tu correo para activar tu cuenta.',
     user: {
       id: user.id,
       email: user.email,
@@ -134,11 +135,11 @@ router.post('/login', rateLimiter.middleware, async (req, res) => {
   const userAgent = auditMiddleware.getUserAgent(req);
 
   if (!email || !password) {
-    return ResponseFormatter.badRequest(res, 'Email y contraseña son requeridos');
+    return ResponseFormatter.badRequest(res, 'Escribe tu correo y tu contraseña');
   }
 
   if (!EMAIL_REGEX.test(email)) {
-    return ResponseFormatter.badRequest(res, 'El formato del email es inválido');
+    return ResponseFormatter.badRequest(res, 'El correo no es válido');
   }
 
   const { user, reason } = await User.authenticate(email, password);
@@ -166,7 +167,7 @@ router.post('/login', rateLimiter.middleware, async (req, res) => {
         code: 'ACCOUNT_DISABLED'
       });
     }
-    return ResponseFormatter.unauthorized(res, 'Email o contraseña incorrectos. Verifica tus datos e intenta nuevamente');
+    return ResponseFormatter.unauthorized(res, 'El correo o la contraseña no coinciden. Revisa tus datos e intenta de nuevo');
   }
 
   // Login correcto: resetear contador de intentos fallidos
@@ -199,7 +200,7 @@ router.post('/resend-activation', mailRequestLimiter.middleware, async (req, res
   const { email } = req.body || {};
 
   if (!email || typeof email !== 'string' || !EMAIL_REGEX.test(email)) {
-    return ResponseFormatter.badRequest(res, 'Email inválido');
+    return ResponseFormatter.badRequest(res, 'El correo no es válido');
   }
 
   const context = requestContext(req);
@@ -261,12 +262,12 @@ router.post('/forgot-password', mailRequestLimiter.middleware, async (req, res) 
   const { email } = req.body;
   // Respuesta genérica siempre para evitar user enumeration
   const GENERIC_RESPONSE = {
-    message: 'Si ese email está registrado, recibirás un enlace de recuperación.',
+    message: 'Si ese correo está registrado, recibirás un enlace para recuperar tu contraseña.',
     hint: 'Revisa tu bandeja de entrada y carpeta de spam'
   };
 
   if (!email || typeof email !== 'string' || !EMAIL_REGEX.test(email)) {
-    return ResponseFormatter.badRequest(res, 'Email inválido');
+    return ResponseFormatter.badRequest(res, 'El correo no es válido');
   }
 
   const ipAddress = auditMiddleware.getIpAddress(req);
@@ -302,14 +303,14 @@ router.post('/reset-password', async (req, res) => {
   const { token, newPassword } = req.body;
 
   if (!token || !newPassword) {
-    return ResponseFormatter.badRequest(res, 'Token y contraseña nueva son requeridos', {
-      token: token ? '✅' : '❌ requerido',
-      newPassword: newPassword ? '✅' : '❌ requerido'
+    return ResponseFormatter.badRequest(res, 'Falta el enlace de recuperación o la contraseña nueva', {
+      token: token ? 'ok' : 'es obligatorio',
+      newPassword: newPassword ? 'ok' : 'es obligatorio'
     });
   }
 
   if (typeof token !== 'string' || typeof newPassword !== 'string') {
-    return ResponseFormatter.badRequest(res, 'Token y contraseña nueva son requeridos');
+    return ResponseFormatter.badRequest(res, 'Falta el enlace de recuperación o la contraseña nueva');
   }
 
   // RN-43: la complejidad completa, antes de gastar el token.
@@ -322,7 +323,7 @@ router.post('/reset-password', async (req, res) => {
   // pendientes ni deshabilitadas.
   const user = await User.resetPasswordWithToken(token, newPassword);
   if (!user) {
-    return ResponseFormatter.badRequest(res, 'Token de recuperación inválido o expirado', {
+    return ResponseFormatter.badRequest(res, 'El enlace de recuperación no es válido o ya venció', {
       hint: 'Solicita un nuevo enlace de recuperación'
     });
   }
@@ -345,8 +346,8 @@ router.post('/reset-password', async (req, res) => {
 
 router.post('/bootstrap-superuser', async (req, res) => {
   if (await User.isSuperuserExists()) {
-    return ResponseFormatter.badRequest(res, 'Ya existe un super usuario en el sistema', {
-      hint: 'Para crear más super usuarios, necesitas tener un token de super usuario'
+    return ResponseFormatter.badRequest(res, 'Ya existe un superusuario', {
+      hint: 'Para crear más superusuarios, tu sesión debe ser de superusuario'
     });
   }
 
@@ -354,9 +355,9 @@ router.post('/bootstrap-superuser', async (req, res) => {
 
   if (!email || !password || !name) {
     return ResponseFormatter.badRequest(res, 'Campos requeridos faltantes', {
-      email: email ? '✅' : '❌ requerido',
-      password: password ? '✅' : '❌ requerido',
-      name: name ? '✅' : '❌ requerido'
+      email: email ? 'ok' : 'es obligatorio',
+      password: password ? 'ok' : 'es obligatorio',
+      name: name ? 'ok' : 'es obligatorio'
     });
   }
 
@@ -368,7 +369,7 @@ router.post('/bootstrap-superuser', async (req, res) => {
 
   const existingUser = await User.findByEmail(email);
   if (existingUser) {
-    return ResponseFormatter.conflict(res, `El email ${email} ya está registrado`);
+    return ResponseFormatter.conflict(res, `El correo ${email} ya está registrado`);
   }
 
   // Único caso de cuenta que nace activada y sin correo: el primer superusuario del arranque.
@@ -386,7 +387,7 @@ router.post('/bootstrap-superuser', async (req, res) => {
   await auditMiddleware.logUserCreation(user.id, user.id, user.email, 'superuser', ipAddress, userAgent);
 
   return ResponseFormatter.success(res, {
-    message: 'Super usuario creado exitosamente',
+    message: 'Superusuario creado',
     user: {
       id: user.id,
       email: user.email,
@@ -397,20 +398,25 @@ router.post('/bootstrap-superuser', async (req, res) => {
   }, 201);
 });
 
+// La contraseña es opcional: la cuenta nace pendiente y al activarla con el enlace del correo
+// la persona define la suya (cambio forzado). Sin contraseña se usa una aleatoria que nadie
+// conoce; si se envía una (scripts y pruebas), debe tener al menos 8 caracteres.
 router.post('/create-user', authMiddleware, async (req, res) => {
-  const { email, password, name, role: targetRole } = req.body;
+  const { email, name, role: targetRole } = req.body;
   const creatorRole = req.user.role;
+  const password = req.body.password === undefined || req.body.password === null || req.body.password === ''
+    ? crypto.randomBytes(32).toString('base64url')
+    : req.body.password;
 
-  if (!email || !password || !name || !targetRole) {
+  if (!email || !name || !targetRole) {
     return ResponseFormatter.badRequest(res, 'Campos requeridos faltantes', {
-      email: email ? '✅' : '❌ requerido',
-      password: password ? '✅' : '❌ requerido',
-      name: name ? '✅' : '❌ requerido',
-      role: targetRole ? '✅' : '❌ requerido'
+      email: email ? 'ok' : 'es obligatorio',
+      name: name ? 'ok' : 'es obligatorio',
+      role: targetRole ? 'ok' : 'es obligatorio'
     });
   }
 
-  if (password.length < 8) {
+  if (typeof password !== 'string' || password.length < 8) {
     return ResponseFormatter.badRequest(res, 'La contraseña debe tener al menos 8 caracteres', {
       password: `${password.length}/8 caracteres`
     });
@@ -420,13 +426,13 @@ router.post('/create-user', authMiddleware, async (req, res) => {
     return ResponseFormatter.forbidden(res, `Tu rol '${creatorRole}' no puede crear usuarios con rol '${targetRole}'`, {
       your_role: creatorRole,
       target_role: targetRole,
-      allowed_roles: creatorRole === 'superuser' ? ['superuser', 'administrador', 'vendedor', 'cliente'] : ['vendedor', 'cliente']
+      allowed_roles: await Role.getManageableRoles(creatorRole)
     });
   }
 
   const existingUser = await User.findByEmail(email);
   if (existingUser) {
-    return ResponseFormatter.conflict(res, `El email ${email} ya está registrado`);
+    return ResponseFormatter.conflict(res, `El correo ${email} ya está registrado`);
   }
 
   // Cuenta pendiente y con cambio forzado; no se devuelve sesión de la cuenta creada.
@@ -462,7 +468,7 @@ router.get('/user-schema/:roleType', async (req, res) => {
 
   if (!role) {
     return ResponseFormatter.notFound(res, `Rol '${roleType}'`, {
-      available_roles: ['superuser', 'administrador', 'vendedor', 'cliente']
+      available_roles: ['superuser', 'administrador', 'tendero', 'encargado', 'vendedor', 'cliente']
     });
   }
 
@@ -480,7 +486,7 @@ router.get('/user-schema/:roleType', async (req, res) => {
       email: { type: 'string', required: true, pattern: 'email' },
       password: { type: 'string', required: true, minLength: 8 },
       name: { type: 'string', required: true, minLength: 2 },
-      role: { type: 'enum', required: false, values: ['superuser', 'administrador', 'vendedor', 'cliente'] }
+      role: { type: 'enum', required: false, values: ['superuser', 'administrador', 'tendero', 'encargado', 'vendedor', 'cliente'] }
     }
   };
 
@@ -495,7 +501,7 @@ router.get('/validate', authMiddleware, async (req, res) => {
   }
 
   return ResponseFormatter.success(res, {
-    message: 'Sesión válida ✅',
+    message: 'Tu sesión está activa',
     user: {
       id: user.id,
       email: user.email,
@@ -522,7 +528,7 @@ router.post('/logout', authMiddleware, async (req, res) => {
   return ResponseFormatter.success(res, {
     message: 'Sesión cerrada exitosamente',
     email,
-    details: 'Tu token ha sido revocado y no se puede usar más'
+    details: 'Tu sesión se cerró. Inicia sesión de nuevo'
   });
 });
 
@@ -607,7 +613,7 @@ router.patch('/profile', authMiddleware, async (req, res) => {
   });
 });
 
-router.patch('/password/:userId', authMiddleware, roleMiddleware.requireRole(['superuser', 'administrador']), async (req, res) => {
+router.patch('/password/:userId', authMiddleware, roleMiddleware.requirePermission('admin:manage-users'), async (req, res) => {
   const { newPassword } = req.body;
   const { userId } = req.params;
   const requesterId = req.user.userId;
@@ -626,8 +632,8 @@ router.patch('/password/:userId', authMiddleware, roleMiddleware.requireRole(['s
   }
 
   const requester = await User.findById(requesterId);
-  if (requester.role === 'administrador' && targetUser.role === 'superuser') {
-    return ResponseFormatter.forbidden(res, 'No puedes cambiar la contraseña de un superuser');
+  if (requester.role !== 'superuser' && targetUser.role === 'superuser') {
+    return ResponseFormatter.forbidden(res, 'No puedes cambiar la contraseña de un superusuario');
   }
 
   await User.setPasswordForUser(userId, newPassword);
@@ -641,7 +647,7 @@ router.patch('/password/:userId', authMiddleware, roleMiddleware.requireRole(['s
     accountMail.notifyPasswordChanged(targetUser, { actorId: requesterId, ipAddress, userAgent }));
 
   return ResponseFormatter.success(res, {
-    message: 'Contraseña del usuario actualizada exitosamente',
+    message: 'Contraseña actualizada',
     userId: userId
   });
 });

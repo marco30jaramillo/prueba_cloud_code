@@ -9,6 +9,7 @@ import { ResendActivation } from '@/components/ResendActivation';
 import { useAuth } from '@/hooks/useAuth';
 import styles from './page.module.scss';
 
+import { Icon } from '@/components/Icon';
 export default function RegisterPage() {
   const router = useRouter();
   const { handleRegister, isLoading, isAuthenticated } = useAuth();
@@ -41,7 +42,7 @@ export default function RegisterPage() {
             </div>
 
             <Alert variant="success" className="mb-4">
-              <Alert.Heading>📧 Revisa tu correo para activar tu cuenta (mira también el spam)</Alert.Heading>
+              <Alert.Heading><Icon name="correo" /> Revisa tu correo para activar tu cuenta (mira también el spam)</Alert.Heading>
               Enviamos un enlace de activación a <strong>{registeredEmail}</strong>. Al abrirlo
               entrarás a tu cuenta y te pediremos definir tu contraseña.
             </Alert>

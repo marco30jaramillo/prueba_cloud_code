@@ -1,7 +1,12 @@
 // Ganchos de resolución para ejecutar lib/*.ts con node --test sin tocar el código de la app:
 //  - './api' sin extensión -> './api.ts'
 //  - 'expo-secure-store' (módulo nativo) -> sustituto en memoria
+//  - 'expo-constants' (módulo nativo) -> sustituto vacío
 import { registerHooks } from 'node:module';
+
+// URLs de ejemplo para lib/config.ts (en una build las pone el perfil de eas.json).
+process.env.API_URL ||= 'https://api.prueba.example';
+process.env.WEB_URL ||= 'https://web.prueba.example/dashboard';
 import { existsSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -9,10 +14,17 @@ const stub = pathToFileURL(
   fileURLToPath(new URL('./stubs/expo-secure-store.mjs', import.meta.url))
 ).href;
 
+const stubConstants = pathToFileURL(
+  fileURLToPath(new URL('./stubs/expo-constants.mjs', import.meta.url))
+).href;
+
 registerHooks({
   resolve(specifier, context, nextResolve) {
     if (specifier === 'expo-secure-store') {
       return { url: stub, shortCircuit: true };
+    }
+    if (specifier === 'expo-constants') {
+      return { url: stubConstants, shortCircuit: true };
     }
     if (specifier.startsWith('./') && context.parentURL?.endsWith('.ts')) {
       const candidato = new URL(`${specifier}.ts`, context.parentURL);

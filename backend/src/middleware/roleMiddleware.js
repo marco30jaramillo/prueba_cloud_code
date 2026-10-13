@@ -5,7 +5,7 @@ const roleMiddleware = {
   requireRole: (...allowedRoles) => {
     return (req, res, next) => {
       if (!req.user) {
-        return ResponseFormatter.unauthorized(res, 'Token requerido para esta acción');
+        return ResponseFormatter.unauthorized(res, 'Inicia sesión para hacer esto');
       }
 
       const userRole = req.user.role || 'cliente';
@@ -23,7 +23,7 @@ const roleMiddleware = {
   requirePermission: (permissionName) => {
     return async (req, res, next) => {
       if (!req.user) {
-        return ResponseFormatter.unauthorized(res, 'Token requerido para esta acción');
+        return ResponseFormatter.unauthorized(res, 'Inicia sesión para hacer esto');
       }
 
       const userRole = req.user.role || 'cliente';

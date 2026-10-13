@@ -15,14 +15,49 @@ after(async () => { await bd.cerrar(); });
 const valeEn = (tienda, cliente, monto = 10000) => m.crearVale({ tienda, cliente, monto });
 const idsDe = (vales) => vales.map((v) => String(v.id).toUpperCase());
 
-test('RN-02 · el vendedor registra vales y abonos en su tienda', async () => {
+test('RN-02 · el vendedor registra vales en su tienda pero no cobra (Cartera en lectura)', async () => {
+  const tokenVendedor = await m.token(m.vendedorA);
   const r = await api.post('/vales', {
     tiendaId: m.tiendaA.id, clienteId: m.clienteX.id, descripcion: 'Compra del vendedor', montoTotal: 3000,
-  }, await m.token(m.vendedorA));
+  }, tokenVendedor);
   assert.equal(r.status, 201);
-  const abono = await api.post(`/vales/${r.body.vale.id}/abonos`, { monto: 1000 }, await m.token(m.vendedorA));
-  assert.equal(abono.status, 201);
+  const abono = await api.post(`/vales/${r.body.vale.id}/abonos`, { monto: 1000 }, tokenVendedor);
+  assert.equal(abono.status, 403);
+  const pago = await api.post('/vales/pago-integral', {
+    clienteId: m.clienteX.id, monto: 1000, valeIds: [r.body.vale.id],
+  }, tokenVendedor);
+  assert.equal(pago.status, 403);
+  assert.equal((await api.get(`/vales/tienda/${m.tiendaA.id}`, tokenVendedor)).status, 200, 'consulta la cartera');
   await m.conciliar('RN-02 vendedor');
+});
+
+test('Encargado · registra vales y cobra en su tienda; no anula ni gestiona el equipo', async () => {
+  const tokenEncargado = await m.token(m.encargadoA);
+  const r = await api.post('/vales', {
+    tiendaId: m.tiendaA.id, clienteId: m.clienteX.id, descripcion: 'Compra del encargado', montoTotal: 4000,
+  }, tokenEncargado);
+  assert.equal(r.status, 201);
+  const abono = await api.post(`/vales/${r.body.vale.id}/abonos`, { monto: 1000 }, tokenEncargado);
+  assert.equal(abono.status, 201);
+  const pago = await api.post('/vales/pago-integral', {
+    clienteId: m.clienteX.id, monto: 500, valeIds: [r.body.vale.id],
+  }, tokenEncargado);
+  assert.equal(pago.status, 201);
+
+  assert.equal((await api.patch(`/vales/${r.body.vale.id}/abonos/${abono.body.abono.id}/anular`, {}, tokenEncargado)).status, 403);
+  assert.equal((await api.patch(`/vales/${r.body.vale.id}/anular`, {}, tokenEncargado)).status, 403);
+  assert.equal((await api.post(`/tiendas/${m.tiendaA.id}/equipo`, { email: m.vendedorB.email }, tokenEncargado)).status, 403);
+  assert.equal((await api.delete(`/tiendas/${m.tiendaA.id}/equipo/${m.vendedorA.id}`, tokenEncargado)).status, 403);
+  await m.conciliar('Encargado');
+});
+
+test('Tienda · el tendero no ve, edita ni se asigna a tiendas ajenas', async () => {
+  const tokenTendero = await m.token(m.tenderoA);
+  assert.equal((await api.get('/tiendas', tokenTendero)).status, 403);
+  assert.equal((await api.patch(`/tiendas/${m.tiendaB.id}`, { nombre: 'Tomada' }, tokenTendero)).status, 403);
+  assert.equal((await api.post(`/tiendas/${m.tiendaB.id}/usuarios`, { userId: m.tenderoA.id, esPropietario: true }, tokenTendero)).status, 403);
+  assert.equal((await api.post(`/tiendas/${m.tiendaB.id}/equipo`, { email: m.vendedorA.email }, tokenTendero)).status, 403);
+  assert.equal((await api.get(`/vales/tienda/${m.tiendaB.id}`, tokenTendero)).status, 403);
 });
 
 test('RN-22 · el tendero de otra tienda no ve, cobra ni anula los vales ajenos', async () => {
@@ -68,7 +103,7 @@ test('RN-22 · el vendedor de otra tienda no ve ni cobra los vales ajenos', asyn
 
 test('RN-22 · quien opera una tienda ve la cartera y los vales de la propia', async () => {
   const vale = await valeEn(m.tiendaA, m.clienteX);
-  for (const quien of [m.tenderoA, m.vendedorA]) {
+  for (const quien of [m.tenderoA, m.encargadoA, m.vendedorA]) {
     const token = await m.token(quien);
     const cartera = await api.get(`/vales/tienda/${m.tiendaA.id}`, token);
     assert.equal(cartera.status, 200);
@@ -169,7 +204,7 @@ test('RN-23 · el cliente consulta el detalle y los abonos de su propio vale', a
 
 test('RN-33 · el vendedor no anula vales ni abonos; el tendero sí', async () => {
   const vale = await valeEn(m.tiendaA, m.clienteX);
-  const abono = await m.abonar(vale, 3000, m.vendedorA);
+  const abono = await m.abonar(vale, 3000, m.encargadoA);
   assert.equal(abono.status, 201);
   const tokenVendedor = await m.token(m.vendedorA);
 

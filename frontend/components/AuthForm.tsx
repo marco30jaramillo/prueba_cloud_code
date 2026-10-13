@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Form, Button, Alert, Spinner, InputGroup } from 'react-bootstrap';
 import styles from './AuthForm.module.scss';
 
+import { Icon } from './Icon';
 export interface AuthFormData {
   email?: string;
   password?: string;
@@ -38,7 +39,7 @@ const LABELS: Record<string, string> = {
   confirmPassword: 'Confirmar Contraseña',
   name:            'Nombre Completo',
   photo:           'Foto de Perfil (URL)',
-  token:           'Token de Recuperación',
+  token:           'Código de recuperación',
   newPassword:     'Nueva Contraseña'
 };
 
@@ -60,7 +61,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = 
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: 'primary' | 'error'; text: string } | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -81,7 +82,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = 
     });
 
     if (formData.email && !EMAIL_REGEX.test(formData.email)) {
-      newErrors.email = 'El formato del email no es válido (ej: usuario@dominio.com)';
+      newErrors.email = 'El correo no es válido. Revisa que tenga este formato: nombre@correo.com';
     }
 
     if (formData.password && formData.password.length < 8) {
@@ -126,12 +127,12 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = 
     <div className={styles.formContainer}>
       {message && (
         <Alert
-          variant={message.type === 'success' ? 'success' : 'danger'}
+          variant={message.type === 'primary' ? 'primary' : 'danger'}
           onClose={() => setMessage(null)}
           dismissible
           className="mb-4"
         >
-          <strong>{message.type === 'success' ? '✓ Éxito' : '❌ Error'}:</strong> {message.text}
+          <strong>{message.type === 'primary' ? 'Éxito' : 'Error'}:</strong> {message.text}
         </Alert>
       )}
 
@@ -172,7 +173,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = 
                     disabled={isLoading}
                     tabIndex={-1}
                   >
-                    {(isPwd ? showPassword : showConfirmPassword) ? '👁️' : '👁️‍🗨️'}
+                    <Icon name={(isPwd ? showPassword : showConfirmPassword) ? 'ocultar' : 'ver'} />
                   </Button>
                   <Form.Control.Feedback type="invalid">{errors[field]}</Form.Control.Feedback>
                   {field === 'newPassword' && !errors[field] && (
@@ -216,7 +217,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type, onSubmit, isLoading = 
         )}
 
         <Button
-          variant="success"
+          variant="primary"
           type="submit"
           className={`w-100 ${styles.submitBtn}`}
           disabled={isLoading}

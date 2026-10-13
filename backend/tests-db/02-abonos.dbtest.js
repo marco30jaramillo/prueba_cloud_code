@@ -95,7 +95,7 @@ test('RN-05 · el estado pasa de pendiente a parcial y a pagado según los abono
   assert.equal(a1.status, 201);
   assert.equal(a1.body.vale.estado, 'parcial');
   assert.equal(a1.body.vale.saldoPendiente, 6000);
-  const a2 = await m.abonar(vale, 6000, m.vendedorA);
+  const a2 = await m.abonar(vale, 6000, m.encargadoA);
   assert.equal(a2.status, 201);
   assert.equal(a2.body.vale.estado, 'pagado');
   assert.equal(a2.body.vale.saldoPendiente, 0);

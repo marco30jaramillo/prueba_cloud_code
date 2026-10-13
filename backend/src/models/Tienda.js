@@ -14,7 +14,7 @@ class Tienda {
     const tienda = {
       id: crypto.randomUUID(), nombre: data.nombre.trim(),
       descripcion: data.descripcion || '', direccion: data.direccion || '',
-      ciudad: data.ciudad || 'Cartagena', telefono: data.telefono || '',
+      ciudad: data.ciudad || '', telefono: data.telefono || '',
       logo: data.logo || '', isActive: true,
       createdAt: new Date().toISOString(), createdBy
     };
@@ -128,6 +128,15 @@ class Tienda {
               JOIN dbo.tienda_usuarios tu ON tu.tiendaId=t.id
               WHERE tu.userId=@userId AND t.isActive=1 ORDER BY t.nombre`);
     return r.recordset.map(fromSql);
+  }
+
+  /** ¿El usuario es propietario (esPropietario=1) de la tienda? */
+  static async esPropietario(tiendaId, userId) {
+    if (!isGuid(tiendaId) || !isGuid(userId)) return false;
+    const r = await (await request()).input('tiendaId', sql.UniqueIdentifier, tiendaId)
+      .input('userId', sql.UniqueIdentifier, userId)
+      .query('SELECT TOP 1 id FROM dbo.tienda_usuarios WHERE tiendaId=@tiendaId AND userId=@userId AND esPropietario=1');
+    return r.recordset.length > 0;
   }
 
   static async hasAcceso(tiendaId, userId) {

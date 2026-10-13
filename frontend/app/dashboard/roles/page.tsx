@@ -5,6 +5,8 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { rolesConfigAPI } from '@/lib/api';
 import styles from './page.module.scss';
 
+import { Icon } from '@/components/Icon';
+import { iconoDeModulo } from '@/lib/icono-modulo';
 // ──────────────────────────────────────────────────────────
 // Types + helpers
 // ──────────────────────────────────────────────────────────
@@ -29,6 +31,7 @@ interface ModuleDef {
   name: string;
   description: string;
   icon: string;
+  href?: string;
   permRead: string[];
   permWrite: string[];
   permFull: string[];
@@ -50,6 +53,10 @@ interface ConfigData {
   modules: ModuleDef[];
   roles: RoleData[];
   allModulePerms: string[];
+  /** Únicos permisos que se asignan directamente; el resto lo da el nivel de cada módulo. */
+  sessionPermissions?: string[];
+  /** ¿Quien consulta puede guardar? Si no, la pantalla es de solo lectura. */
+  canManageRoles?: boolean;
 }
 
 const LEVEL_LABELS: Record<Level, string> = {
@@ -116,7 +123,7 @@ function CreateRoleModal({ modules, onClose, onCreated }: CreateModalProps) {
       <div className={styles.modal}>
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitle}>Crear nuevo rol</h2>
-          <button className={styles.modalClose} onClick={onClose}>✕</button>
+          <button className={styles.modalClose} onClick={onClose}><Icon name="cerrar" /></button>
         </div>
 
         {error && <div className={`${styles.alert} ${styles.alertError}`} style={{ margin: '0 0 1rem' }}>{error}</div>}
@@ -130,7 +137,7 @@ function CreateRoleModal({ modules, onClose, onCreated }: CreateModalProps) {
             placeholder="ej. supervisor"
             autoFocus
           />
-          <span className={styles.formHint}>Se guardará en minúsculas con guión bajo. Ejemplo: "supervisor_ventas"</span>
+          <span className={styles.formHint}>Escríbelo en minúsculas y sin espacios. Ejemplo: supervisor</span>
         </div>
 
         <div className={styles.formField}>
@@ -150,7 +157,7 @@ function CreateRoleModal({ modules, onClose, onCreated }: CreateModalProps) {
               const level = getLevel(mod.id);
               return (
                 <div key={mod.id} className={styles.modalModuleRow}>
-                  <span className={styles.modalModuleIcon}>{mod.icon}</span>
+                  <span className={styles.modalModuleIcon}><Icon name={iconoDeModulo(mod.icon, mod.href)} /></span>
                   <span className={styles.modalModuleName}>{mod.name}</span>
                   <div className={styles.modalLevelBtns}>
                     {LEVELS.map(lvl => (
@@ -229,12 +236,14 @@ function RolesContent() {
 
   const selectedRole = config?.roles.find(r => r.id === selectedRoleId);
   const isSuperuser = selectedRole?.name === 'superuser';
+  // Solo lectura: el rol superusuario, o quien no tiene «Roles y permisos» en escritura.
+  const soloLectura = isSuperuser || !config?.canManageRoles;
 
   const getLevel = (moduleId: string): Level =>
     (pendingAccess.find(a => a.id === moduleId)?.level as Level) || 'none';
 
   const setLevel = (moduleId: string, level: Level) => {
-    if (isSuperuser) return;
+    if (soloLectura) return;
     setPendingAccess(prev => {
       const rest = prev.filter(a => a.id !== moduleId);
       if (level === 'none') return rest;
@@ -244,7 +253,7 @@ function RolesContent() {
   };
 
   const toggleDirectPerm = (perm: string) => {
-    if (isSuperuser) return;
+    if (soloLectura) return;
     setPendingDirect(prev =>
       prev.includes(perm) ? prev.filter(p => p !== perm) : [...prev, perm]
     );
@@ -281,12 +290,12 @@ function RolesContent() {
   const handleRoleCreated = async (newRole: RoleData) => {
     setShowCreateModal(false);
     await load(newRole.id);
-    setSuccessMsg(`Rol "${newRole.name}" creado. Ya está disponible para asignar a usuarios.`);
+    setSuccessMsg(`Rol "${newRole.name}" creado. Ya está disponible para asignar a personas.`);
   };
 
-  const orphanPerms = pendingDirect.filter(p =>
-    p !== 'system:full-access' && !config?.allModulePerms.includes(p)
-  );
+  // Permisos directos de antes de la regla «todo por módulo»: se pueden quitar, no agregar.
+  const sessionPerms = config?.sessionPermissions ?? [];
+  const legacyPerms = pendingDirect.filter(p => p !== 'system:full-access' && !sessionPerms.includes(p));
   const effectivePerms = selectedRole?.effectivePermissions ?? [];
 
   if (loading) {
@@ -314,7 +323,7 @@ function RolesContent() {
 
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>🛡️ Roles y Permisos</h1>
+          <h1 className={styles.title}><Icon name="escudo" /> Roles y Permisos</h1>
           <p className={styles.subtitle}>Gestiona el acceso de cada rol a módulos y permisos del sistema</p>
         </div>
       </div>
@@ -322,12 +331,14 @@ function RolesContent() {
       <div className={styles.layout}>
         {/* ── Role list ── */}
         <aside className={styles.sidebar}>
-          <button
-            className={styles.createRoleBtn}
-            onClick={() => setShowCreateModal(true)}
-          >
-            ＋ Crear nuevo rol
-          </button>
+          {config.canManageRoles && (
+            <button
+              className={styles.createRoleBtn}
+              onClick={() => setShowCreateModal(true)}
+            >
+              ＋ Crear nuevo rol
+            </button>
+          )}
 
           <div className={styles.sidebarLabel}>Roles</div>
           {config.roles.map(role => (
@@ -370,6 +381,11 @@ function RolesContent() {
                 El superusuario tiene acceso completo a todo. Su configuración no puede modificarse.
               </div>
             )}
+            {!isSuperuser && !config.canManageRoles && (
+              <div className={`${styles.alert} ${styles.alertInfo}`}>
+                Puedes consultar los roles, pero no modificarlos. Solo quien tiene «Roles y permisos» en escritura puede cambiarlos.
+              </div>
+            )}
 
             {/* Tabs */}
             <div className={styles.tabs}>
@@ -379,9 +395,9 @@ function RolesContent() {
                   className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
                   onClick={() => setActiveTab(tab)}
                 >
-                  {tab === 'modules'     && '📦 Acceso a módulos'}
-                  {tab === 'permissions' && '🔑 Permisos directos'}
-                  {tab === 'effective'   && '✅ Efectivos'}
+                  {tab === 'modules'     && 'Acceso a módulos'}
+                  {tab === 'permissions' && 'Permisos directos'}
+                  {tab === 'effective'   && 'Efectivos'}
                 </button>
               ))}
             </div>
@@ -394,7 +410,7 @@ function RolesContent() {
                   return (
                     <div key={mod.id} className={`${styles.moduleCard} ${styles[CARD_LEVEL_CLASS[level]] || ''}`}>
                       <div className={styles.moduleTop}>
-                        <span className={styles.moduleIcon}>{mod.icon}</span>
+                        <span className={styles.moduleIcon}><Icon name={iconoDeModulo(mod.icon, mod.href)} /></span>
                         <div>
                           <div className={styles.moduleName}>{mod.name}</div>
                           <div className={styles.moduleDescText}>{mod.description}</div>
@@ -407,7 +423,7 @@ function RolesContent() {
                             key={lvl}
                             className={`${styles.levelBtn} ${level === lvl ? styles[BTN_ACTIVE_CLASS[lvl]] : ''}`}
                             onClick={() => setLevel(mod.id, lvl)}
-                            disabled={isSuperuser}
+                            disabled={soloLectura}
                             title={LEVEL_LABELS[lvl]}
                           >
                             {LEVEL_LABELS[lvl]}
@@ -431,8 +447,9 @@ function RolesContent() {
             {activeTab === 'permissions' && (
               <div className={styles.permSection}>
                 <div className={styles.permSectionInfo}>
-                  Permisos concedidos directamente a este rol, independientemente de los módulos.
-                  Los marcados con <span className={styles.orphanTag}>huérfano</span> no pertenecen a ningún módulo.
+                  Lo que un rol puede hacer se concede con el nivel de cada módulo (lectura = consultar,
+                  escritura = operar, total = anular o administrar). Directamente solo se asignan los
+                  permisos de la sesión.
                 </div>
 
                 {isSuperuser ? (
@@ -443,37 +460,32 @@ function RolesContent() {
                   </div>
                 ) : (
                   <div className={styles.permGroups}>
-                    {config.modules.map(mod => {
-                      const allModPerms = [...new Set([...mod.permRead, ...mod.permWrite, ...mod.permFull])];
-                      if (!allModPerms.length) return null;
-                      return (
-                        <div key={mod.id} className={styles.permGroup}>
-                          <div className={styles.permGroupLabel}>{mod.icon} {mod.name}</div>
-                          <div className={styles.permGrid}>
-                            {allModPerms.map(perm => (
-                              <label key={perm} className={`${styles.permCheck} ${pendingDirect.includes(perm) ? styles.permCheckOn : ''}`}>
-                                <input
-                                  type="checkbox"
-                                  checked={pendingDirect.includes(perm)}
-                                  onChange={() => toggleDirectPerm(perm)}
-                                />
-                                <span className={styles.permLabel}>{perm}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
+                    <div className={styles.permGroup}>
+                      <div className={styles.permGroupLabel}><Icon name="candado" /> Sesión</div>
+                      <div className={styles.permGrid}>
+                        {sessionPerms.map(perm => (
+                          <label key={perm} className={`${styles.permCheck} ${pendingDirect.includes(perm) ? styles.permCheckOn : ''}`}>
+                            <input
+                              type="checkbox"
+                              checked={pendingDirect.includes(perm)}
+                              onChange={() => toggleDirectPerm(perm)}
+                              disabled={soloLectura}
+                            />
+                            <span className={styles.permLabel}>{perm}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
 
-                    {orphanPerms.length > 0 && (
+                    {legacyPerms.length > 0 && (
                       <div className={styles.permGroup}>
-                        <div className={styles.permGroupLabel}>🔓 Permisos huérfanos (sin módulo)</div>
+                        <div className={styles.permGroupLabel}><Icon name="alerta" /> Asignados directamente antes (se pueden quitar)</div>
                         <div className={styles.permGrid}>
-                          {orphanPerms.map(perm => (
+                          {legacyPerms.map(perm => (
                             <label key={perm} className={`${styles.permCheck} ${styles.permCheckOn} ${styles.orphanCheck}`}>
-                              <input type="checkbox" checked onChange={() => toggleDirectPerm(perm)} />
+                              <input type="checkbox" checked onChange={() => toggleDirectPerm(perm)} disabled={soloLectura} />
                               <span className={styles.permLabel}>{perm}</span>
-                              <span className={styles.orphanTag}>huérfano</span>
+                              <span className={styles.orphanTag}>directo</span>
                             </label>
                           ))}
                         </div>

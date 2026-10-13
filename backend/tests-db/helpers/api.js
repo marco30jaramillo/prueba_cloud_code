@@ -42,6 +42,7 @@ const api = {
   get: (ruta, token) => llamar('GET', ruta, { token }),
   post: (ruta, cuerpo, token) => llamar('POST', ruta, { token, cuerpo }),
   patch: (ruta, cuerpo, token) => llamar('PATCH', ruta, { token, cuerpo }),
+  delete: (ruta, token) => llamar('DELETE', ruta, { token }),
 };
 
 /** Inicia sesión y devuelve solo el token. */

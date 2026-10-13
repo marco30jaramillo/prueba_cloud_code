@@ -6,6 +6,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { authAPI } from '@/lib/api';
 import styles from './ForceChangePasswordModal.module.scss';
 
+import { Icon } from './Icon';
 interface ForceChangePasswordModalProps {
   show: boolean;
   onPasswordChanged: () => void;
@@ -22,7 +23,7 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: 'primary' | 'error'; text: string } | null>(null);
 
   const handleChangePassword = async () => {
     if (!newPassword || !confirmPassword) {
@@ -48,20 +49,20 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
     setIsLoading(true);
     try {
       await authAPI.changePasswordTemporary(newPassword);
-      setMessage({ type: 'success', text: '✅ Contraseña actualizada exitosamente' });
+      setMessage({ type: 'primary', text: 'Contraseña actualizada exitosamente' });
       setTimeout(() => {
         onPasswordChanged();
       }, 1000);
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || 'Error al cambiar contraseña';
-      setMessage({ type: 'error', text: `❌ ${errorMsg}` });
+      setMessage({ type: 'error', text: `${errorMsg}` });
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleCancel = async () => {
-    if (confirm('⚠️ Si cancelas, tu sesión se cerrará. ¿Continuar?')) {
+    if (confirm('Si cancelas, tu sesión se cerrará. ¿Continuar?')) {
       onCancel();
     }
   };
@@ -69,7 +70,7 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
   return (
     <Modal show={show} backdrop="static" keyboard={false} centered className={styles.modal}>
       <Modal.Header className={styles.header}>
-        <Modal.Title>🔐 Cambiar Contraseña</Modal.Title>
+        <Modal.Title><Icon name="candado" /> Cambiar Contraseña</Modal.Title>
       </Modal.Header>
       <Modal.Body className={styles.body}>
         <Alert variant="warning" className="mb-4">
@@ -81,7 +82,7 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
 
         {message && (
           <Alert
-            variant={message.type === 'success' ? 'success' : 'danger'}
+            variant={message.type === 'primary' ? 'primary' : 'danger'}
             className="mb-3"
           >
             {message.text}
@@ -103,7 +104,7 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
               onClick={() => setShowNewPassword(!showNewPassword)}
               disabled={isLoading}
             >
-              {showNewPassword ? '👁️' : '👁️‍🗨️'}
+              <Icon name={showNewPassword ? 'ocultar' : 'ver'} />
             </Button>
           </div>
         </Form.Group>
@@ -123,7 +124,7 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               disabled={isLoading}
             >
-              {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
+              <Icon name={showConfirmPassword ? 'ocultar' : 'ver'} />
             </Button>
           </div>
         </Form.Group>
@@ -134,10 +135,10 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
           onClick={handleCancel}
           disabled={isLoading}
         >
-          ❌ Cancelar (cerrar sesión)
+          <Icon name="error" /> Cancelar (cerrar sesión)
         </Button>
         <Button
-          variant="success"
+          variant="primary"
           onClick={handleChangePassword}
           disabled={isLoading}
         >
@@ -147,7 +148,7 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
               Cambiando...
             </>
           ) : (
-            '✓ Cambiar Contraseña'
+            'Cambiar Contraseña'
           )}
         </Button>
       </Modal.Footer>

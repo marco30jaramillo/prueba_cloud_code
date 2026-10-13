@@ -1,0 +1,51 @@
+# Qué NO sube EAS Build (eas build). EAS empaqueta el repositorio completo porque mobile/ está
+# dentro de él; la app móvil no usa nada fuera de mobile/. Con este archivo EAS ignora el
+# .gitignore, así que aquí van también sus reglas (dependencias, secretos, salidas).
+
+# Proyectos y carpetas que no son la app móvil
+/backend/
+/frontend/
+/database/
+/datos/
+/docs/
+/marca/
+/.github/
+/README.md
+/README_FRONTEND.md
+/test-api.sh
+/test-headers.sh
+
+# Dependencias y salidas (EAS instala las dependencias en sus servidores)
+node_modules/
+.expo/
+dist/
+build/
+out/
+web-build/
+coverage/
+/mobile/android/
+/mobile/ios/
+
+# Secretos y llaves: nunca salen del computador
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.pem
+*.mobileprovision
+/mobile/play-service-account.json
+
+# Sistema, editores y temporales
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+tmp/
+temp/
+*.tmp
+*.bak

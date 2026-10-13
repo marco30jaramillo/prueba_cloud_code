@@ -17,7 +17,7 @@ export const ResendActivation: React.FC<ResendActivationProps> = ({ email: known
   const [typedEmail, setTypedEmail] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [cooldown, setCooldown] = useState(0);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: 'primary' | 'error'; text: string } | null>(null);
 
   const email = (knownEmail ?? typedEmail).trim();
 
@@ -39,7 +39,7 @@ export const ResendActivation: React.FC<ResendActivationProps> = ({ email: known
       await authAPI.resendActivation(email);
       // Respuesta genérica: no confirma si el correo tiene una cuenta pendiente.
       setMessage({
-        type: 'success',
+        type: 'primary',
         text: 'Si el correo tiene una cuenta pendiente de activación, te enviamos un nuevo enlace. Revisa también el spam.'
       });
       setCooldown(COOLDOWN_SECONDS);
@@ -59,7 +59,7 @@ export const ResendActivation: React.FC<ResendActivationProps> = ({ email: known
     <div>
       {message && (
         <Alert
-          variant={message.type === 'success' ? 'success' : 'danger'}
+          variant={message.type === 'primary' ? 'primary' : 'danger'}
           onClose={() => setMessage(null)}
           dismissible
           className="mb-3"
@@ -83,7 +83,7 @@ export const ResendActivation: React.FC<ResendActivationProps> = ({ email: known
       )}
 
       <Button
-        variant="outline-success"
+        variant="outline-primary"
         className="w-100"
         onClick={handleResend}
         disabled={isSending || cooldown > 0}

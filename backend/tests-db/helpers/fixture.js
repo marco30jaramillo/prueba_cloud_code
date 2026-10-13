@@ -2,7 +2,7 @@
  * Fixture de las pruebas de crédito: un «mundo» propio por archivo de pruebas.
  *
  *   superusuario (lo crea el corredor) → 2 tiendas (A y B)
- *   por tienda: un tendero y un vendedor
+ *   por tienda: un tendero y un vendedor; en la tienda A además un encargado
  *   dos clientes activos (X, Y) y un cliente pendiente de activación
  *
  * Todo se crea por la API real (tiendas, usuarios, asignaciones). Lo único que se hace por
@@ -59,6 +59,7 @@ async function crearMundo() {
   const tiendaB = await crearTienda('B');
   const tenderoA = await crearUsuario('tendero', 'a');
   const vendedorA = await crearUsuario('vendedor', 'a');
+  const encargadoA = await crearUsuario('encargado', 'a');
   const tenderoB = await crearUsuario('tendero', 'b');
   const vendedorB = await crearUsuario('vendedor', 'b');
   const clienteX = await crearUsuario('cliente', 'x');
@@ -67,12 +68,13 @@ async function crearMundo() {
 
   await asignar(tiendaA, tenderoA, true);
   await asignar(tiendaA, vendedorA, false);
+  await asignar(tiendaA, encargadoA, false);
   await asignar(tiendaB, tenderoB, true);
   await asignar(tiendaB, vendedorB, false);
 
   // Activa las cuentas del mundo, salvo la del cliente pendiente.
   const pool = await bd.abrir();
-  for (const usuario of [tenderoA, vendedorA, tenderoB, vendedorB, clienteX, clienteY]) {
+  for (const usuario of [tenderoA, vendedorA, encargadoA, tenderoB, vendedorB, clienteX, clienteY]) {
     const r = await pool.request()
       .input('id', bd.sql.UniqueIdentifier, usuario.id)
       .query(`UPDATE dbo.users SET activatedAt = SYSUTCDATETIME(), mustChangePassword = 0,
@@ -140,7 +142,7 @@ async function crearMundo() {
     sufijo,
     tokenSu,
     tiendaA, tiendaB,
-    tenderoA, vendedorA, tenderoB, vendedorB,
+    tenderoA, vendedorA, encargadoA, tenderoB, vendedorB,
     clienteX, clienteY, clientePendiente,
     token, crearVale, abonar, leerVale, conciliar, tendero, vendedor,
     mayusculas,

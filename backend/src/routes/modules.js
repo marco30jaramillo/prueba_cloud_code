@@ -6,10 +6,16 @@ const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 
-// GET /modules — modules accessible to the current user's role
+// GET /modules — módulos del rol de la sesión con su nivel (read | write | full) y los
+// permisos efectivos, para que web y app muestren solo lo que el rol puede hacer.
 router.get('/', authMiddleware, async (req, res) => {
   const modules = await Module.getForRole(req.user.role);
-  return ResponseFormatter.success(res, { modules: modules.map(m => m.toJSON()) });
+  const access = await Role.getModuleAccess(req.user.role);
+  const levelOf = (id) => access.find(a => String(a.id) === String(id))?.level ?? 'read';
+  return ResponseFormatter.success(res, {
+    modules: modules.map(m => ({ ...m.toJSON(), level: levelOf(m.id) })),
+    permissions: await Role.getEffectivePermissions(req.user.role),
+  });
 });
 
 // GET /modules/all — superuser only: all modules + roles summary

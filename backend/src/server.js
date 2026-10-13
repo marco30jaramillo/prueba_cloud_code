@@ -50,7 +50,7 @@ const corsOptions = {
     if (!origin || allowedOriginPatterns.some(r => r.test(origin))) {
       callback(null, true);
     } else {
-      callback(new Error('CORS policy: solicitud no permitida'), false);
+      callback(new Error('Solicitud no permitida'), false);
     }
   },
   credentials: true,
@@ -74,7 +74,7 @@ app.use('/docs', docsRoutes);
 
 app.get('/health', (req, res) => {
   ResponseFormatter.success(res, {
-    message: 'Servidor operacional',
+    message: 'Todo funciona',
     status: 'healthy',
     timestamp: new Date().toISOString()
   });
@@ -88,7 +88,7 @@ app.get('/tokens/stats', ...soloAdministracion, (req, res) => {
   const tokenManager = new TokenManager();
   const stats = tokenManager.getStats();
   ResponseFormatter.success(res, {
-    message: 'Estadísticas de tokens',
+    message: 'Estadísticas de sesiones',
     stats
   });
 });
@@ -96,7 +96,7 @@ app.get('/tokens/stats', ...soloAdministracion, (req, res) => {
 app.post('/tokens/clean', ...soloAdministracion, (req, res) => {
   const deleted = TokenCleaner.run();
   ResponseFormatter.success(res, {
-    message: 'Limpieza de tokens ejecutada',
+    message: 'Limpieza de sesiones ejecutada',
     tokensEliminados: deleted
   });
 });
@@ -235,7 +235,7 @@ app.use((err, req, res, next) => {
   // fragmento del cuerpo) ni `err.body` ni el objeto completo: pueden contener un token.
   const type = (err && (err.type || err.code || err.name)) || 'error';
   console.error('🔴 Error no capturado: tipo=' + String(type).replace(/[^A-Za-z0-9_.:-]/g, '').slice(0, 60));
-  ResponseFormatter.internalError(res, err.message || 'Error interno del servidor');
+  ResponseFormatter.internalError(res, 'Algo salió mal. Intenta de nuevo en unos minutos');
 });
 
 const os = require('os');
