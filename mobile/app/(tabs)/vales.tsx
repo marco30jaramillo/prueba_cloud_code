@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { valesAPI, tiendasAPI, pick } from '@/lib/api';
-import { useAuthStore, isAdminRole, formatCOP } from '@/lib/store';
+import { useAccesos, formatCOP } from '@/lib/store';
 import { ETIQUETA_ESTADO, esCobrable, estadoVisible } from '@/lib/estado-vale';
 import { colorEstado } from '@/lib/tema';
 
@@ -32,9 +32,10 @@ export default function ValesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<TabFilter>('activos');
-  const { user } = useAuthStore();
   const router = useRouter();
-  const canAdmin = isAdminRole(user?.role);
+  // Personal de la tienda (con módulo de cartera o de nuevo vale) ve los vales de su tienda;
+  // el cliente, los suyos.
+  const { valesDeTienda: canAdmin, nuevoVale: puedeCrear } = useAccesos();
 
   const loadVales = useCallback(async () => {
     try {
@@ -136,9 +137,11 @@ export default function ValesScreen() {
       />
 
       {/* FAB */}
-      <TouchableOpacity style={styles.fab} onPress={() => router.push('/vale-nuevo')} activeOpacity={0.85}>
-        <Icon name="agregar" size={30} color="#ffffff" />
-      </TouchableOpacity>
+      {puedeCrear && (
+        <TouchableOpacity style={styles.fab} onPress={() => router.push('/vale-nuevo')} activeOpacity={0.85}>
+          <Icon name="agregar" size={30} color="#ffffff" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

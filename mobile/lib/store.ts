@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
-import { setApiToken } from './api';
+import { setApiToken, modulesAPI, pick } from './api';
+import { accesosDeModulos, accesosPorRol, type Accesos } from './modulos';
 
 export interface User {
   id: string;
@@ -18,12 +19,16 @@ interface AuthStore {
   clearAuth: () => Promise<void>;
   setUser: (user: User) => void;
   init: () => Promise<void>;
+  /** Rutas de los módulos del rol (GET /modules); null mientras no se han cargado. */
+  modulos: string[] | null;
+  cargarModulos: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthStore>((set) => ({
   token: null,
   user: null,
   isLoaded: false,
+  modulos: null,
 
   setAuth: async (token, user) => {
     await SecureStore.setItemAsync('mv_token', token);
@@ -36,10 +41,19 @@ export const useAuthStore = create<AuthStore>((set) => ({
     await SecureStore.deleteItemAsync('mv_token').catch(() => {});
     await SecureStore.deleteItemAsync('mv_user').catch(() => {});
     setApiToken(null);
-    set({ token: null, user: null });
+    set({ token: null, user: null, modulos: null });
   },
 
   setUser: (user) => set({ user }),
+
+  cargarModulos: async () => {
+    try {
+      const modulos: any[] = pick(await modulesAPI.getMios(), 'modules');
+      set({ modulos: modulos.map((m) => m.href).filter(Boolean) });
+    } catch {
+      // Sin conexión o sesión vencida: se conserva lo último cargado.
+    }
+  },
 
   init: async () => {
     try {
@@ -74,3 +88,10 @@ export const ROLE_LABEL: Record<string, string> = {
 
 export const formatCOP = (n: number | string) =>
   `$${Number(n ?? 0).toLocaleString('es-CO')}`;
+
+/** Qué módulos ve la sesión: por permisos si ya cargaron, si no por rol (mientras tanto). */
+export const useAccesos = (): Accesos => {
+  const modulos = useAuthStore((s) => s.modulos);
+  const role = useAuthStore((s) => s.user?.role);
+  return modulos ? accesosDeModulos(modulos) : accesosPorRol(role);
+};

@@ -1,15 +1,28 @@
-import type { ColorValue } from 'react-native';
+import { useEffect } from 'react';
+import { AppState, type ColorValue } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Icon, type NombreIcono } from '@/components/Icon';
-import { useAuthStore, isAdminRole } from '@/lib/store';
+import { useAuthStore, useAccesos } from '@/lib/store';
 
 function TabIcon({ name, color, size }: { name: NombreIcono; color: ColorValue; size: number }) {
   return <Icon name={name} size={size} color={color as string} />;
 }
 
 export default function TabLayout() {
-  const { user } = useAuthStore();
-  const canSeeAdmin = isAdminRole(user?.role);
+  const userId = useAuthStore((s) => s.user?.id);
+  const cargarModulos = useAuthStore((s) => s.cargarModulos);
+  const accesos = useAccesos();
+
+  // Los módulos salen de los permisos del rol; se recargan al volver a la app para que un cambio
+  // hecho en «Roles y permisos» se vea sin cerrar sesión.
+  useEffect(() => {
+    if (!userId) return;
+    cargarModulos();
+    const sub = AppState.addEventListener('change', (estado) => {
+      if (estado === 'active') cargarModulos();
+    });
+    return () => sub.remove();
+  }, [userId, cargarModulos]);
 
   return (
     <Tabs
@@ -36,6 +49,7 @@ export default function TabLayout() {
         name="vales"
         options={{
           title: 'Vales',
+          href: accesos.vales ? undefined : null,
           tabBarIcon: ({ color, size }) => <TabIcon name="vale" color={color} size={size} />,
         }}
       />
@@ -43,7 +57,7 @@ export default function TabLayout() {
         name="cartera"
         options={{
           title: 'Cartera',
-          href: canSeeAdmin ? undefined : null,
+          href: accesos.cartera ? undefined : null,
           tabBarIcon: ({ color, size }) => <TabIcon name="cartera" color={color} size={size} />,
         }}
       />
@@ -51,7 +65,7 @@ export default function TabLayout() {
         name="equipo"
         options={{
           title: 'Equipo',
-          href: canSeeAdmin ? undefined : null,
+          href: accesos.equipo ? undefined : null,
           tabBarIcon: ({ color, size }) => <TabIcon name="equipo" color={color} size={size} />,
         }}
       />

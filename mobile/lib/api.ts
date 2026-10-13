@@ -76,6 +76,15 @@ export const authAPI = {
   },
 };
 
+// ─── Módulos ─────────────────────────────────────────────────────────────────
+export const modulesAPI = {
+  /** Módulos del rol de la sesión, según sus permisos (los mismos del menú web). */
+  getMios: async () => {
+    const { data } = await api.get('/modules');
+    return data;
+  },
+};
+
 // ─── Tiendas ─────────────────────────────────────────────────────────────────
 export const tiendasAPI = {
   getMisTiendas: async () => {

@@ -1,23 +1,23 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuthStore, isAdminRole, ROLE_LABEL } from '@/lib/store';
+import { useAuthStore, useAccesos, ROLE_LABEL } from '@/lib/store';
+import type { Accesos } from '@/lib/modulos';
 
 import { Icon, type NombreIcono } from '@/components/Icon';
-const ACTIONS_ALL: { icon: NombreIcono; label: string; desc: string; route: string; color: string; bg: string }[] = [
-  { icon: 'agregar', label: 'Nuevo Vale', desc: 'Registrar un crédito nuevo', route: '/vale-nuevo', color: '#2563eb', bg: '#dbeafe' },
-  { icon: 'vale', label: 'Mis Vales', desc: 'Consultar y gestionar vales', route: '/(tabs)/vales', color: '#047857', bg: '#d1fae5' },
-];
-const ACTIONS_ADMIN: typeof ACTIONS_ALL = [
-  { icon: 'cartera', label: 'Cartera', desc: 'Panel de indicadores', route: '/(tabs)/cartera', color: '#b45309', bg: '#fef3c7' },
-  { icon: 'equipo', label: 'Equipo', desc: 'Gestionar personas y roles', route: '/(tabs)/equipo', color: '#2563eb', bg: '#dbeafe' },
+/** Cada acceso se muestra solo si el rol tiene el módulo correspondiente (lib/modulos.ts). */
+const ACTIONS: { acceso: keyof Accesos; icon: NombreIcono; label: string; desc: string; route: string; color: string; bg: string }[] = [
+  { acceso: 'nuevoVale', icon: 'agregar', label: 'Nuevo Vale', desc: 'Registrar un crédito nuevo', route: '/vale-nuevo', color: '#2563eb', bg: '#dbeafe' },
+  { acceso: 'vales', icon: 'vale', label: 'Mis Vales', desc: 'Consultar y gestionar vales', route: '/(tabs)/vales', color: '#047857', bg: '#d1fae5' },
+  { acceso: 'cartera', icon: 'cartera', label: 'Cartera', desc: 'Panel de indicadores', route: '/(tabs)/cartera', color: '#b45309', bg: '#fef3c7' },
+  { acceso: 'equipo', icon: 'equipo', label: 'Equipo', desc: 'Gestionar personas y roles', route: '/(tabs)/equipo', color: '#2563eb', bg: '#dbeafe' },
 ];
 
 export default function HomeScreen() {
   const { user } = useAuthStore();
   const router = useRouter();
-  const canAdmin = isAdminRole(user?.role);
-  const actions = canAdmin ? [...ACTIONS_ALL, ...ACTIONS_ADMIN] : ACTIONS_ALL;
+  const accesos = useAccesos();
+  const actions = ACTIONS.filter((a) => accesos[a.acceso]);
   const roleLabel = ROLE_LABEL[user?.role ?? ''] ?? user?.role ?? '';
 
   return (

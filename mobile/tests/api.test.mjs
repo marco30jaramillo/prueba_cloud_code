@@ -21,7 +21,7 @@ axios.defaults.adapter = async (config) => {
   return { data: respuesta(config), status: 200, statusText: 'OK', headers: {}, config };
 };
 
-const { authAPI, valesAPI, tiendasAPI, usersAPI, setApiToken } = await import('../lib/api.ts');
+const { authAPI, valesAPI, tiendasAPI, usersAPI, modulesAPI, setApiToken } = await import('../lib/api.ts');
 const { API_URL } = await import('../lib/config.ts');
 
 const ultima = () => llamadas[llamadas.length - 1];
@@ -131,6 +131,12 @@ test('Equipo · crearVendedor envía nombre y correo a POST /tiendas/:id/vendedo
   assert.equal(ultima().method, 'post');
   assert.equal(ultima().url, '/tiendas/t-1/vendedores/nuevo');
   assert.deepEqual(cuerpo(ultima()), { name: 'Nico', email: 'nico@ejemplo.com' });
+});
+
+test('Módulos · getMios consulta GET /modules (los mismos del menú web)', async () => {
+  await modulesAPI.getMios();
+  assert.equal(ultima().method, 'get');
+  assert.equal(ultima().url, '/modules');
 });
 
 test('RN-17 · buscarClientes envía q como parámetro de consulta', async () => {

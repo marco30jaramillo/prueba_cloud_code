@@ -96,6 +96,19 @@ mobile/
 | vale-nuevo | admin/tendero/vendedor | Formulario crear vale |
 | vale/[id] | todos | Detalle + historial de abonos + registrar abono |
 
+## Módulos y permisos
+
+Las pestañas y los accesos de Inicio salen de `GET /modules` (los módulos del rol, los mismos del
+menú web), no del nombre del rol: lo que se cambie en «Roles y permisos» se refleja en la app al
+volver a abrirla. La correspondencia está en `lib/modulos.ts`:
+
+| Módulo (ruta web) | En la app |
+|---|---|
+| Mis vales | Pestaña Vales con los vales propios |
+| Nueva venta | Botón «Nuevo vale» y pestaña Vales con los de la tienda |
+| Cartera | Pestaña Cartera |
+| Mi tienda | Pestaña Equipo |
+
 ## Formato de respuesta API
 
 ```ts
