@@ -39,8 +39,8 @@ for (const [nombre, plantilla] of Object.entries(templates)) {
     const { html, text } = plantilla.render(DATOS);
     for (const salida of [html, text]) {
       assert.ok(salida.includes('Atentamente, el equipo de soporte'));
-      assert.ok(salida.includes('Este correo es autogenerado; por favor no lo responda.'));
-      assert.ok(salida.includes('Sus datos personales serán tratados conforme a la normativa colombiana de protección de datos personales.'));
+      assert.ok(salida.includes('Este correo es autogenerado; por favor no lo respondas.'));
+      assert.ok(salida.includes('Tratamos tus datos personales conforme a la normativa colombiana de protección de datos personales.'));
     }
     assert.equal(SIGNATURE, 'Atentamente, el equipo de soporte');
     assert.equal(FOOTER_LINES.length, 2);

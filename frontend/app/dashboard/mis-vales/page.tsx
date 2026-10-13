@@ -7,6 +7,7 @@ import { valesAPI } from '@/lib/api';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import styles from './page.module.scss';
 
+import { Icon } from '@/components/Icon';
 interface Vale {
   id: string;
   tiendaId: string;
@@ -32,7 +33,7 @@ interface Abono {
 const ESTADO_CONFIG = {
   pendiente: { bg: 'warning', label: 'Pendiente' },
   parcial:   { bg: 'info',    label: 'Parcial' },
-  pagado:    { bg: 'success', label: 'Pagado' },
+  pagado:    { bg: 'primary', label: 'Pagado' },
   anulado:   { bg: 'secondary', label: 'Anulado' },
 };
 
@@ -68,7 +69,7 @@ function MisValesContent() {
     } catch (err: any) {
       const status = err?.response?.status;
       if (status === 403) setError('No tienes permiso para ver tus vales.');
-      else if (status === 500) setError('Error del servidor al cargar vales. Intenta más tarde.');
+      else if (status === 500) setError('No pudimos cargar tus vales. Intenta más tarde.');
       else setError('No se pudieron cargar tus vales.');
     } finally {
       setLoading(false);
@@ -94,14 +95,14 @@ function MisValesContent() {
   return (
     <Container className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>🧾 Mis Vales</h1>
-        <p className={styles.subtitle}>Historial de compras al fiado en tiendas de barrio</p>
+        <h1 className={styles.title}><Icon name="vale" /> Mis Vales</h1>
+        <p className={styles.subtitle}>Historial de tus vales en las tiendas</p>
       </div>
 
       {error && <Alert variant="danger" onClose={() => setError('')} dismissible>{error}</Alert>}
 
       {loading ? (
-        <div className={styles.loadingCenter}><Spinner animation="border" variant="success" /></div>
+        <div className={styles.loadingCenter}><Spinner animation="border" variant="primary" /></div>
       ) : (
         <>
           {totalPendiente > 0 && (
@@ -149,7 +150,7 @@ function MisValesContent() {
           {vales.length === 0 ? (
             <Card className={styles.card}>
               <Card.Body className={styles.emptyState}>
-                <p>🎉 No tienes vales registrados.</p>
+                <p><Icon name="exito" /> No tienes vales registrados.</p>
               </Card.Body>
             </Card>
           ) : (
@@ -177,7 +178,7 @@ function MisValesContent() {
                           <td><strong>{v.tiendaNombre || '—'}</strong></td>
                           <td>{v.descripcion}</td>
                           <td className={styles.monto}>{fmt(v.montoTotal)}</td>
-                          <td className={styles.monto}>{v.estado === 'pagado' ? <span className={styles.pagado}>✓ Pagado</span> : fmt(v.saldoPendiente)}</td>
+                          <td className={styles.monto}>{v.estado === 'pagado' ? <span className={styles.pagado}><Icon name="check" /> Pagado</span> : fmt(v.saldoPendiente)}</td>
                           <td>
                             <Badge bg={cfg.bg}>{cfg.label}</Badge>
                             {enMora && <Badge bg="danger" className="ms-1">Mora</Badge>}
@@ -203,7 +204,7 @@ function MisValesContent() {
       {/* Modal detalle + abonos */}
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
         <Modal.Header closeButton>
-          <Modal.Title>🧾 Detalle del vale</Modal.Title>
+          <Modal.Title><Icon name="vale" /> Detalle del vale</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {selectedVale && (

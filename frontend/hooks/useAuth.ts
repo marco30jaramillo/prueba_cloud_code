@@ -22,14 +22,14 @@ export const useAuth = () => {
         saveAuthToStorage(response.user, response.token);
         return { success: true, data: response };
       }
-      return { success: false, error: 'Respuesta inesperada del servidor' };
+      return { success: false, error: 'Algo salió mal. Intenta de nuevo' };
     } catch (error: any) {
       const status = error.response?.status;
       const data = error.response?.data;
 
       // Cuenta deshabilitada — error específico del backend
       if (status === 403 && data?.code === 'ACCOUNT_DISABLED') {
-        return { success: false, error: '🔒 Tu cuenta está deshabilitada. Contacta al administrador.' };
+        return { success: false, error: 'Tu cuenta está deshabilitada. Contacta al administrador.' };
       }
 
       // Cuenta creada pero sin activar: la contraseña es correcta, falta el enlace del correo
@@ -37,7 +37,7 @@ export const useAuth = () => {
         return {
           success: false,
           code: 'ACCOUNT_PENDING_ACTIVATION',
-          error: '📧 Tu cuenta está pendiente de activación. Revisa tu correo y abre el enlace de activación (mira también el spam), o pide que te lo reenviemos.'
+          error: 'Tu cuenta está pendiente de activación. Revisa tu correo y abre el enlace de activación (mira también el spam), o pide que te lo reenviemos.'
         };
       }
 
@@ -45,7 +45,7 @@ export const useAuth = () => {
       if (status === 429) {
         const secs = data?.retryAfterSec || 900;
         const mins = Math.ceil(secs / 60);
-        return { success: false, error: `⏱️ Demasiados intentos fallidos. Intenta nuevamente en ${mins} minutos.` };
+        return { success: false, error: `Demasiados intentos fallidos. Intenta nuevamente en ${mins} minutos.` };
       }
 
       const errorMsg = data?.message || error.message || 'No se pudo iniciar sesión. Intenta nuevamente.';

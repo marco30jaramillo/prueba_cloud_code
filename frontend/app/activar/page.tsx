@@ -10,7 +10,8 @@ import { ResendActivation } from '@/components/ResendActivation';
 import { AuthResponse } from '@/types';
 import styles from './page.module.scss';
 
-type Status = 'activating' | 'success' | 'error';
+import { Icon } from '@/components/Icon';
+type Status = 'activating' | 'primary' | 'error';
 
 export default function ActivarPage() {
   const router = useRouter();
@@ -47,12 +48,12 @@ export default function ActivarPage() {
         if (body.user && body.token) {
           setAuth(body.user, body.token);
           saveAuthToStorage(body.user, body.token);
-          setStatus('success');
+          setStatus('primary');
           // Si la cuenta exige cambiar la contraseña, el panel muestra solo ese paso.
           router.replace('/dashboard');
           return;
         }
-        setReason('Respuesta inesperada del servidor. Intenta abrir el enlace de nuevo o pide uno nuevo.');
+        setReason('Algo salió mal. Abre el enlace de nuevo o pide uno nuevo.');
         setStatus('error');
       } catch (error: any) {
         const httpStatus = error.response?.status;
@@ -67,7 +68,7 @@ export default function ActivarPage() {
         } else if (httpStatus && httpStatus < 500) {
           setReason('El enlace de activación no es válido o ya venció.');
         } else {
-          setReason('No pudimos conectar con el servidor. Revisa tu conexión e intenta de nuevo en unos minutos.');
+          setReason('No pudimos conectarnos. Revisa tu internet e intenta de nuevo en unos minutos.');
         }
         setStatus('error');
       }
@@ -91,7 +92,7 @@ export default function ActivarPage() {
             <div className={styles.loading}>
               <Spinner animation="border" role="status" />
               <p className="mt-3 text-muted">
-                {status === 'success' ? 'Cuenta activada. Llevándote al panel...' : 'Validando tu enlace...'}
+                {status === 'primary' ? 'Cuenta activada. Llevándote al panel...' : 'Validando tu enlace...'}
               </p>
             </div>
           )}
@@ -99,7 +100,7 @@ export default function ActivarPage() {
           {status === 'error' && (
             <>
               <Alert variant="danger" className="mb-4">
-                <Alert.Heading>❌ Enlace no válido</Alert.Heading>
+                <Alert.Heading><Icon name="error" /> Enlace no válido</Alert.Heading>
                 {reason}
               </Alert>
 

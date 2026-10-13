@@ -3,7 +3,7 @@
 }
 
 .profileCard {
-  background: linear-gradient(135deg, #f0fdf4 0%, #ecf0ff 100%);
+  background: linear-gradient(135deg, #d1fae5 0%, #dbeafe 100%);
   border: 2px solid #e5e7eb;
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
@@ -45,7 +45,7 @@
 }
 
 .actionCard {
-  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -54,8 +54,8 @@
 
   &:hover {
     transform: translateY(-8px);
-    box-shadow: 0 20px 40px rgba(16, 185, 129, 0.15);
-    border-color: #10b981;
+    box-shadow: 0 20px 40px rgba(37, 99, 235, 0.15);
+    border-color: #2563eb;
   }
 }
 
@@ -83,7 +83,7 @@
   }
 
   .modal-header {
-    background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+    background: linear-gradient(135deg, #2563eb 0%, #2563eb 100%);
     color: white;
     border: none;
 

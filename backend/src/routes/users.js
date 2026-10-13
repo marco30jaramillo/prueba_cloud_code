@@ -6,12 +6,17 @@ const { authMiddleware, tokenManager } = require('../middleware/auth');
 const roleMiddleware = require('../middleware/roleMiddleware');
 const auditMiddleware = require('../middleware/auditMiddleware');
 const accountMail = require('../mail/accountMail');
+const Tienda = require('../models/Tienda');
+const { ROLES_EQUIPO } = require('../config/permisos');
+
+/** Roles que trabajan en una tienda (dueño, encargado, vendedor). */
+const ROLES_DE_TIENDA = ['tendero', ...ROLES_EQUIPO];
 
 const router = express.Router();
 
 // Returns the roles that the current user can create/manage
 // Superuser always gets ALL roles (including custom ones)
-router.get('/manageable-roles', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), async (req, res) => {
+router.get('/manageable-roles', authMiddleware, roleMiddleware.requirePermission('auth:view-users'), async (req, res) => {
   if (req.user.role === 'superuser') {
     const allRoles = (await Role.getAll()).map(r => r.name);
     return ResponseFormatter.success(res, { roles: allRoles });
@@ -20,7 +25,7 @@ router.get('/manageable-roles', authMiddleware, roleMiddleware.requireRole('supe
   return ResponseFormatter.success(res, { roles: manageableRoles });
 });
 
-router.get('/', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), async (req, res) => {
+router.get('/', authMiddleware, roleMiddleware.requirePermission('auth:view-users'), async (req, res) => {
   const requesterRole = req.user.role;
   const allUsers = await User.getAll();
 
@@ -39,7 +44,7 @@ router.get('/', authMiddleware, roleMiddleware.requireRole('superuser', 'adminis
   }));
 
   return ResponseFormatter.success(res, {
-    message: 'Usuarios obtenidos exitosamente',
+    message: 'Personas cargadas',
     total: safeUsers.length,
     users: safeUsers
   });
@@ -71,8 +76,8 @@ router.get('/:userId', authMiddleware, async (req, res) => {
   }
 
   const requester = await User.findById(requesterId);
-  if (requester.role !== 'superuser' && requester.role !== 'administrador' && userId !== requesterId) {
-    return ResponseFormatter.forbidden(res, 'No tienes permiso para ver este usuario');
+  if (userId !== requesterId && !await Role.hasPermission(requester.role, 'auth:view-users')) {
+    return ResponseFormatter.forbidden(res, 'No tienes permiso para ver a esta persona');
   }
 
   return ResponseFormatter.success(res, {
@@ -88,7 +93,7 @@ router.get('/:userId', authMiddleware, async (req, res) => {
   });
 });
 
-router.patch('/:userId', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), async (req, res) => {
+router.patch('/:userId', authMiddleware, roleMiddleware.requirePermission('auth:update-user'), async (req, res) => {
   const { userId } = req.params;
   const { name, photo, role } = req.body;
   const requesterId = req.user.userId;
@@ -99,8 +104,8 @@ router.patch('/:userId', authMiddleware, roleMiddleware.requireRole('superuser',
   }
 
   const requester = await User.findById(requesterId);
-  if (requester.role === 'administrador' && targetUser.role === 'superuser') {
-    return ResponseFormatter.forbidden(res, 'No puedes editar a un superuser');
+  if (requester.role !== 'superuser' && targetUser.role === 'superuser') {
+    return ResponseFormatter.forbidden(res, 'No puedes editar a un superusuario');
   }
 
   if (!name && !photo && !role) {
@@ -110,15 +115,31 @@ router.patch('/:userId', authMiddleware, roleMiddleware.requireRole('superuser',
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
 
-  // Handle role change
+  // Cambio de rol. El rol viaja en el token de sesión: se cierran las sesiones de la persona
+  // para que entre de nuevo con el rol nuevo (si no, conservaría el anterior hasta que venza).
+  let rolCambiado = false;
   if (role && role !== targetUser.role) {
+    if (typeof role !== 'string' || !await Role.getByName(role)) {
+      return ResponseFormatter.badRequest(res, `El rol "${role}" no existe`);
+    }
     if (requester.role !== 'superuser') {
       const canManage = await Role.getManageableRoles(requester.role);
       if (!canManage.includes(role)) {
         return ResponseFormatter.forbidden(res, `No tienes permiso para asignar el rol "${role}"`);
       }
     }
-    await User.update(userId, { role });
+    const tiendas = await Tienda.getTiendasByUsuario(userId);
+    // Una tienda no se queda sin dueño por un cambio de rol: primero se asigna otro.
+    if (role !== 'tendero' && tiendas.some(t => t.esPropietario)) {
+      return ResponseFormatter.conflict(res, 'Esta persona es dueña de una tienda. Asigna otro dueño antes de cambiarle el rol.');
+    }
+    await User.updateRole(userId, role);
+    // Quien deja de ser personal de tienda deja de estar en sus tiendas.
+    if (!ROLES_DE_TIENDA.includes(role)) {
+      for (const t of tiendas) await Tienda.removeUsuario(t.id, userId);
+    }
+    await tokenManager.revokeAllUserTokens(userId, targetUser.email);
+    rolCambiado = true;
     auditMiddleware.logUserRoleChanged(requesterId, userId, targetUser.role, role, ipAddress, userAgent).catch(() => {});
   }
 
@@ -133,7 +154,9 @@ router.patch('/:userId', authMiddleware, roleMiddleware.requireRole('superuser',
   }
 
   return ResponseFormatter.success(res, {
-    message: 'Usuario actualizado exitosamente',
+    message: rolCambiado
+      ? `Persona actualizada. Ahora es ${updatedUser.role}; cerramos sus sesiones para que entre con el rol nuevo.`
+      : 'Persona actualizada',
     user: {
       id: updatedUser.id,
       email: updatedUser.email,
@@ -145,13 +168,13 @@ router.patch('/:userId', authMiddleware, roleMiddleware.requireRole('superuser',
   });
 });
 
-router.patch('/:userId/status', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), async (req, res) => {
+router.patch('/:userId/status', authMiddleware, roleMiddleware.requirePermission('admin:manage-users'), async (req, res) => {
   const { userId } = req.params;
   const { isActive } = req.body;
   const requesterId = req.user.userId;
 
   if (typeof isActive !== 'boolean') {
-    return ResponseFormatter.badRequest(res, 'El campo isActive debe ser un booleano');
+    return ResponseFormatter.badRequest(res, 'Indica si la persona queda activa o inactiva');
   }
 
   if (userId === requesterId) {
@@ -164,8 +187,8 @@ router.patch('/:userId/status', authMiddleware, roleMiddleware.requireRole('supe
   }
 
   const requester = await User.findById(requesterId);
-  if (requester.role === 'administrador' && targetUser.role === 'superuser') {
-    return ResponseFormatter.forbidden(res, 'No puedes deshabilitar un superuser');
+  if (requester.role !== 'superuser' && targetUser.role === 'superuser') {
+    return ResponseFormatter.forbidden(res, 'No puedes deshabilitar a un superusuario');
   }
 
   const updatedUser = await User.toggleActive(userId, isActive);
@@ -202,7 +225,7 @@ router.patch('/:userId/status', authMiddleware, roleMiddleware.requireRole('supe
   });
 });
 
-router.post('/:userId/generate-password', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), async (req, res) => {
+router.post('/:userId/generate-password', authMiddleware, roleMiddleware.requirePermission('admin:manage-users'), async (req, res) => {
   const { userId } = req.params;
   const requesterId = req.user.userId;
 
@@ -212,8 +235,8 @@ router.post('/:userId/generate-password', authMiddleware, roleMiddleware.require
   }
 
   const requester = await User.findById(requesterId);
-  if (requester.role === 'administrador' && targetUser.role === 'superuser') {
-    return ResponseFormatter.forbidden(res, 'No puedes generar contraseña para un superuser');
+  if (requester.role !== 'superuser' && targetUser.role === 'superuser') {
+    return ResponseFormatter.forbidden(res, 'No puedes generar contraseña para un superusuario');
   }
 
   const newPassword = User.generateRandomPassword();
@@ -230,7 +253,48 @@ router.post('/:userId/generate-password', authMiddleware, roleMiddleware.require
     message: 'Contraseña generada exitosamente',
     userId: userId,
     newPassword: newPassword,
-    warning: '⚠️ Comparte esta contraseña de forma segura. El usuario debe cambiarla en su primer login.'
+    warning: 'Comparte esta contraseña de forma segura. La persona debe cambiarla al entrar por primera vez.'
+  });
+});
+
+// POST /users/:userId/revoke-sessions — cierra todas las sesiones de una persona.
+// Solo quien está por encima de su rol y puede gestionarlo: el superusuario cierra las de cualquier
+// rol distinto al suyo; el administrador, las de los roles que su rol gestiona (canManage).
+router.post('/:userId/revoke-sessions', authMiddleware, roleMiddleware.requirePermission('admin:manage-users'), async (req, res) => {
+  const { userId } = req.params;
+  const requesterId = req.user.userId;
+
+  if (userId === requesterId) {
+    return ResponseFormatter.badRequest(res, 'Para cerrar tus propias sesiones usa «Cerrar sesión en todos tus dispositivos»');
+  }
+
+  const targetUser = await User.findById(userId);
+  if (!targetUser) {
+    return ResponseFormatter.notFound(res, 'Usuario');
+  }
+
+  const requester = await User.findById(requesterId);
+  let permitido;
+  if (requester.role === 'superuser') {
+    permitido = targetUser.role !== 'superuser';
+  } else {
+    const gestionables = await Role.getManageableRoles(requester.role);
+    permitido = targetUser.role !== requester.role && gestionables.includes(targetUser.role);
+  }
+  if (!permitido) {
+    return ResponseFormatter.forbidden(res, 'No puedes cerrar las sesiones de una persona con tu mismo rol o uno superior');
+  }
+
+  const closedCount = await tokenManager.revokeAllUserTokens(userId, targetUser.email);
+
+  const ipAddress = auditMiddleware.getIpAddress(req);
+  const userAgent = auditMiddleware.getUserAgent(req);
+  await auditMiddleware.logUserSessionsClosed(requesterId, userId, closedCount, ipAddress, userAgent);
+
+  return ResponseFormatter.success(res, {
+    message: closedCount > 0 ? 'Sesiones cerradas' : 'Esa persona no tenía sesiones abiertas',
+    userId,
+    closedCount
   });
 });
 

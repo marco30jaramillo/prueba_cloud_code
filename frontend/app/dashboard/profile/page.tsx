@@ -9,12 +9,13 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { getImageUrl } from '@/lib/image-url';
 import styles from './page.module.scss';
 
+import { Icon } from '@/components/Icon';
 function ProfilePageContent() {
   const { user, token, setAuth } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: 'primary' | 'error'; text: string } | null>(null);
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -65,11 +66,11 @@ function ProfilePageContent() {
         saveAuthToStorage(response.user, token);
       }
 
-      setMessage({ type: 'success', text: '✅ Perfil actualizado exitosamente' });
+      setMessage({ type: 'primary', text: 'Perfil actualizado exitosamente' });
       setIsEditing(false);
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || 'Error al actualizar perfil';
-      setMessage({ type: 'error', text: `⚠️ ${errorMsg}` });
+      setMessage({ type: 'error', text: `${errorMsg}` });
     } finally {
       setIsLoading(false);
     }
@@ -98,7 +99,7 @@ function ProfilePageContent() {
         passwordData.newPassword,
         passwordData.confirmPassword
       );
-      setMessage({ type: 'success', text: '✅ Contraseña cambiada exitosamente' });
+      setMessage({ type: 'primary', text: 'Contraseña cambiada exitosamente' });
       setIsChangingPassword(false);
       setPasswordData({
         currentPassword: '',
@@ -110,7 +111,7 @@ function ProfilePageContent() {
       });
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || 'Error al cambiar contraseña';
-      setMessage({ type: 'error', text: `⚠️ ${errorMsg}` });
+      setMessage({ type: 'error', text: `${errorMsg}` });
     } finally {
       setIsLoading(false);
     }
@@ -126,16 +127,19 @@ function ProfilePageContent() {
 
   return (
     <Container className={styles.container}>
+      <div className={styles.header}>
+        <div>
+          <h1 className={styles.title}><Icon name="cliente" /> Mi Perfil</h1>
+          <p className={styles.subtitle}>Gestiona tu información personal</p>
+        </div>
+      </div>
+
       <Row className="justify-content-center">
         <Col lg={6} md={8}>
-          <div className={styles.header}>
-            <h1 className={styles.title}>👤 Mi Perfil</h1>
-            <p className={styles.subtitle}>Gestiona tu información personal</p>
-          </div>
 
           {message && (
             <Alert
-              variant={message.type === 'success' ? 'success' : 'danger'}
+              variant={message.type === 'primary' ? 'primary' : 'danger'}
               onClose={() => setMessage(null)}
               dismissible
               className="mb-4"
@@ -184,14 +188,14 @@ function ProfilePageContent() {
                 </Form.Group>
 
                 <Form.Group className="mb-3">
-                  <Form.Label>Email</Form.Label>
+                  <Form.Label>Correo</Form.Label>
                   <Form.Control
                     type="email"
                     value={user.email}
                     disabled
                     className={styles.disabled}
                   />
-                  <small className="text-muted">El email no puede ser modificado</small>
+                  <small className="text-muted">El correo no se puede cambiar</small>
                 </Form.Group>
 
                 <Form.Group className="mb-4">
@@ -207,12 +211,12 @@ function ProfilePageContent() {
                 {isEditing ? (
                   <div className={styles.buttonGroup}>
                     <Button
-                      variant="success"
+                      variant="primary"
                       onClick={handleSaveProfile}
                       disabled={isLoading}
                       className="me-2"
                     >
-                      {isLoading ? '💾 Guardando...' : '💾 Guardar Cambios'}
+                      {isLoading ? 'Guardando...' : 'Guardar Cambios'}
                     </Button>
                     <Button
                       variant="secondary"
@@ -220,21 +224,21 @@ function ProfilePageContent() {
                         setIsEditing(false);
                         setFormData({
                           name: user.name,
-                          photo: user.photo || 'https://via.placeholder.com/40?text=👤'
+                          photo: user.photo || 'https://via.placeholder.com/40?text=U'
                         });
                       }}
                       disabled={isLoading}
                     >
-                      ❌ Cancelar
+                      <Icon name="error" /> Cancelar
                     </Button>
                   </div>
                 ) : (
                   <Button
-                    variant="primary"
+                    variant="outline-primary"
                     onClick={() => setIsEditing(true)}
                     className="w-100"
                   >
-                    ✏️ Editar Perfil
+                    <Icon name="editar" /> Editar Perfil
                   </Button>
                 )}
               </Form>
@@ -243,13 +247,13 @@ function ProfilePageContent() {
 
           <Card className={`${styles.card} mt-4`}>
             <Card.Body>
-              <h5 className="mb-3">🔐 Seguridad</h5>
+              <h5 className="mb-3"><Icon name="candado" /> Seguridad</h5>
               <Button
                 variant="warning"
                 onClick={() => setIsChangingPassword(true)}
                 className="w-100"
               >
-                🔑 Cambiar Contraseña
+                <Icon name="candado" /> Cambiar Contraseña
               </Button>
             </Card.Body>
           </Card>
@@ -258,7 +262,7 @@ function ProfilePageContent() {
 
       <Modal show={isChangingPassword} onHide={() => setIsChangingPassword(false)} centered>
         <Modal.Header closeButton>
-          <Modal.Title>🔑 Cambiar Contraseña</Modal.Title>
+          <Modal.Title><Icon name="candado" /> Cambiar Contraseña</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form.Group className="mb-3">
@@ -282,7 +286,7 @@ function ProfilePageContent() {
                 }
                 disabled={isLoading}
               >
-                {passwordData.showCurrent ? '👁️' : '👁️‍🗨️'}
+                <Icon name={passwordData.showCurrent ? 'ocultar' : 'ver'} />
               </Button>
             </div>
           </Form.Group>
@@ -308,7 +312,7 @@ function ProfilePageContent() {
                 }
                 disabled={isLoading}
               >
-                {passwordData.showNew ? '👁️' : '👁️‍🗨️'}
+                <Icon name={passwordData.showNew ? 'ocultar' : 'ver'} />
               </Button>
             </div>
           </Form.Group>
@@ -334,7 +338,7 @@ function ProfilePageContent() {
                 }
                 disabled={isLoading}
               >
-                {passwordData.showConfirm ? '👁️' : '👁️‍🗨️'}
+                <Icon name={passwordData.showConfirm ? 'ocultar' : 'ver'} />
               </Button>
             </div>
           </Form.Group>
@@ -352,7 +356,7 @@ function ProfilePageContent() {
             onClick={handleChangePassword}
             disabled={isLoading}
           >
-            {isLoading ? '⏳ Cambiando...' : '🔐 Cambiar Contraseña'}
+            {isLoading ? 'Cambiando...' : 'Cambiar Contraseña'}
           </Button>
         </Modal.Footer>
       </Modal>

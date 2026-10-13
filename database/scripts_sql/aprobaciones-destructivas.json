@@ -3,6 +3,26 @@
     "script": "alters/002_activacion_de_cuentas.sql",
     "hash": "d2c47a9cddd06a80faa8fe4111776a4c20d2096595d19385d87c11719f527b69",
     "claveJira": "KAN-69",
-    "tablasModificadas": ["dbo.users"]
+    "tablasModificadas": [
+      "dbo.users"
+    ]
+  },
+  {
+    "script": "alters/004_administrador_registra_vales.sql",
+    "hash": "c4984e8daa4ea443f1c35dd8dfa22f68cfcdda365eb44778bc0646049cddc522",
+    "claveJira": "KAN-75",
+    "tablasModificadas": [
+      "dbo.roles"
+    ]
+  },
+  {
+    "script": "alters/005_permisos_por_modulo_y_rol_encargado.sql",
+    "hash": "72f97f31aaa6f8ad2eae93dc7a136846901e90f3d061d0f2e7725b2f8b7fcc17",
+    "claveJira": "KAN-75",
+    "tablasModificadas": [
+      "dbo.modules",
+      "dbo.roles",
+      "dbo.permissions"
+    ]
   }
 ]

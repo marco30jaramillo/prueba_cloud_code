@@ -27,7 +27,7 @@ BEGIN
         nombre      NVARCHAR(200)    NOT NULL,
         descripcion NVARCHAR(500)    NULL,
         direccion   NVARCHAR(300)    NULL,
-        ciudad      NVARCHAR(100)    NOT NULL CONSTRAINT DF_tiendas_ciudad      DEFAULT 'Cartagena',
+        ciudad      NVARCHAR(100)    NOT NULL CONSTRAINT DF_tiendas_ciudad      DEFAULT '',
         telefono    NVARCHAR(20)     NULL,
         logo        NVARCHAR(2048)   NULL,        -- URL de imagen (Azure Blob o /uploads/...)
         isActive    BIT              NOT NULL CONSTRAINT DF_tiendas_isActive    DEFAULT 1,

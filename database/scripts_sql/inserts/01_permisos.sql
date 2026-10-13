@@ -1,7 +1,7 @@
 -- ============================================================
 -- Mi Valecito - inserts/01_permisos.sql
 -- Catálogo de permisos.
--- Origen: backend/permissions.csv (33 filas).
+-- Origen: backend/permissions.csv (33 filas) + equipo:gestionar (alters/005).
 -- Idempotente: solo inserta las filas cuyo id no existe; no modifica las existentes,
 -- para no pisar cambios hechos desde la aplicación.
 -- Prerrequisito: esquemas/01_esquema_inicial.sql.
@@ -39,14 +39,15 @@ FROM (VALUES
     (23, N'vale:crear', N'Registrar un nuevo vale para un cliente', N'vale'),
     (24, N'vale:ver-tienda', N'Ver todos los vales activos de la tienda', N'vale'),
     (25, N'vale:ver-propio', N'Cliente: consultar sus propios vales', N'vale'),
-    (26, N'vale:anular', N'Anular un vale (solo tendero propietario)', N'vale'),
+    (26, N'vale:anular', N'Anular un vale de la tienda', N'vale'),
     (27, N'abono:crear', N'Registrar un abono a un vale', N'abono'),
     (28, N'abono:ver', N'Ver historial de abonos de un vale', N'abono'),
     (29, N'abono:anular', N'Anular un abono mal registrado', N'abono'),
     (30, N'tienda:ver', N'Consultar informacion de la tienda', N'tienda'),
-    (31, N'tienda:administrar', N'Crear y gestionar tiendas', N'tienda'),
+    (31, N'tienda:administrar', N'Crear, editar y desactivar cualquier tienda y asignar su equipo', N'tienda'),
     (32, N'cartera:ver', N'Ver resumen de cartera pendiente', N'cartera'),
-    (33, N'cartera:reportes', N'Generar reportes de deuda y mora', N'cartera')
+    (33, N'cartera:reportes', N'Generar reportes de deuda y mora', N'cartera'),
+    (34, N'equipo:gestionar', N'Agregar, crear y quitar vendedores y encargados de su propia tienda', N'tienda')
 ) AS v (id, name, description, category)
 WHERE NOT EXISTS (SELECT 1 FROM dbo.permissions AS t WHERE t.id = v.id);
 

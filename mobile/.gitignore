@@ -11,3 +11,4 @@ android/
 *.orig.*
 web-build/
 .env
+play-service-account.json
