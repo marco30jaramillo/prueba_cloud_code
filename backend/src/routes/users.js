@@ -191,6 +191,15 @@ router.patch('/:userId/status', authMiddleware, roleMiddleware.requirePermission
     return ResponseFormatter.forbidden(res, 'No puedes deshabilitar a un superusuario');
   }
 
+  // Dos cuentas activas no pueden compartir correo: si el correo ya lo usa otra cuenta activa
+  // (porque la persona se volvió a registrar), esta no se puede reactivar.
+  if (isActive) {
+    const activa = await User.findActiveByEmail(targetUser.email);
+    if (activa && activa.id !== targetUser.id) {
+      return ResponseFormatter.conflict(res, 'No se puede habilitar: ya existe otra cuenta activa con ese correo');
+    }
+  }
+
   const updatedUser = await User.toggleActive(userId, isActive);
 
   if (!isActive) {

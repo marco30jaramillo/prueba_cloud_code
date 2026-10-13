@@ -31,7 +31,7 @@ function UsersPageContent() {
   // ── Filtros ──────────────────────────────────────────────────
   const [filterText, setFilterText]     = useState('');
   const [filterRole, setFilterRole]     = useState('');
-  const [filterStatus, setFilterStatus] = useState('');  // '' | 'active' | 'inactive'
+  const [filterStatus, setFilterStatus] = useState('active');  // 'active' (por defecto) | 'inactive' | '' (todos)
 
   const isAdmin = user?.role === 'superuser' || user?.role === 'administrador';
 
@@ -47,7 +47,7 @@ function UsersPageContent() {
   }, [users, filterText, filterRole, filterStatus]);
 
   const uniqueRoles = useMemo(() => [...new Set(users.map(u => u.role))].sort(), [users]);
-  const hasFilters = filterText || filterRole || filterStatus;
+  const hasFilters = filterText || filterRole || filterStatus !== 'active';
 
   // ── Edit modal ───────────────────────────────────────────────
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -319,7 +319,7 @@ function UsersPageContent() {
               {hasFilters && (
                 <button
                   className={styles.clearAll}
-                  onClick={() => { setFilterText(''); setFilterRole(''); setFilterStatus(''); }}
+                  onClick={() => { setFilterText(''); setFilterRole(''); setFilterStatus('active'); }}
                 >
                   Limpiar filtros
                 </button>
