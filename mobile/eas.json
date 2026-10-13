@@ -8,8 +8,8 @@
       "distribution": "internal",
       "env": {
         "APP_VARIANT": "qa",
-        "API_URL": "",
-        "WEB_URL": ""
+        "API_URL": "https://app-backend-mivalencito-b3hycrgxaef2bjhn.brazilsouth-01.azurewebsites.net",
+        "WEB_URL": "https://app-frontend-mivalencito-gkf5bncwcpbkascb.brazilsouth-01.azurewebsites.net/dashboard"
       },
       "android": {
         "buildType": "apk"
@@ -28,8 +28,8 @@
       "autoIncrement": true,
       "env": {
         "APP_VARIANT": "production",
-        "API_URL": "https://app-backend-mivalencito-b3hycrgxaef2bjhn.brazilsouth-01.azurewebsites.net",
-        "WEB_URL": "https://app-frontend-mivalencito-gkf5bncwcpbkascb.brazilsouth-01.azurewebsites.net/dashboard"
+        "API_URL": "backend-mi-valecito-prod-a0cefyetcwfsabbk.brazilsouth-01.azurewebsites.net",
+        "WEB_URL": "https://mi-valecito-hwerd7f0cfena5hx.brazilsouth-01.azurewebsites.net/dashboard"
       },
       "android": {
         "buildType": "app-bundle"
