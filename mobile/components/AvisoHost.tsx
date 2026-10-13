@@ -6,11 +6,11 @@ import { colores, fuentes } from '@/lib/tema';
 import { Icon, type NombreIcono } from './Icon';
 
 const ESTILO_TONO: Record<TonoAviso, { icono: NombreIcono; color: string; fondo: string }> = {
-  exito: { icono: 'exito', color: colores.verde, fondo: colores.verdeSuave },
-  error: { icono: 'error', color: colores.rojo, fondo: colores.rojoSuave },
-  peligro: { icono: 'alerta', color: colores.rojo, fondo: colores.rojoSuave },
-  aviso: { icono: 'alerta', color: colores.ambar, fondo: colores.ambarSuave },
-  info: { icono: 'informacion', color: colores.azul, fondo: colores.azulSuave },
+  exito: { icono: 'exito', color: colores.verdeTexto, fondo: colores.verdeSuave },
+  error: { icono: 'error', color: colores.rojoTexto, fondo: colores.rojoSuave },
+  peligro: { icono: 'alerta', color: colores.rojoTexto, fondo: colores.rojoSuave },
+  aviso: { icono: 'alerta', color: colores.ambarTexto, fondo: colores.ambarSuave },
+  info: { icono: 'informacion', color: colores.azulPresionado, fondo: colores.azulSuave },
 };
 
 /**
