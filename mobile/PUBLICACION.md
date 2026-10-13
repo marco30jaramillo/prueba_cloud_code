@@ -60,29 +60,68 @@ el comando. No hace falta pasar por Google Play.
 La primera vez, EAS pregunta si genera la llave de firma (keystore): responde **sí**. EAS la guarda en tu
 cuenta. No la borres ni la pierdas: es la que identifica tu app.
 
-## 1a. Actualizaciones automáticas de QA (EAS Update)
+## 1a. Ambientes en Expo y despliegue automático
 
-El pipeline del release (`.github/workflows/desplegar-release.yml`, job `movil`) decide solo qué hace
-falta en cada `release/vX.Y.Z`:
+Todo vive en **un solo proyecto de expo.dev** (`mivalecito/mi-valecito`, `projectId` en `app.config.js`).
+QA y producción son dos apps distintas (identificador `.qa` o no) dentro de ese proyecto, separadas
+por perfil, canal y ambiente de EAS:
 
-- **Solo cambió JavaScript** (pantallas, estilos, textos, lógica): publica un **EAS Update** en el canal
-  `qa`. Las apps de QA instaladas lo descargan al abrirse y lo aplican al reabrirse. No hay que reinstalar.
-- **Cambió la parte nativa** (una dependencia nativa, un plugin, el ícono, `app.config.js`, `eas.json`...):
-  lanza `eas build --profile qa` y hay que instalar ese APK. Desde ahí, los cambios de JavaScript
-  vuelven a llegar por EAS Update.
+| Perfil de `eas.json` | Sale | Canal de EAS Update | Ambiente de EAS | Lo lanza |
+|---|---|---|---|---|
+| `qa` | APK (interna) | `qa` | `preview` | pipeline del release (`release/vX.Y.Z`) |
+| `qa-tiendas` | AAB / IPA | `qa` | `preview` | a mano |
+| `production-apk` | APK (interna) | `production` | `production` | pipeline de producción (`main`) |
+| `production` | AAB para Play | `production` | `production` | a mano (`--auto-submit`) |
 
-Lo decide comparando la **huella nativa** (`runtimeVersion: { policy: 'fingerprint' }` en `app.config.js`)
-con las builds de QA ya hechas. El resumen de la ejecución en GitHub dice cuál de las dos hizo.
+- **La fuente de la verdad es `eas.json`**: URLs, variante, canal y ambiente de cada perfil, versionados
+  y revisados en los PR. No hace falta definir variables en expo.dev (las URLs no son secretas). Si algún
+  día hay un secreto (por ejemplo una llave de un servicio), va en expo.dev → *Environment variables*, en
+  el ambiente del perfil, con visibilidad *Secret*.
+- `production` y `production-apk` tienen la misma huella nativa: un update del canal `production` llega
+  tanto al APK como a la app de Play.
 
-Requisitos (una sola vez):
+### Qué hace cada pipeline
 
-1. Crear un token en expo.dev (*Account settings → Access tokens*) y guardarlo como secreto
-   `EXPO_TOKEN` en el ambiente `qa` de GitHub.
-2. Las APK de QA instaladas **antes** de este cambio no traen `expo-updates`: el primer release hará una
-   build nueva sola (la huella cambió) y hay que instalarla una vez.
+El paso `.github/actions/eas-desplegar` (job `movil` del release; último paso del job de producción):
 
-Para publicar una actualización a mano: `eas update --channel qa --platform android --environment preview`
-(con las variables `APP_VARIANT`, `API_URL` y `WEB_URL` del perfil `qa` exportadas).
+1. Corre las pruebas de la app móvil.
+2. Calcula la **huella nativa** (`runtimeVersion: { policy: 'fingerprint' }` en `app.config.js`) con las
+   variables del perfil (`scripts/perfil-eas.mjs`).
+3. Busca una build de ese perfil con esa huella, terminada o en curso.
+   - **La hay** (solo cambió JavaScript: pantallas, estilos, textos): `eas update` en el canal del perfil.
+     Las apps instaladas lo descargan al abrirse y lo aplican al reabrirse.
+   - **No la hay** (cambió una dependencia nativa, un plugin, el ícono, `app.config.js` o `eas.json`):
+     `eas build` del perfil, sin esperarla. Hay que instalar ese APK; después los cambios de JavaScript
+     vuelven a llegar por EAS Update.
+4. Builds y updates llevan como mensaje la versión y el commit (`v1.2.0 (abc1234)`), así en expo.dev se
+   ve qué release generó cada uno. El resumen de la ejecución en GitHub dice si hizo update o build.
+
+### Configuración en expo.dev (una sola vez)
+
+1. **Token para GitHub:** expo.dev → organización `mivalecito` → *Settings → Access tokens* → crear un
+   **robot** (rol *Developer*) y su token. Guardarlo en GitHub como secreto `EXPO_TOKEN` en **los dos**
+   ambientes: `qa` y `produccion` (*Settings → Environments*). Un robot no depende de la cuenta de una
+   persona.
+2. **Credenciales de firma:** cada app tiene su llave. Si aún no se hizo, lanzar una vez a mano
+   `eas build -p android --profile qa` y `eas build -p android --profile production-apk` y aceptar que
+   EAS genere la llave. El pipeline corre sin preguntas (`--non-interactive`): esa primera vez va a mano.
+3. **Canales:** los crea solo el primer `eas update`. Para verlos: expo.dev → proyecto → *Updates →
+   Channels* (`qa` → rama `qa`, `production` → rama `production`).
+4. **Primera vez:** las APK instaladas antes de este cambio no traen `expo-updates`. El primer release y el
+   primer despliegue de producción harán una build sola (la huella cambió); esa APK se instala una vez.
+
+### Revertir un update
+
+Si un update sale mal: expo.dev → *Updates* → el update anterior → *Republish*, o
+`eas update:republish --channel production` (elige el anterior). Las apps vuelven a él al reabrirse.
+
+### A mano
+
+```bash
+cd mobile
+eval "$(node scripts/perfil-eas.mjs qa | sed 's/^/export /')"
+eas update --channel "$CANAL" --environment "$AMBIENTE_EAS" --platform android --message "prueba"
+```
 
 ## 1b. Producción sin Google Play (APK para un grupo de usuarios)
 

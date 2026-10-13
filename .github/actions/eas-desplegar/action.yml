@@ -1,0 +1,135 @@
+name: Desplegar app movil (EAS Update o build)
+description: >
+  Publica la app movil de un perfil de mobile/eas.json. Si ya existe una build de ese perfil con
+  la misma huella nativa (runtimeVersion: fingerprint en mobile/app.config.js), publica un EAS
+  Update en el canal del perfil: las apps instaladas lo reciben sin reinstalar. Si la huella es
+  nueva (cambio una dependencia nativa, un plugin, el icono, app.config.js o eas.json), lanza una
+  build de ese perfil sin esperarla. Canal, ambiente de EAS y variables (APP_VARIANT, API_URL,
+  WEB_URL) salen del propio perfil (mobile/scripts/perfil-eas.mjs), asi el update y la build usan
+  exactamente lo mismo. Espera el repositorio descargado y Node instalado; no lee secretos: el
+  token llega como entrada desde un job con environment.
+
+inputs:
+  perfil:
+    description: "Perfil de build de eas.json (qa, production-apk...)"
+    required: true
+  version:
+    description: "Version del despliegue (vX.Y.Z), para el mensaje de la build o del update"
+    required: true
+  expo-token:
+    description: "Token de Expo (secreto EXPO_TOKEN del ambiente)"
+    required: true
+  plataforma:
+    description: "android (ios cuando haya cuenta de Apple)"
+    required: false
+    default: android
+
+outputs:
+  accion:
+    description: "update o build"
+    value: ${{ steps.decidir.outputs.accion }}
+  runtime:
+    description: "Version de runtime (huella nativa)"
+    value: ${{ steps.decidir.outputs.runtime }}
+
+runs:
+  using: composite
+  steps:
+    - name: Validar entradas
+      shell: bash
+      env:
+        EXPO_TOKEN: ${{ inputs.expo-token }}
+        PERFIL: ${{ inputs.perfil }}
+        PLATAFORMA: ${{ inputs.plataforma }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        if [ -z "$EXPO_TOKEN" ]; then echo "::error::Falta el token de Expo (EXPO_TOKEN)."; exit 1; fi
+        if ! [[ "$PERFIL" =~ ^[a-z0-9-]+$ ]]; then echo "::error::Perfil invalido."; exit 1; fi
+        if ! [[ "$PLATAFORMA" =~ ^(android|ios)$ ]]; then echo "::error::Plataforma invalida."; exit 1; fi
+        if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-+][A-Za-z0-9._-]+)?$ ]]; then echo "::error::Version invalida."; exit 1; fi
+
+    - name: Instalar dependencias y probar
+      shell: bash
+      working-directory: mobile
+      run: |
+        set -euo pipefail
+        npm ci
+        npm test
+
+    - name: Variables del perfil
+      shell: bash
+      working-directory: mobile
+      env:
+        PERFIL: ${{ inputs.perfil }}
+      run: node scripts/perfil-eas.mjs "$PERFIL" >> "$GITHUB_ENV"
+
+    - name: Decidir entre EAS Update y build nueva
+      id: decidir
+      shell: bash
+      working-directory: mobile
+      env:
+        EXPO_TOKEN: ${{ inputs.expo-token }}
+        PERFIL: ${{ inputs.perfil }}
+        PLATAFORMA: ${{ inputs.plataforma }}
+      run: |
+        set -euo pipefail
+        runtime="$(npx expo-updates runtimeversion:resolve --platform "$PLATAFORMA" | jq -r '.runtimeVersion')"
+        if ! [[ "$runtime" =~ ^[A-Za-z0-9._-]+$ ]]; then
+          echo "::error::No se pudo calcular la version de runtime (huella)."
+          exit 1
+        fi
+        # Cuenta como compatible una build del perfil terminada o en curso con la misma huella.
+        builds="$(npx --yes eas-cli@24.13.0 build:list --platform "$PLATAFORMA" --build-profile "$PERFIL" \
+          --runtime-version "$runtime" --limit 50 --json --non-interactive)"
+        compatibles="$(echo "$builds" | jq '[.[] | select(.status | ascii_upcase | IN("FINISHED","IN_PROGRESS","IN_QUEUE","NEW"))] | length')"
+        if [ "$compatibles" -gt 0 ]; then accion=update; else accion=build; fi
+        echo "runtime=$runtime" >> "$GITHUB_OUTPUT"
+        echo "accion=$accion" >> "$GITHUB_OUTPUT"
+        echo "Perfil $PERFIL, huella $runtime: $compatibles build(s) compatibles -> $accion"
+
+    - name: Publicar EAS Update
+      if: ${{ steps.decidir.outputs.accion == 'update' }}
+      shell: bash
+      working-directory: mobile
+      env:
+        EXPO_TOKEN: ${{ inputs.expo-token }}
+        PLATAFORMA: ${{ inputs.plataforma }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        npx --yes eas-cli@24.13.0 update --channel "$CANAL" --environment "$AMBIENTE_EAS" \
+          --platform "$PLATAFORMA" --message "$VERSION (${GITHUB_SHA::7})" --non-interactive
+
+    - name: Lanzar build nueva
+      if: ${{ steps.decidir.outputs.accion == 'build' }}
+      shell: bash
+      working-directory: mobile
+      env:
+        EXPO_TOKEN: ${{ inputs.expo-token }}
+        PERFIL: ${{ inputs.perfil }}
+        PLATAFORMA: ${{ inputs.plataforma }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        npx --yes eas-cli@24.13.0 build --profile "$PERFIL" --platform "$PLATAFORMA" \
+          --message "$VERSION (${GITHUB_SHA::7})" --non-interactive --no-wait
+
+    - name: Resumen
+      shell: bash
+      env:
+        PERFIL: ${{ inputs.perfil }}
+        PLATAFORMA: ${{ inputs.plataforma }}
+        ACCION: ${{ steps.decidir.outputs.accion }}
+        RUNTIME: ${{ steps.decidir.outputs.runtime }}
+      run: |
+        {
+          echo "### App movil: perfil $PERFIL ($PLATAFORMA)"
+          echo ""
+          echo "- Canal \`$CANAL\`, ambiente de EAS \`$AMBIENTE_EAS\`, huella nativa \`$RUNTIME\`"
+          if [ "$ACCION" = "update" ]; then
+            echo "- **EAS Update publicado**: las apps instaladas lo reciben al reabrirse."
+          else
+            echo "- **Build nueva lanzada** (cambio la parte nativa). Instalar el APK desde expo.dev cuando termine."
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
