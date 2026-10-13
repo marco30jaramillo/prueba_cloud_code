@@ -15,23 +15,23 @@ router.get('/logs', authMiddleware, roleMiddleware.requirePermission('admin:view
   });
 });
 
-router.get('/logs/actor/:actorId', authMiddleware, roleMiddleware.requireRole('superuser'), async (req, res) => {
+router.get('/logs/actor/:actorId', authMiddleware, roleMiddleware.requirePermission('admin:view-stats'), async (req, res) => {
   const logs = await AuditLog.getByActorId(req.params.actorId);
   return ResponseFormatter.success(res, { total: logs.length, logs });
 });
 
-router.get('/logs/target/:targetId', authMiddleware, roleMiddleware.requireRole('superuser'), async (req, res) => {
+router.get('/logs/target/:targetId', authMiddleware, roleMiddleware.requirePermission('admin:view-stats'), async (req, res) => {
   const logs = await AuditLog.getByTargetId(req.params.targetId);
   return ResponseFormatter.success(res, { total: logs.length, logs });
 });
 
-router.get('/logs/failed-logins', authMiddleware, roleMiddleware.requireRole('superuser'), async (req, res) => {
+router.get('/logs/failed-logins', authMiddleware, roleMiddleware.requirePermission('admin:view-stats'), async (req, res) => {
   const limit = parseInt(req.query.limit) || 50;
   const logs = await AuditLog.getFailedLogins(limit);
   return ResponseFormatter.success(res, { total: logs.length, logs });
 });
 
-router.get('/security-report', authMiddleware, roleMiddleware.requireRole('superuser'), async (req, res) => {
+router.get('/security-report', authMiddleware, roleMiddleware.requirePermission('admin:view-stats'), async (req, res) => {
   const days = parseInt(req.query.days) || 7;
   const report = await AuditLog.generateSecurityReport(days);
   return ResponseFormatter.success(res, { message: 'Reporte generado', report });

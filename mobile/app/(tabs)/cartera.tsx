@@ -6,7 +6,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { valesAPI, tiendasAPI, pick } from '@/lib/api';
-import { useAuthStore, useAccesos, formatCOP, verTodasLasTiendas } from '@/lib/store';
+import { useAccesos, useTodasLasTiendas, formatCOP } from '@/lib/store';
 import { esCobrable, estaEnMora } from '@/lib/estado-vale';
 import { valesCobrables, distribuirPago, validarPago, totalSaldos } from '@/lib/pago-integral';
 import { colores, fuentes } from '@/lib/tema';
@@ -47,7 +47,7 @@ const soloDigitos = (t: string) => t.replace(/[^0-9]/g, '');
 
 export default function CarteraScreen() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const todasLasTiendas = useTodasLasTiendas();
   // Cartera en solo lectura: se consulta, pero no se cobra (el servidor también lo exige).
   const { cobrarEnCartera } = useAccesos();
   const [tiendas, setTiendas] = useState<Tienda[]>([]);
@@ -75,7 +75,7 @@ export default function CarteraScreen() {
     try {
       let lista: any[] = pick(await tiendasAPI.getMisTiendas(), 'tiendas');
       // Administrador y superusuario no suelen estar asignados a una tienda: ven todas.
-      if (lista.length === 0 && verTodasLasTiendas(user?.role)) lista = pick(await tiendasAPI.getAll(), 'tiendas');
+      if (lista.length === 0 && todasLasTiendas) lista = pick(await tiendasAPI.getAll(), 'tiendas');
       const ts: Tienda[] = lista.map((t) => ({ id: t.id, nombre: t.nombre ?? t.name ?? 'Tienda' }));
       setTiendas(ts);
       const actual = ts.find((t) => t.id === tiendaRef.current)?.id ?? ts[0]?.id ?? null;
@@ -88,7 +88,7 @@ export default function CarteraScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user?.role, cargarCartera]);
+  }, [todasLasTiendas, cargarCartera]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 

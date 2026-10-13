@@ -4,11 +4,14 @@ const Abono = require('../models/Abono');
 const Tienda = require('../models/Tienda');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { authMiddleware } = require('../middleware/auth');
-const { requirePermission, requireModuleLevel } = require('../middleware/roleMiddleware');
+const { requirePermission } = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
-const isAdmin = role => role === 'superuser' || role === 'administrador';
+const Role = require('../models/Role');
+
+// tienda:administrar («Mi tienda» en total) opera en cualquier tienda; el resto, en las suyas.
+const todasLasTiendas = role => Role.hasPermission(role, 'tienda:administrar');
 
 /**
  * Fecha de vencimiento válida: vacía, o un día que no sea anterior a hoy. Se compara por día
@@ -25,7 +28,7 @@ function vencimientoInvalido(fecha) {
 }
 
 async function tiendaAcceso(userId, role, tiendaId) {
-  if (isAdmin(role)) return true;
+  if (await todasLasTiendas(role)) return true;
   return Tienda.hasAcceso(tiendaId, userId);
 }
 
@@ -57,10 +60,8 @@ router.post('/', authMiddleware, requirePermission('vale:crear'), async (req, re
 });
 
 // POST /vales/pago-integral — distribuye un pago entre varios vales (más viejo primero).
-// Es la acción de cobro de Cartera: además de abono:crear exige Cartera en escritura, así
-// Cartera en solo lectura no cobra aunque el rol tenga abono:crear por otro módulo.
-router.post('/pago-integral', authMiddleware, requirePermission('abono:crear'),
-  requireModuleLevel('/dashboard/cartera', 'write', 'registrar pagos'), async (req, res) => {
+// abono:crear solo lo da Cartera en escritura (alters/005): en solo lectura no se cobra.
+router.post('/pago-integral', authMiddleware, requirePermission('abono:crear'), async (req, res) => {
   const { clienteId, monto, valeIds } = req.body;
   const montoNum = parseFloat(monto);
   if (!clienteId || !montoNum || montoNum <= 0 || !Array.isArray(valeIds) || valeIds.length === 0)
@@ -134,7 +135,7 @@ router.get('/usuario/:userId', authMiddleware, requirePermission('vale:ver-tiend
     const targetId = req.params.userId;
 
     let tiendaIds;
-    if (!isAdmin(role)) {
+    if (!await todasLasTiendas(role)) {
       const Tienda = require('../models/Tienda');
       const misTiendas = await Tienda.getTiendasByUsuario(userId);
       tiendaIds = misTiendas.map(t => t.id);

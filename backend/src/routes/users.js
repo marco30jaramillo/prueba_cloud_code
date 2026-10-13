@@ -11,7 +11,7 @@ const router = express.Router();
 
 // Returns the roles that the current user can create/manage
 // Superuser always gets ALL roles (including custom ones)
-router.get('/manageable-roles', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), async (req, res) => {
+router.get('/manageable-roles', authMiddleware, roleMiddleware.requirePermission('auth:view-users'), async (req, res) => {
   if (req.user.role === 'superuser') {
     const allRoles = (await Role.getAll()).map(r => r.name);
     return ResponseFormatter.success(res, { roles: allRoles });
@@ -20,7 +20,7 @@ router.get('/manageable-roles', authMiddleware, roleMiddleware.requireRole('supe
   return ResponseFormatter.success(res, { roles: manageableRoles });
 });
 
-router.get('/', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), async (req, res) => {
+router.get('/', authMiddleware, roleMiddleware.requirePermission('auth:view-users'), async (req, res) => {
   const requesterRole = req.user.role;
   const allUsers = await User.getAll();
 
@@ -71,7 +71,7 @@ router.get('/:userId', authMiddleware, async (req, res) => {
   }
 
   const requester = await User.findById(requesterId);
-  if (requester.role !== 'superuser' && requester.role !== 'administrador' && userId !== requesterId) {
+  if (userId !== requesterId && !await Role.hasPermission(requester.role, 'auth:view-users')) {
     return ResponseFormatter.forbidden(res, 'No tienes permiso para ver a esta persona');
   }
 
@@ -88,7 +88,7 @@ router.get('/:userId', authMiddleware, async (req, res) => {
   });
 });
 
-router.patch('/:userId', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), async (req, res) => {
+router.patch('/:userId', authMiddleware, roleMiddleware.requirePermission('auth:update-user'), async (req, res) => {
   const { userId } = req.params;
   const { name, photo, role } = req.body;
   const requesterId = req.user.userId;
@@ -99,7 +99,7 @@ router.patch('/:userId', authMiddleware, roleMiddleware.requireRole('superuser',
   }
 
   const requester = await User.findById(requesterId);
-  if (requester.role === 'administrador' && targetUser.role === 'superuser') {
+  if (requester.role !== 'superuser' && targetUser.role === 'superuser') {
     return ResponseFormatter.forbidden(res, 'No puedes editar a un superusuario');
   }
 
@@ -145,7 +145,7 @@ router.patch('/:userId', authMiddleware, roleMiddleware.requireRole('superuser',
   });
 });
 
-router.patch('/:userId/status', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), async (req, res) => {
+router.patch('/:userId/status', authMiddleware, roleMiddleware.requirePermission('admin:manage-users'), async (req, res) => {
   const { userId } = req.params;
   const { isActive } = req.body;
   const requesterId = req.user.userId;
@@ -164,7 +164,7 @@ router.patch('/:userId/status', authMiddleware, roleMiddleware.requireRole('supe
   }
 
   const requester = await User.findById(requesterId);
-  if (requester.role === 'administrador' && targetUser.role === 'superuser') {
+  if (requester.role !== 'superuser' && targetUser.role === 'superuser') {
     return ResponseFormatter.forbidden(res, 'No puedes deshabilitar a un superusuario');
   }
 
@@ -202,7 +202,7 @@ router.patch('/:userId/status', authMiddleware, roleMiddleware.requireRole('supe
   });
 });
 
-router.post('/:userId/generate-password', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), async (req, res) => {
+router.post('/:userId/generate-password', authMiddleware, roleMiddleware.requirePermission('admin:manage-users'), async (req, res) => {
   const { userId } = req.params;
   const requesterId = req.user.userId;
 
@@ -212,7 +212,7 @@ router.post('/:userId/generate-password', authMiddleware, roleMiddleware.require
   }
 
   const requester = await User.findById(requesterId);
-  if (requester.role === 'administrador' && targetUser.role === 'superuser') {
+  if (requester.role !== 'superuser' && targetUser.role === 'superuser') {
     return ResponseFormatter.forbidden(res, 'No puedes generar contraseña para un superusuario');
   }
 
@@ -237,7 +237,7 @@ router.post('/:userId/generate-password', authMiddleware, roleMiddleware.require
 // POST /users/:userId/revoke-sessions — cierra todas las sesiones de una persona.
 // Solo quien está por encima de su rol y puede gestionarlo: el superusuario cierra las de cualquier
 // rol distinto al suyo; el administrador, las de los roles que su rol gestiona (canManage).
-router.post('/:userId/revoke-sessions', authMiddleware, roleMiddleware.requireRole('superuser', 'administrador'), async (req, res) => {
+router.post('/:userId/revoke-sessions', authMiddleware, roleMiddleware.requirePermission('admin:manage-users'), async (req, res) => {
   const { userId } = req.params;
   const requesterId = req.user.userId;
 

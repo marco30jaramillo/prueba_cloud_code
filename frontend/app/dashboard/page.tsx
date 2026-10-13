@@ -22,6 +22,8 @@ interface DashboardModule {
 const ROLE_COLORS: Record<string, string> = {
   superuser:     '#d97706',
   administrador: '#2563eb',
+  tendero:       '#2563eb',
+  encargado:     '#2563eb',
   vendedor:      '#2563eb',
   cliente:       '#2563eb',
 };

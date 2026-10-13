@@ -53,7 +53,7 @@ export function accesosDeModulos(modulos: ModuloRol[]): Accesos {
  * dejar la pantalla vacía. En cuanto llega la respuesta, mandan los permisos.
  */
 export function accesosPorRol(role?: string): Accesos {
-  const personal = ['superuser', 'administrador', 'tendero'].includes(role ?? '');
+  const personal = ['superuser', 'administrador', 'tendero', 'encargado'].includes(role ?? '');
   const vendedor = role === 'vendedor';
   return {
     vales: true,
@@ -64,4 +64,13 @@ export function accesosPorRol(role?: string): Accesos {
     cobrarEnCartera: false,
     equipo: personal,
   };
+}
+
+/**
+ * ¿La sesión tiene el permiso? Los permisos efectivos vienen de GET /modules (los mismos que
+ * revisa el servidor). Mientras no han cargado, nada: el botón aparece al llegar la respuesta.
+ */
+export function tienePermiso(permisos: string[] | null | undefined, permiso: string): boolean {
+  if (!permisos) return false;
+  return permisos.includes(permiso) || permisos.includes('system:full-access');
 }

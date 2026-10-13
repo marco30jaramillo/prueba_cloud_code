@@ -142,7 +142,7 @@ router.get('/modules', (req, res) => {
     prefix: '/modules',
     description: 'Módulos del dashboard accesibles según el rol del usuario',
     endpoints: [
-      endpoint('GET', '/modules', 'Módulos accesibles al usuario autenticado, con su nivel (read, write o full)', 'auth',
+      endpoint('GET', '/modules', 'Módulos accesibles al usuario autenticado, con su nivel (read, write o full), y sus permisos efectivos', 'auth',
         null, { modules: '[{ id, name, description, buttonLabel, href, icon }]' }),
       endpoint('GET', '/modules/all', 'Todos los módulos con info de permisos', 'system:full-access',
         null, { modules: '[{ id, name, permRead, permWrite, permFull, roles }]' }),
@@ -189,10 +189,11 @@ router.get('/tiendas', (req, res) => {
       endpoint('POST', '/tiendas/:id/usuarios', 'Asignar tendero/vendedor a tienda', 'tienda:administrar',
         { userId: 'string', esPropietario: 'boolean (opcional)' }),
       endpoint('DELETE', '/tiendas/:id/usuarios/:userId', 'Quitar usuario de la tienda', 'tienda:administrar'),
-      endpoint('POST', '/tiendas/:id/vendedores', 'Agregar al equipo un vendedor ya registrado, por su correo exacto (propietario de la tienda o admin)', 'tienda:ver',
+      endpoint('POST', '/tiendas/:id/equipo', 'Sumar al equipo un vendedor o encargado ya registrado, por su correo exacto (dueño con equipo:gestionar, o tienda:administrar)', 'equipo:gestionar',
         { email: 'string' }),
-      endpoint('POST', '/tiendas/:id/vendedores/nuevo', 'Crear la cuenta de un vendedor y sumarlo a la tienda; recibe correo de activación (propietario de la tienda o admin)', 'tienda:ver',
-        { name: 'string', email: 'string' }),
+      endpoint('POST', '/tiendas/:id/equipo/nuevo', 'Crear la cuenta de un vendedor o encargado y sumarlo a la tienda; recibe correo de activación', 'equipo:gestionar',
+        { name: 'string', email: 'string', rol: "'vendedor' | 'encargado' (opcional, vendedor por defecto)" }),
+      endpoint('DELETE', '/tiendas/:id/equipo/:userId', 'Quitar a un vendedor o encargado de la tienda (no al dueño)', 'equipo:gestionar'),
     ],
   });
 });
@@ -217,7 +218,7 @@ router.get('/vales', (req, res) => {
     endpoints: [
       endpoint('POST', '/vales', 'Registrar nuevo vale al fiado. El cliente debe existir y haber activado su cuenta (si no, 400)', 'vale:crear',
         { tiendaId: 'string', clienteId: 'string', descripcion: 'string', montoTotal: 'number', fechaVencimiento: 'date (opcional)', notas: 'string (opcional)' }),
-      endpoint('POST', '/vales/pago-integral', 'Distribuir un pago entre varios vales (más antiguo primero); exige además Cartera en escritura', 'abono:crear',
+      endpoint('POST', '/vales/pago-integral', 'Distribuir un pago entre varios vales (más antiguo primero); abono:crear lo da Cartera en escritura', 'abono:crear',
         { clienteId: 'string', monto: 'number', valeIds: 'string[]' },
         { abonos: '[]', vales: '[]', montoAplicado: 'number', montoNoAplicado: 'number' }),
       endpoint('GET', '/vales/mis-vales', 'Vales propios del cliente autenticado', 'vale:ver-propio',

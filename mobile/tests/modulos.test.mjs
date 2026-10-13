@@ -1,7 +1,7 @@
 // Qué ve cada rol en la app según los módulos de sus permisos (lib/modulos.ts).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { accesosDeModulos, accesosPorRol, RUTA_MODULO } from '../lib/modulos.ts';
+import { accesosDeModulos, accesosPorRol, tienePermiso, RUTA_MODULO } from '../lib/modulos.ts';
 
 const m = (href, level = 'read') => ({ href, level });
 
@@ -47,4 +47,17 @@ test('mientras cargan, se usa lo que antes decidía el rol', () => {
   assert.equal(accesosPorRol('vendedor').cartera, false);
   assert.equal(accesosPorRol('cliente').nuevoVale, false);
   assert.equal(accesosPorRol('tendero').cobrarEnCartera, false, 'cobrar espera a conocer el nivel');
+});
+
+test('permisos efectivos: tiene el permiso, o el acceso total; sin cargar, ninguno', () => {
+  assert.equal(tienePermiso(['abono:crear'], 'abono:crear'), true);
+  assert.equal(tienePermiso(['abono:crear'], 'abono:anular'), false);
+  assert.equal(tienePermiso(['system:full-access'], 'vale:anular'), true);
+  assert.equal(tienePermiso(null, 'abono:crear'), false);
+});
+
+test('el encargado, mientras cargan los módulos, ve lo del personal de la tienda', () => {
+  const a = accesosPorRol('encargado');
+  assert.equal(a.cartera, true);
+  assert.equal(a.nuevoVale, true);
 });

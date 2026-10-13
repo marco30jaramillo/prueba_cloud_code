@@ -420,7 +420,7 @@ router.post('/create-user', authMiddleware, async (req, res) => {
     return ResponseFormatter.forbidden(res, `Tu rol '${creatorRole}' no puede crear usuarios con rol '${targetRole}'`, {
       your_role: creatorRole,
       target_role: targetRole,
-      allowed_roles: creatorRole === 'superuser' ? ['superuser', 'administrador', 'vendedor', 'cliente'] : ['vendedor', 'cliente']
+      allowed_roles: await Role.getManageableRoles(creatorRole)
     });
   }
 
@@ -462,7 +462,7 @@ router.get('/user-schema/:roleType', async (req, res) => {
 
   if (!role) {
     return ResponseFormatter.notFound(res, `Rol '${roleType}'`, {
-      available_roles: ['superuser', 'administrador', 'vendedor', 'cliente']
+      available_roles: ['superuser', 'administrador', 'tendero', 'encargado', 'vendedor', 'cliente']
     });
   }
 
@@ -480,7 +480,7 @@ router.get('/user-schema/:roleType', async (req, res) => {
       email: { type: 'string', required: true, pattern: 'email' },
       password: { type: 'string', required: true, minLength: 8 },
       name: { type: 'string', required: true, minLength: 2 },
-      role: { type: 'enum', required: false, values: ['superuser', 'administrador', 'vendedor', 'cliente'] }
+      role: { type: 'enum', required: false, values: ['superuser', 'administrador', 'tendero', 'encargado', 'vendedor', 'cliente'] }
     }
   };
 
@@ -607,7 +607,7 @@ router.patch('/profile', authMiddleware, async (req, res) => {
   });
 });
 
-router.patch('/password/:userId', authMiddleware, roleMiddleware.requireRole(['superuser', 'administrador']), async (req, res) => {
+router.patch('/password/:userId', authMiddleware, roleMiddleware.requirePermission('admin:manage-users'), async (req, res) => {
   const { newPassword } = req.body;
   const { userId } = req.params;
   const requesterId = req.user.userId;
@@ -626,7 +626,7 @@ router.patch('/password/:userId', authMiddleware, roleMiddleware.requireRole(['s
   }
 
   const requester = await User.findById(requesterId);
-  if (requester.role === 'administrador' && targetUser.role === 'superuser') {
+  if (requester.role !== 'superuser' && targetUser.role === 'superuser') {
     return ResponseFormatter.forbidden(res, 'No puedes cambiar la contraseña de un superusuario');
   }
 

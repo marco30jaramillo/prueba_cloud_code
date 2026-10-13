@@ -6,7 +6,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useFocusEffect } from 'expo-router';
 import { tiendasAPI, pick } from '@/lib/api';
-import { useAuthStore, ROLE_LABEL, verTodasLasTiendas } from '@/lib/store';
+import { ROLE_LABEL, usePermiso, useTodasLasTiendas } from '@/lib/store';
 import { colores, fuentes } from '@/lib/tema';
 
 import { Icon } from '@/components/Icon';
@@ -21,22 +21,30 @@ interface Miembro {
   esPropietario?: boolean;
 }
 
-/** Formulario abierto: sumar un vendedor ya registrado o crear la cuenta de uno nuevo. */
+/** Formulario abierto: sumar a alguien ya registrado o crear la cuenta de alguien nuevo. */
 type Formulario = 'agregar' | 'crear';
+/** Roles que el dueño suma a su equipo (backend/src/config/permisos.js, ROLES_EQUIPO). */
+type RolEquipo = 'vendedor' | 'encargado';
+const ROLES_EQUIPO: RolEquipo[] = ['vendedor', 'encargado'];
+const AYUDA_ROL: Record<RolEquipo, string> = {
+  vendedor: 'Registra vales y consulta la cartera.',
+  encargado: 'Atiende por ti: registra vales y cobra, pero no anula ni gestiona el equipo.',
+};
 
 export default function EquipoScreen() {
   const [miembros, setMiembros] = useState<Miembro[]>([]);
   const [tienda, setTienda] = useState<{ id: string; nombre: string; esPropietario: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const { user } = useAuthStore();
-  const isSuperAdmin = verTodasLasTiendas(user?.role);
-  // El propietario de la tienda arma su equipo; administrador y superusuario, en cualquiera.
-  const puedeGestionar = isSuperAdmin || (user?.role === 'tendero' && tienda?.esPropietario === true);
+  // Con tienda:administrar se gestiona cualquier tienda; con equipo:gestionar, solo la propia.
+  const isSuperAdmin = useTodasLasTiendas();
+  const gestionaEquipo = usePermiso('equipo:gestionar');
+  const puedeGestionar = isSuperAdmin || (gestionaEquipo && tienda?.esPropietario === true);
 
   const [formulario, setFormulario] = useState<Formulario | null>(null);
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
+  const [rolNuevo, setRolNuevo] = useState<RolEquipo>('vendedor');
   const [guardando, setGuardando] = useState(false);
 
   const load = useCallback(async () => {
@@ -67,29 +75,30 @@ export default function EquipoScreen() {
     setFormulario((actual) => (actual === f ? null : f));
     setNombre('');
     setEmail('');
+    setRolNuevo('vendedor');
   };
 
   const guardar = async () => {
     if (!tienda || !formulario) return;
     const correo = email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo)) {
-      Alert.alert('Correo', 'Escribe el correo completo del vendedor.');
+      Alert.alert('Correo', 'Escribe el correo completo de la persona.');
       return;
     }
     if (formulario === 'crear' && nombre.trim().length < 2) {
-      Alert.alert('Nombre', 'Escribe el nombre del vendedor.');
+      Alert.alert('Nombre', 'Escribe el nombre de la persona.');
       return;
     }
     setGuardando(true);
     try {
       const res = formulario === 'agregar'
-        ? await tiendasAPI.agregarVendedor(tienda.id, correo)
-        : await tiendasAPI.crearVendedor(tienda.id, nombre.trim(), correo);
+        ? await tiendasAPI.agregarAlEquipo(tienda.id, correo)
+        : await tiendasAPI.crearMiembro(tienda.id, nombre.trim(), correo, rolNuevo);
       setFormulario(null);
       setNombre('');
       setEmail('');
       await load();
-      Alert.alert(formulario === 'agregar' ? 'Vendedor agregado' : 'Vendedor creado', res?.message ?? 'Listo.');
+      Alert.alert(formulario === 'agregar' ? 'Persona agregada' : 'Cuenta creada', res?.message ?? 'Listo.');
     } catch (e: any) {
       Alert.alert('No se pudo completar', e?.response?.data?.message || 'Revisa tu conexión e intenta de nuevo.');
     } finally {
@@ -110,7 +119,9 @@ export default function EquipoScreen() {
           onPress: async () => {
             try {
               const uid = m.userId ?? m.id;
-              await tiendasAPI.removeUsuario(tienda.id, uid);
+              // Vendedores y encargados, por el equipo (dueño o admin); otros roles, solo el admin.
+              if (ROLES_EQUIPO.includes(m.role as RolEquipo)) await tiendasAPI.quitarDelEquipo(tienda.id, uid);
+              else await tiendasAPI.removeUsuario(tienda.id, uid);
               setMiembros((prev) => prev.filter((x) => (x.userId ?? x.id) !== uid));
             } catch {
               Alert.alert('Error', 'No pudimos quitar a la persona.');
@@ -145,7 +156,7 @@ export default function EquipoScreen() {
             activeOpacity={0.8}
           >
             <Icon name="agregar" size={18} color={formulario === 'agregar' ? colores.superficie : colores.azul} />
-            <Text style={[styles.accionText, formulario === 'agregar' && styles.accionTextActivo]}>Agregar vendedor</Text>
+            <Text style={[styles.accionText, formulario === 'agregar' && styles.accionTextActivo]}>Agregar al equipo</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.accionBtn, formulario === 'crear' && styles.accionBtnActivo]}
@@ -153,7 +164,7 @@ export default function EquipoScreen() {
             activeOpacity={0.8}
           >
             <Icon name="cliente" size={18} color={formulario === 'crear' ? colores.superficie : colores.azul} />
-            <Text style={[styles.accionText, formulario === 'crear' && styles.accionTextActivo]}>Crear vendedor nuevo</Text>
+            <Text style={[styles.accionText, formulario === 'crear' && styles.accionTextActivo]}>Crear cuenta nueva</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -161,21 +172,35 @@ export default function EquipoScreen() {
       {formulario && (
         <View style={styles.formCard}>
           <Text style={styles.formTitulo}>
-            {formulario === 'agregar' ? 'Agregar un vendedor registrado' : 'Crear un vendedor nuevo'}
+            {formulario === 'agregar' ? 'Agregar a alguien ya registrado' : 'Crear la cuenta de alguien nuevo'}
           </Text>
           <Text style={styles.formAyuda}>
             {formulario === 'agregar'
-              ? 'Escribe el correo completo con el que el vendedor se registró en la app. Podrá registrar vales en esta tienda.'
+              ? 'Escribe el correo completo con el que el vendedor o encargado se registró en la app. Quedará en esta tienda con su rol.'
               : 'Creamos su cuenta y le enviamos un correo para activarla y crear su contraseña. Quedará en esta tienda.'}
           </Text>
           {formulario === 'crear' && (
             <>
+              <Text style={styles.label}>Rol</Text>
+              <View style={styles.roles}>
+                {ROLES_EQUIPO.map((r) => (
+                  <TouchableOpacity
+                    key={r}
+                    style={[styles.rolOpcion, rolNuevo === r && styles.rolOpcionActiva]}
+                    onPress={() => setRolNuevo(r)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.rolOpcionText, rolNuevo === r && styles.rolOpcionTextActiva]}>{ROLE_LABEL[r]}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={styles.formAyuda}>{AYUDA_ROL[rolNuevo]}</Text>
               <Text style={styles.label}>Nombre completo</Text>
               <TextInput
                 style={styles.input}
                 value={nombre}
                 onChangeText={setNombre}
-                placeholder="Nombre del vendedor"
+                placeholder="Nombre completo"
                 placeholderTextColor={colores.textoMinimo}
                 autoCapitalize="words"
                 returnKeyType="next"
@@ -187,7 +212,7 @@ export default function EquipoScreen() {
             style={styles.input}
             value={email}
             onChangeText={setEmail}
-            placeholder="vendedor@correo.com"
+            placeholder="persona@correo.com"
             placeholderTextColor={colores.textoMinimo}
             keyboardType="email-address"
             autoCapitalize="none"
@@ -238,7 +263,7 @@ export default function EquipoScreen() {
                 <Text style={styles.statusLabel}>{activo ? 'Activo' : 'Inactivo'}</Text>
               </View>
             </View>
-            {isSuperAdmin && !item.esPropietario && (
+            {puedeGestionar && !item.esPropietario && (isSuperAdmin || ROLES_EQUIPO.includes(rol as RolEquipo)) && (
               <TouchableOpacity style={styles.removeBtn} onPress={() => handleRemove(item)}>
                 <Text style={styles.removeBtnText}>Quitar</Text>
               </TouchableOpacity>
@@ -263,6 +288,14 @@ const styles = StyleSheet.create({
   accionText: { color: colores.azul, fontFamily: fuentes.extrabold, fontSize: 13 },
   accionTextActivo: { color: colores.superficie },
   formCard: { backgroundColor: colores.superficie, borderRadius: 14, padding: 16 },
+  roles: { flexDirection: 'row', gap: 8, marginBottom: 6 },
+  rolOpcion: {
+    flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 10,
+    borderWidth: 1.5, borderColor: colores.borde, backgroundColor: colores.superficie,
+  },
+  rolOpcionActiva: { borderColor: colores.azul, backgroundColor: colores.azulSuave },
+  rolOpcionText: { color: colores.textoSecundario, fontFamily: fuentes.semibold },
+  rolOpcionTextActiva: { color: colores.azulPresionado, fontFamily: fuentes.extrabold },
   formTitulo: { fontSize: 16, fontFamily: fuentes.extrabold, color: colores.texto },
   formAyuda: { fontSize: 12, color: colores.textoMinimo, marginTop: 4 },
   label: { fontSize: 13, fontFamily: fuentes.semibold, color: colores.textoSecundario, marginTop: 14, marginBottom: 6 },

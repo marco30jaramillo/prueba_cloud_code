@@ -20,7 +20,7 @@ test('CA-7 · la conciliación cuadra con vales, abonos y anulaciones mezclados'
   const v1 = await m.crearVale({ tienda: m.tiendaA, cliente: m.clienteX, monto: 12000 });
   const v2 = await m.crearVale({ tienda: m.tiendaB, cliente: m.clienteY, monto: 8000 });
   const a = await m.abonar(v1, 5000, m.tenderoA);
-  await m.abonar(v1, 7000, m.vendedorA);
+  await m.abonar(v1, 7000, m.encargadoA);
   await api.patch(`/vales/${v1.id}/abonos/${a.body.abono.id}/anular`, {}, await m.token(m.tenderoA));
   await m.abonar(v2, 3000, m.tenderoB);
   await m.conciliar('CA-7 mezcla');

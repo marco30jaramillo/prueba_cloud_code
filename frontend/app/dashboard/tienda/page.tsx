@@ -172,7 +172,7 @@ function TiendaContent() {
       const existingIds = new Set(usuarios.map(u => u.userId));
       setUserResults(
         (res.users || []).filter((u: UserResult) =>
-          ['tendero', 'vendedor'].includes(u.role) &&
+          ['tendero', 'encargado', 'vendedor'].includes(u.role) &&
           !existingIds.has(u.id) &&
           (u.name.toLowerCase().includes(lower) || u.email.toLowerCase().includes(lower))
         ).slice(0, 6)

@@ -6,7 +6,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { valesAPI, pick } from '@/lib/api';
-import { useAuthStore, isAdminRole, formatCOP } from '@/lib/store';
+import { useAuthStore, usePermiso, formatCOP } from '@/lib/store';
 import { ETIQUETA_ESTADO, esCobrable, estadoVisible } from '@/lib/estado-vale';
 import { colorEstado } from '@/lib/tema';
 
@@ -40,7 +40,10 @@ export default function ValeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const navigation = useNavigation();
   const { user } = useAuthStore();
-  const canAdmin = isAdminRole(user?.role);
+  // Cada acción, según los permisos efectivos del rol (los mismos que revisa el servidor).
+  const puedeAbonar = usePermiso('abono:crear');
+  const puedeAnularVale = usePermiso('vale:anular');
+  const puedeAnularAbono = usePermiso('abono:anular');
 
   const [vale, setVale] = useState<Vale | null>(null);
   const [abonos, setAbonos] = useState<Abono[]>([]);
@@ -147,8 +150,8 @@ export default function ValeDetailScreen() {
   const isVencido = estado === 'mora';
   const estadoColor = colorEstado[estado];
   const estadoLabel = ETIQUETA_ESTADO[estado];
-  const canRegisterAbono = esCobrable(vale.estado) && Number(vale.saldoPendiente) > 0;
-  const canAnular = esCobrable(vale.estado) && canAdmin;
+  const canRegisterAbono = puedeAbonar && esCobrable(vale.estado) && Number(vale.saldoPendiente) > 0;
+  const canAnular = esCobrable(vale.estado) && puedeAnularVale;
   const abonosActivos = abonos.filter(a => a.estado !== 'anulado');
 
   return (
@@ -251,7 +254,7 @@ export default function ValeDetailScreen() {
                   {a.registradoPorNombre ? `  ·  ${a.registradoPorNombre}` : ''}
                 </Text>
               </View>
-              {canAdmin && a.estado !== 'anulado' && (
+              {puedeAnularAbono && a.estado !== 'anulado' && (
                 <TouchableOpacity onPress={() => handleAnularAbono(a)} style={styles.abonoAnularBtn}>
                   <Text style={styles.abonoAnularText}>Anular</Text>
                 </TouchableOpacity>

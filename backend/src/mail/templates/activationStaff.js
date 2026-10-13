@@ -1,6 +1,6 @@
 /**
  * C-3: bienvenida y activación del personal creado desde el módulo de usuarios
- * (administrador, tendero, vendedor, superusuario u otro rol).
+ * (administrador, tendero, encargado, vendedor, superusuario u otro rol).
  * data: { name, role, link }
  */
 const { renderLayout, singleLine } = require('../layout');
@@ -12,15 +12,19 @@ const ROLE_INFO = {
   },
   administrador: {
     label: 'administrador',
-    can: 'Con tu rol puedes gestionar personas, tiendas y roles, y consultar la auditoría y la cartera.',
+    can: 'Con tu rol puedes gestionar personas y tiendas, registrar vales y cobros, y consultar los roles y la auditoría.',
   },
   tendero: {
     label: 'tendero',
-    can: 'Con tu rol puedes operar tu tienda: registrar vales, recibir abonos y consultar la cartera de tus clientes.',
+    can: 'Con tu rol puedes operar tu tienda: registrar vales, recibir abonos, consultar la cartera de tus clientes y armar tu equipo.',
+  },
+  encargado: {
+    label: 'encargado',
+    can: 'Con tu rol atiendes la tienda en nombre del dueño: registras vales y recibes abonos.',
   },
   vendedor: {
     label: 'vendedor',
-    can: 'Con tu rol puedes registrar vales y abonos en la tienda a la que te asignen.',
+    can: 'Con tu rol puedes registrar vales y consultar la cartera de la tienda a la que te asignen.',
   },
   cliente: {
     label: 'cliente',

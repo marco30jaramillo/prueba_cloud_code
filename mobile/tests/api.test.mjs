@@ -119,18 +119,24 @@ test('RN-11 · pagoIntegral envía POST /vales/pago-integral con cliente, monto 
   assert.deepEqual(cuerpo(ultima()), body);
 });
 
-test('Equipo · agregarVendedor envía el correo a POST /tiendas/:id/vendedores', async () => {
-  await tiendasAPI.agregarVendedor('t-1', 'vera@ejemplo.com');
+test('Equipo · agregarAlEquipo envía el correo a POST /tiendas/:id/equipo', async () => {
+  await tiendasAPI.agregarAlEquipo('t-1', 'vera@ejemplo.com');
   assert.equal(ultima().method, 'post');
-  assert.equal(ultima().url, '/tiendas/t-1/vendedores');
+  assert.equal(ultima().url, '/tiendas/t-1/equipo');
   assert.deepEqual(cuerpo(ultima()), { email: 'vera@ejemplo.com' });
 });
 
-test('Equipo · crearVendedor envía nombre y correo a POST /tiendas/:id/vendedores/nuevo', async () => {
-  await tiendasAPI.crearVendedor('t-1', 'Nico', 'nico@ejemplo.com');
+test('Equipo · crearMiembro envía nombre, correo y rol a POST /tiendas/:id/equipo/nuevo', async () => {
+  await tiendasAPI.crearMiembro('t-1', 'Eva', 'eva@ejemplo.com', 'encargado');
   assert.equal(ultima().method, 'post');
-  assert.equal(ultima().url, '/tiendas/t-1/vendedores/nuevo');
-  assert.deepEqual(cuerpo(ultima()), { name: 'Nico', email: 'nico@ejemplo.com' });
+  assert.equal(ultima().url, '/tiendas/t-1/equipo/nuevo');
+  assert.deepEqual(cuerpo(ultima()), { name: 'Eva', email: 'eva@ejemplo.com', rol: 'encargado' });
+});
+
+test('Equipo · quitarDelEquipo usa DELETE /tiendas/:id/equipo/:userId', async () => {
+  await tiendasAPI.quitarDelEquipo('t-1', 'u-1');
+  assert.equal(ultima().method, 'delete');
+  assert.equal(ultima().url, '/tiendas/t-1/equipo/u-1');
 });
 
 test('Módulos · getMios consulta GET /modules (los mismos del menú web)', async () => {

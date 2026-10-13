@@ -1,6 +1,7 @@
 /**
- * Equipo de la tienda (KAN-75): el propietario suma vendedores ya registrados por su correo
- * exacto o crea la cuenta de uno nuevo, sin depender del administrador.
+ * Equipo de la tienda (KAN-75): el dueño (equipo:gestionar, solo en SU tienda) suma vendedores
+ * o encargados ya registrados por su correo exacto, crea la cuenta de uno nuevo o lo quita, sin
+ * depender del administrador. tienda:administrar lo hace en cualquier tienda.
  *
  * Sin base de datos real: modelos, correo y auditoría se reemplazan por dobles. Las
  * peticiones HTTP van al app de Express sobre un puerto local efímero.
@@ -48,6 +49,8 @@ function reset() {
     ['vendedor@ejemplo.com', { id: 'u-vend', email: 'vendedor@ejemplo.com', name: 'Vera Vendedora', role: 'vendedor', isActive: true }],
     ['inactivo@ejemplo.com', { id: 'u-inac', email: 'inactivo@ejemplo.com', name: 'Iván', role: 'vendedor', isActive: false }],
     ['cliente@ejemplo.com', { id: 'u-cli', email: 'cliente@ejemplo.com', name: 'Carla', role: 'cliente', isActive: true }],
+    ['encargada@ejemplo.com', { id: 'u-enc', email: 'encargada@ejemplo.com', name: 'Elsa Encargada', role: 'encargado', isActive: true }],
+    ['tendero2@ejemplo.com', { id: 'u-ten2', email: 'tendero2@ejemplo.com', name: 'Tomás', role: 'tendero', isActive: true }],
   ]);
   asignaciones = new Set();
   creados = [];
@@ -57,6 +60,21 @@ function reset() {
 
 Tienda.findById = async (id) => ([TIENDA, OTRA_TIENDA].includes(id) ? { id } : null);
 Tienda.esPropietario = async (tiendaId, userId) => tiendaId === TIENDA && userId === 'u-tendero';
+Tienda.getUsuariosByTienda = async (tiendaId) => {
+  const porId = new Map([...usuarios.values()].map((u) => [u.id, u]));
+  const lista = [{ userId: 'U-TENDERO', name: 'Dueño', role: 'tendero', esPropietario: true }];
+  for (const clave of asignaciones) {
+    const [t, uid] = clave.split('|');
+    if (t === tiendaId) lista.push({ userId: uid.toUpperCase(), name: porId.get(uid)?.name, role: porId.get(uid)?.role, esPropietario: false });
+  }
+  return lista;
+};
+const quitados = [];
+Tienda.removeUsuario = async (tiendaId, userId) => {
+  quitados.push(userId);
+  asignaciones.delete(`${tiendaId}|${String(userId).toLowerCase()}`);
+  return true;
+};
 Tienda.addUsuario = async (tiendaId, userId, esPropietario, assignedBy) => {
   const clave = `${tiendaId}|${userId}`;
   if (asignaciones.has(clave)) { const e = new Error('Violation of UQ_tienda_usuario'); e.number = 2627; throw e; }
@@ -73,7 +91,16 @@ User.create = async (email, password, name, role, photo, options) => {
 User.findById = async (id) => ({ id, isActive: true, mustChangePassword: false });
 accountMail.sendActivation = async (user, token, opts) => { correos.push({ user, token, opts }); return { ok: true }; };
 auditMiddleware.logUserCreation = async (...args) => { auditorias.push(args); };
-const PERMISOS = { tendero: ['tienda:ver'], vendedor: ['tienda:ver'], administrador: ['tienda:ver'], superuser: ['tienda:ver'], cliente: [] };
+// Permisos efectivos por defecto (alters/005): el dueño gestiona su equipo; el encargado y el
+// vendedor solo ven la tienda; el administrador administra cualquiera.
+const PERMISOS = {
+  tendero: ['tienda:ver', 'equipo:gestionar'],
+  encargado: ['tienda:ver'],
+  vendedor: ['tienda:ver'],
+  administrador: ['tienda:ver', 'equipo:gestionar', 'tienda:administrar'],
+  superuser: ['tienda:ver', 'equipo:gestionar', 'tienda:administrar'],
+  cliente: [],
+};
 Role.hasPermission = async (role, permiso) => (PERMISOS[role] || []).includes(permiso);
 TokenManager.prototype.isTokenValid = async () => true;
 
@@ -92,16 +119,17 @@ test.before(async () => {
 });
 test.after(async () => { await new Promise((res) => server.close(res)); });
 
-async function post(ruta, role, body, userId) {
+async function post(ruta, role, body, userId, method = 'POST') {
   const r = await fetch(base + ruta, {
-    method: 'POST',
+    method,
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenDe(role, userId)}` },
     body: JSON.stringify(body),
   });
   return { status: r.status, body: await r.json().catch(() => null) };
 }
-const agregar = (tienda, email, role = 'tendero', userId) => post(`/tiendas/${tienda}/vendedores`, role, { email }, userId);
-const crear = (tienda, body, role = 'tendero', userId) => post(`/tiendas/${tienda}/vendedores/nuevo`, role, body, userId);
+const agregar = (tienda, email, role = 'tendero', userId) => post(`/tiendas/${tienda}/equipo`, role, { email }, userId);
+const crear = (tienda, body, role = 'tendero', userId) => post(`/tiendas/${tienda}/equipo/nuevo`, role, body, userId);
+const quitar = (tienda, uid, role = 'tendero', userId) => post(`/tiendas/${tienda}/equipo/${uid}`, role, undefined, userId, 'DELETE');
 
 // ── Agregar por correo ──────────────────────────────────────────────────────
 
@@ -149,9 +177,17 @@ test('tendero que no es propietario de la tienda -> 403', async () => {
   assert.equal(asignaciones.size, 0);
 });
 
-test('vendedor no gestiona el equipo -> 403; cliente sin permiso -> 403', async () => {
+test('el dueño también suma encargados; tenderos u otros roles no se suman por aquí', async () => {
+  reset();
+  assert.equal((await agregar(TIENDA, 'encargada@ejemplo.com')).status, 201);
+  assert.ok(asignaciones.has(`${TIENDA}|u-enc`));
+  assert.equal((await agregar(TIENDA, 'tendero2@ejemplo.com')).status, 404);
+});
+
+test('vendedor y encargado no gestionan el equipo -> 403; cliente sin permiso -> 403', async () => {
   reset();
   assert.equal((await agregar(TIENDA, 'vendedor@ejemplo.com', 'vendedor')).status, 403);
+  assert.equal((await agregar(TIENDA, 'vendedor@ejemplo.com', 'encargado')).status, 403);
   assert.equal((await agregar(TIENDA, 'vendedor@ejemplo.com', 'cliente')).status, 403);
   assert.equal(asignaciones.size, 0);
 });
@@ -202,4 +238,48 @@ test('crear en una tienda ajena -> 403 y no crea nada', async () => {
   assert.equal((await crear(OTRA_TIENDA, { name: 'Ana', email: 'ana@ejemplo.com' })).status, 403);
   assert.equal((await crear(TIENDA, { name: 'Ana', email: 'ana@ejemplo.com' }, 'vendedor')).status, 403);
   assert.equal(creados.length, 0);
+});
+
+test('crear un encargado nuevo: rol encargado, en la tienda y con correo de activación', async () => {
+  reset();
+  const r = await crear(TIENDA, { name: 'Eva Encargada', email: 'eva@ejemplo.com', rol: 'encargado' });
+  assert.equal(r.status, 201);
+  assert.equal(creados[0].role, 'encargado');
+  assert.ok(asignaciones.has(`${TIENDA}|${creados[0].id}`));
+  assert.match(r.body.message, /encargado/);
+});
+
+test('crear con un rol que no es de equipo -> 400 y no crea nada', async () => {
+  reset();
+  for (const rol of ['tendero', 'administrador', 'cliente']) {
+    assert.equal((await crear(TIENDA, { name: 'X Y', email: `${rol}@nuevo.com`, rol })).status, 400, rol);
+  }
+  assert.equal(creados.length, 0);
+});
+
+// ── Quitar del equipo ───────────────────────────────────────────────────────
+
+test('el dueño quita a un vendedor o encargado de su tienda', async () => {
+  reset(); quitados.length = 0;
+  await agregar(TIENDA, 'vendedor@ejemplo.com');
+  await agregar(TIENDA, 'encargada@ejemplo.com');
+  assert.equal((await quitar(TIENDA, 'u-vend')).status, 200);
+  assert.equal((await quitar(TIENDA, 'U-ENC')).status, 200, 'el id no distingue mayúsculas');
+  assert.equal(asignaciones.size, 0);
+});
+
+test('al dueño no se le quita desde el equipo; a quien no está -> 404', async () => {
+  reset(); quitados.length = 0;
+  assert.equal((await quitar(TIENDA, 'u-tendero')).status, 403);
+  assert.equal((await quitar(TIENDA, 'u-nadie')).status, 404);
+  assert.equal(quitados.length, 0);
+});
+
+test('encargado, vendedor o tendero de otra tienda no quitan -> 403', async () => {
+  reset(); quitados.length = 0;
+  await agregar(TIENDA, 'vendedor@ejemplo.com');
+  assert.equal((await quitar(TIENDA, 'u-vend', 'encargado')).status, 403);
+  assert.equal((await quitar(TIENDA, 'u-vend', 'vendedor')).status, 403);
+  assert.equal((await quitar(TIENDA, 'u-vend', 'tendero', 'u-otro-tendero')).status, 403);
+  assert.equal(quitados.length, 0);
 });

@@ -107,14 +107,19 @@ export const tiendasAPI = {
     const { data } = await api.delete(`/tiendas/${id}/usuarios/${userId}`);
     return data;
   },
-  /** Suma al equipo un vendedor ya registrado, por su correo exacto (propietario o admin). */
-  agregarVendedor: async (id: string, email: string) => {
-    const { data } = await api.post(`/tiendas/${id}/vendedores`, { email });
+  /** Suma al equipo un vendedor o encargado ya registrado, por su correo exacto (dueño o admin). */
+  agregarAlEquipo: async (id: string, email: string) => {
+    const { data } = await api.post(`/tiendas/${id}/equipo`, { email });
     return data;
   },
-  /** Crea la cuenta de un vendedor (recibe correo de activación) y lo deja en la tienda. */
-  crearVendedor: async (id: string, name: string, email: string) => {
-    const { data } = await api.post(`/tiendas/${id}/vendedores/nuevo`, { name, email });
+  /** Crea la cuenta (vendedor o encargado; recibe correo de activación) y la deja en la tienda. */
+  crearMiembro: async (id: string, name: string, email: string, rol: 'vendedor' | 'encargado') => {
+    const { data } = await api.post(`/tiendas/${id}/equipo/nuevo`, { name, email, rol });
+    return data;
+  },
+  /** Quita a un vendedor o encargado de la tienda (dueño o admin). */
+  quitarDelEquipo: async (id: string, userId: string) => {
+    const { data } = await api.delete(`/tiendas/${id}/equipo/${userId}`);
     return data;
   },
 };

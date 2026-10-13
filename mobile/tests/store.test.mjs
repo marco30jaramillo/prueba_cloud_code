@@ -27,9 +27,9 @@ test('RN-33 · isAdminRole no habilita vendedor, cliente, rol desconocido ni vac
   }
 });
 
-test('RN-30 · ROLE_LABEL define etiqueta para los cinco roles base', () => {
+test('RN-30 · ROLE_LABEL define etiqueta para los seis roles base (incluido el encargado)', () => {
   assert.deepEqual(Object.keys(ROLE_LABEL).sort(), [
-    'administrador', 'cliente', 'superuser', 'tendero', 'vendedor',
+    'administrador', 'cliente', 'encargado', 'superuser', 'tendero', 'vendedor',
   ]);
 });
 

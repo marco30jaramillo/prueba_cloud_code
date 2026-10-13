@@ -107,7 +107,9 @@ volver a abrirla. La correspondencia está en `lib/modulos.ts`:
 | Mis vales | Pestaña Vales con los vales propios |
 | Nueva venta | Botón «Nuevo vale» y pestaña Vales con los de la tienda |
 | Cartera | Pestaña Cartera; en lectura solo consulta, en escritura o total también cobra |
-| Mi tienda | Pestaña Equipo |
+| Mi tienda | Pestaña Equipo; en escritura el dueño agrega, crea o quita vendedores y encargados |
+
+Los botones de cobrar y anular salen de los permisos efectivos del rol (`usePermiso`). Modelo completo: [docs/permisos.md](../docs/permisos.md).
 
 ## Formato de respuesta API
 

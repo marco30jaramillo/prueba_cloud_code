@@ -89,17 +89,19 @@ function CarteraContent() {
   const [pagoClienteNombre, setPagoClienteNombre] = useState('');
   const [pagoVales, setPagoVales] = useState<ValeActivo[]>([]);
 
-  // Cobrar (pagos y abonos) exige Cartera en escritura o total; en solo lectura se consulta.
-  // El servidor también lo exige para el pago integral.
-  const [puedeCobrar, setPuedeCobrar] = useState(false);
+  // Cada acción se muestra según los permisos efectivos del rol (GET /modules), los mismos que
+  // revisa el servidor: cobrar = abono:crear (Cartera en escritura); anular = vale:anular y
+  // abono:anular (nivel total). Sin cargar, nada.
+  const [permisos, setPermisos] = useState<string[]>([]);
   useEffect(() => {
     modulesAPI.getAll()
-      .then(res => {
-        const cartera = (res.modules || []).find((m: { href: string }) => m.href === '/dashboard/cartera');
-        setPuedeCobrar(cartera?.level === 'write' || cartera?.level === 'full');
-      })
-      .catch(() => setPuedeCobrar(false));
+      .then(res => setPermisos(res.permissions || []))
+      .catch(() => setPermisos([]));
   }, []);
+  const tiene = (p: string) => permisos.includes(p) || permisos.includes('system:full-access');
+  const puedeCobrar = tiene('abono:crear');
+  const puedeAnularVale = tiene('vale:anular');
+  const puedeAnularAbono = tiene('abono:anular');
 
   useEffect(() => { loadTiendas(); }, []);
   useEffect(() => { if (tiendaId && !modoCliente) loadCartera(); }, [tiendaId, filtroEstado]);
@@ -561,7 +563,7 @@ function CarteraContent() {
                 <Col md={6}><strong>Descripción:</strong> {selectedVale.descripcion}</Col>
                 <Col md={3}><strong>Estado:</strong> <Badge bg={ESTADO_CONFIG[selectedVale.estado].bg}>{ESTADO_CONFIG[selectedVale.estado].label}</Badge></Col>
                 <Col md={3} className="text-end">
-                  {valeActivo && (
+                  {puedeAnularVale && valeActivo && (
                     <Button size="sm" variant="outline-danger" onClick={() => handleAnularVale(selectedVale)}>
                       Anular vale
                     </Button>
@@ -612,7 +614,7 @@ function CarteraContent() {
                         <td>{a.registradoPorNombre || '—'}</td>
                         <td>{a.anulado ? <Badge bg="secondary">Anulado</Badge> : <Badge bg="success">Activo</Badge>}</td>
                         <td>
-                          {!a.anulado && (
+                          {puedeAnularAbono && !a.anulado && (
                             <Button size="sm" variant="outline-danger" onClick={() => handleAnularAbono(a.id)}><Icon name="cerrar" /></Button>
                           )}
                         </td>

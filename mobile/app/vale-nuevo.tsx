@@ -6,7 +6,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useRouter } from 'expo-router';
 import { valesAPI, tiendasAPI, usersAPI, pick } from '@/lib/api';
-import { useAuthStore, isAdminRole, verTodasLasTiendas } from '@/lib/store';
+import { useTodasLasTiendas } from '@/lib/store';
 import { aISO, unMesDespues } from '@/lib/fechas';
 import { CampoFecha } from '@/components/CampoFecha';
 
@@ -14,9 +14,8 @@ interface Tienda { id: string; nombre?: string; name?: string }
 interface Cliente { id: string; nombre?: string; name?: string; email?: string }
 
 export default function ValeNuevoScreen() {
-  const { user } = useAuthStore();
   const router = useRouter();
-  const canAdmin = isAdminRole(user?.role);
+  const todasLasTiendas = useTodasLasTiendas();
 
   const [tiendas, setTiendas] = useState<Tienda[]>([]);
   const [tiendaId, setTiendaId] = useState('');
@@ -34,7 +33,7 @@ export default function ValeNuevoScreen() {
   useEffect(() => {
     const loadTiendas = async () => {
       try {
-        const res = verTodasLasTiendas(user?.role)
+        const res = todasLasTiendas
           ? await tiendasAPI.getAll()
           : await tiendasAPI.getMisTiendas();
         const list: Tienda[] = pick(res, 'tiendas');
@@ -45,7 +44,7 @@ export default function ValeNuevoScreen() {
       }
     };
     loadTiendas();
-  }, [user?.role]);
+  }, [todasLasTiendas]);
 
   const buscarCliente = async (q: string) => {
     setClienteSearch(q);
