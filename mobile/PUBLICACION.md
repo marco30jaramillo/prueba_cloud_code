@@ -32,7 +32,7 @@ Perfiles de `eas.json`:
 
 1. **Revisar las URLs de cada ambiente** en `eas.json`: perfil `qa` y perfil `production`, en `env.API_URL` y
    `env.WEB_URL`, con `https://`. `qa-tiendas` hereda las de `qa`.
-   Si quedan vacías, la build de QA falla a propósito para no apuntar a producción por error.
+   Si quedan vacías, la build de ese perfil falla a propósito para no apuntar al ambiente equivocado.
 2. **Ícono:** `app.config.js` usa los de `assets/marca/` (1024×1024; `icon.png` sin transparencia, como
    exige App Store). Si los cambias, mantén esos requisitos.
 3. Instalar EAS CLI e iniciar sesión (se necesita una cuenta gratuita en https://expo.dev):
