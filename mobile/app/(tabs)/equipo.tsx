@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, RefreshControl, TextInput,
-  ActivityIndicator, Alert, TouchableOpacity,
+  ActivityIndicator, TouchableOpacity,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useFocusEffect } from 'expo-router';
@@ -10,6 +10,8 @@ import { ROLE_LABEL, usePermiso, useTodasLasTiendas } from '@/lib/store';
 import { colores, fuentes } from '@/lib/tema';
 
 import { Icon } from '@/components/Icon';
+import { avisar } from '@/lib/aviso';
+
 interface Miembro {
   id: string;
   userId?: string;
@@ -82,11 +84,11 @@ export default function EquipoScreen() {
     if (!tienda || !formulario) return;
     const correo = email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo)) {
-      Alert.alert('Correo', 'Escribe el correo completo de la persona.');
+      avisar('Correo', 'Escribe el correo completo de la persona.', undefined, 'aviso');
       return;
     }
     if (formulario === 'crear' && nombre.trim().length < 2) {
-      Alert.alert('Nombre', 'Escribe el nombre de la persona.');
+      avisar('Nombre', 'Escribe el nombre de la persona.', undefined, 'aviso');
       return;
     }
     setGuardando(true);
@@ -98,9 +100,9 @@ export default function EquipoScreen() {
       setNombre('');
       setEmail('');
       await load();
-      Alert.alert(formulario === 'agregar' ? 'Persona agregada' : 'Cuenta creada', res?.message ?? 'Listo.');
+      avisar(formulario === 'agregar' ? 'Persona agregada' : 'Cuenta creada', res?.message ?? 'Listo.', undefined, 'exito');
     } catch (e: any) {
-      Alert.alert('No se pudo completar', e?.response?.data?.message || 'Revisa tu conexión e intenta de nuevo.');
+      avisar('No se pudo completar', e?.response?.data?.message || 'Revisa tu conexión e intenta de nuevo.', undefined, 'error');
     } finally {
       setGuardando(false);
     }
@@ -108,7 +110,7 @@ export default function EquipoScreen() {
 
   const handleRemove = (m: Miembro) => {
     if (!tienda) return;
-    Alert.alert(
+    avisar(
       'Quitar del equipo',
       `¿Quitar a ${m.nombre || m.name} del equipo?`,
       [
@@ -124,7 +126,7 @@ export default function EquipoScreen() {
               else await tiendasAPI.removeUsuario(tienda.id, uid);
               setMiembros((prev) => prev.filter((x) => (x.userId ?? x.id) !== uid));
             } catch {
-              Alert.alert('Error', 'No pudimos quitar a la persona.');
+              avisar('Error', 'No pudimos quitar a la persona.', undefined, 'error');
             }
           },
         },

@@ -1,7 +1,7 @@
 name: Desplegar release
 
 # Orquestador del despliegue a QA: validar -> base-de-datos -> backend -> frontend
-# -> pruebas-release -> release-pr.
+# -> pruebas-release -> release-pr y movil (en paralelo).
 # Estructura: los pasos de pruebas del release (tarea 9) y de apertura del PR hacia main
 # (tarea 10) son los jobs pruebas-release y release-pr de ESTE archivo, no workflows
 # separados, para que el orden y las dependencias vivan en un solo orquestador.
@@ -375,6 +375,33 @@ jobs:
 
           echo "Pruebas del release: aprobadas" >> "$GITHUB_STEP_SUMMARY"
           echo "resultado=aprobadas" >> "$GITHUB_OUTPUT"
+
+  # App movil de QA (perfil qa de mobile/eas.json, APK): EAS Update si solo cambio JavaScript,
+  # build nueva si cambio la parte nativa. La logica esta en .github/actions/eas-desplegar.
+  # Exige el secreto EXPO_TOKEN en el ambiente qa.
+  movil:
+    name: movil
+    needs: [validar, pruebas-release]
+    if: ${{ needs.validar.outputs.modo == 'aplicar' && needs.pruebas-release.result == 'success' }}
+    runs-on: ubuntu-latest
+    environment: qa
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+
+      - name: Desplegar app movil de QA
+        uses: ./.github/actions/eas-desplegar
+        with:
+          perfil: qa
+          version: ${{ needs.validar.outputs.version }}
+          expo-token: ${{ secrets.EXPO_TOKEN }}
 
   release-pr:
     name: release-pr

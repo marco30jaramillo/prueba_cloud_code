@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Navbar } from '@/components/Navbar';
 import { AuthProvider } from '@/components/AuthProvider';
 import { ChangePasswordGuard } from '@/components/ChangePasswordGuard';
+import { ConfirmProvider } from '@/components/ConfirmDialog';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '@/styles/globals.scss';
 
@@ -19,11 +20,13 @@ export default function RootLayout({
     <html lang="es">
       <body>
         <AuthProvider>
-          <ChangePasswordGuard />
-          <Navbar />
-          <main className="min-vh-100 py-5">
-            {children}
-          </main>
+          <ConfirmProvider>
+            <ChangePasswordGuard />
+            <Navbar />
+            <main className="min-vh-100 py-5">
+              {children}
+            </main>
+          </ConfirmProvider>
         </AuthProvider>
       </body>
     </html>

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Alert,
-  TextInput, ActivityIndicator, Image,
+  View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Image,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import * as ImagePicker from 'expo-image-picker';
@@ -12,6 +11,8 @@ import { authAPI } from '@/lib/api';
 import { API_URL, APP_VARIANT, WEB_URL } from '@/lib/config';
 
 import { Icon } from '@/components/Icon';
+import { avisar } from '@/lib/aviso';
+
 export default function PerfilScreen() {
   const { user, clearAuth, setUser } = useAuthStore();
   const router = useRouter();
@@ -49,12 +50,12 @@ export default function PerfilScreen() {
       const res = await authAPI.updateProfile(user!.name, url);
       if (res?.status == 'success') {
         setUser({ ...user!, photo: res?.user?.photo ?? url });
-        Alert.alert('Listo', 'Foto actualizada.');
+        avisar('Listo', 'Foto actualizada.', undefined, 'exito');
       } else {
-        Alert.alert('Error', res?.message ?? 'No pudimos guardar la foto.');
+        avisar('Error', res?.message ?? 'No pudimos guardar la foto.', undefined, 'error');
       }
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message ?? 'No pudimos subir la foto. Intenta de nuevo.');
+      avisar('Error', e?.response?.data?.message ?? 'No pudimos subir la foto. Intenta de nuevo.', undefined, 'error');
     } finally {
       setSubiendoFoto(false);
     }
@@ -68,12 +69,12 @@ export default function PerfilScreen() {
       if (res?.status == 'success') {
         setUser({ ...user!, name: newName.trim() });
         setEditingName(false);
-        Alert.alert('Listo', 'Nombre actualizado.');
+        avisar('Listo', 'Nombre actualizado.', undefined, 'exito');
       } else {
-        Alert.alert('Error', res?.message ?? 'No se pudo actualizar.');
+        avisar('Error', res?.message ?? 'No se pudo actualizar.', undefined, 'error');
       }
     } catch {
-      Alert.alert('Error', 'No se pudo guardar.');
+      avisar('Error', 'No se pudo guardar.', undefined, 'error');
     } finally {
       setSavingName(false);
     }
@@ -81,11 +82,11 @@ export default function PerfilScreen() {
 
   const handleChangePwd = async () => {
     if (!pwdForm.current || !pwdForm.next || !pwdForm.confirm) {
-      Alert.alert('Campos requeridos', 'Completa todos los campos.');
+      avisar('Campos requeridos', 'Completa todos los campos.', undefined, 'aviso');
       return;
     }
     if (pwdForm.next !== pwdForm.confirm) {
-      Alert.alert('Error', 'Las contraseñas nuevas no coinciden.');
+      avisar('No coinciden', 'Las contraseñas nuevas no coinciden.', undefined, 'aviso');
       return;
     }
     setSavingPwd(true);
@@ -94,19 +95,19 @@ export default function PerfilScreen() {
       if (res?.status == 'success') {
         setChangingPwd(false);
         setPwdForm({ current: '', next: '', confirm: '' });
-        Alert.alert('Listo', 'Contraseña actualizada.');
+        avisar('Listo', 'Contraseña actualizada.', undefined, 'exito');
       } else {
-        Alert.alert('Error', res?.message ?? 'Contraseña actual incorrecta.');
+        avisar('Error', res?.message ?? 'Contraseña actual incorrecta.', undefined, 'error');
       }
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message ?? 'No se pudo cambiar la contraseña.');
+      avisar('Error', e?.response?.data?.message ?? 'No se pudo cambiar la contraseña.', undefined, 'error');
     } finally {
       setSavingPwd(false);
     }
   };
 
   const handleLogout = () => {
-    Alert.alert('Cerrar sesión', '¿Deseas salir?', [
+    avisar('Cerrar sesión', '¿Deseas salir?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Salir',

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, StyleSheet, TouchableOpacity,
-  ScrollView, Alert, ActivityIndicator, FlatList,
+  ScrollView, ActivityIndicator, FlatList,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useRouter } from 'expo-router';
@@ -9,6 +9,8 @@ import { valesAPI, tiendasAPI, usersAPI, pick } from '@/lib/api';
 import { useTodasLasTiendas } from '@/lib/store';
 import { aISO, unMesDespues } from '@/lib/fechas';
 import { CampoFecha } from '@/components/CampoFecha';
+import { avisar } from '@/lib/aviso';
+import { AvisoHost } from '@/components/AvisoHost';
 
 interface Tienda { id: string; nombre?: string; name?: string }
 interface Cliente { id: string; nombre?: string; name?: string; email?: string }
@@ -40,7 +42,7 @@ export default function ValeNuevoScreen() {
         setTiendas(list);
         if (list.length > 0) setTiendaId(list[0].id);
       } catch {
-        Alert.alert('Error', 'No se pudieron cargar las tiendas.');
+        avisar('Error', 'No se pudieron cargar las tiendas.', undefined, 'error');
       }
     };
     loadTiendas();
@@ -68,11 +70,11 @@ export default function ValeNuevoScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!tiendaId) return Alert.alert('Error', 'Selecciona una tienda.');
-    if (!clienteSeleccionado) return Alert.alert('Error', 'Busca y selecciona un cliente.');
-    if (!descripcion.trim()) return Alert.alert('Error', 'Ingresa una descripción.');
+    if (!tiendaId) return avisar('Faltan datos', 'Selecciona una tienda.', undefined, 'aviso');
+    if (!clienteSeleccionado) return avisar('Faltan datos', 'Busca y selecciona un cliente.', undefined, 'aviso');
+    if (!descripcion.trim()) return avisar('Faltan datos', 'Ingresa una descripción.', undefined, 'aviso');
     const montoNum = parseFloat(monto.replace(/[^0-9.]/g, ''));
-    if (!montoNum || montoNum <= 0) return Alert.alert('Error', 'Ingresa un monto válido.');
+    if (!montoNum || montoNum <= 0) return avisar('Faltan datos', 'Ingresa un monto válido.', undefined, 'aviso');
 
     setLoading(true);
     try {
@@ -87,14 +89,14 @@ export default function ValeNuevoScreen() {
 
       const res = await valesAPI.crear(body);
       if (res?.status == 'success') {
-        Alert.alert('Vale creado', `Vale registrado por $${montoNum.toLocaleString('es-CO')}`, [
+        avisar('Vale creado', `Vale registrado por $${montoNum.toLocaleString('es-CO')}`, [
           { text: 'OK', onPress: () => router.back() },
-        ]);
+        ], 'exito');
       } else {
-        Alert.alert('Error', res?.message ?? 'No se pudo crear el vale.');
+        avisar('Error', res?.message ?? 'No se pudo crear el vale.', undefined, 'error');
       }
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message ?? 'Error al crear el vale.');
+      avisar('Error', e?.response?.data?.message ?? 'Error al crear el vale.', undefined, 'error');
     } finally {
       setLoading(false);
     }
@@ -104,6 +106,7 @@ export default function ValeNuevoScreen() {
   const cNombre = (c: Cliente) => c.nombre ?? c.name ?? '';
 
   return (
+    <>
     <KeyboardAwareScrollView
       style={styles.root}
       contentContainerStyle={styles.container}
@@ -213,6 +216,9 @@ export default function ValeNuevoScreen() {
           }
         </TouchableOpacity>
     </KeyboardAwareScrollView>
+    {/* Pantalla modal nativa: en iOS los avisos de la raíz quedan detrás (components/AvisoHost.tsx). */}
+    <AvisoHost />
+    </>
   );
 }
 
