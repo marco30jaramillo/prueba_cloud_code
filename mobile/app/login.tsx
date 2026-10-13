@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Alert, ActivityIndicator,
+  ActivityIndicator,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useRouter } from 'expo-router';
@@ -9,6 +9,7 @@ import { authAPI } from '@/lib/api';
 import { Logo } from '@/components/Logo';
 import { CampoContrasena } from '@/components/CampoContrasena';
 import { useAuthStore } from '@/lib/store';
+import { avisar } from '@/lib/aviso';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -20,7 +21,7 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     const trimmedEmail = email.trim().toLowerCase();
     if (!trimmedEmail || !password) {
-      Alert.alert('Campos requeridos', 'Ingresa tu correo y contraseña.');
+      avisar('Campos requeridos', 'Ingresa tu correo y contraseña.', undefined, 'aviso');
       return;
     }
     setLoading(true);
@@ -30,22 +31,24 @@ export default function LoginScreen() {
         await setAuth(res.token, res.user);
         router.replace('/(tabs)');
       } else {
-        Alert.alert('Error', res?.message || 'Credenciales incorrectas.');
+        avisar('Error', res?.message || 'Credenciales incorrectas.', undefined, 'error');
       }
     } catch (e: any) {
       if (e?.response?.status === 403 && e?.response?.data?.code === 'ACCOUNT_PENDING_ACTIVATION') {
-        Alert.alert(
+        avisar(
           'Cuenta pendiente de activación',
-          'Tu cuenta aún no está activada. Revisa tu correo (también la carpeta de spam) y abre el enlace para activarla.'
+          'Tu cuenta aún no está activada. Revisa tu correo (también la carpeta de spam) y abre el enlace para activarla.',
+          undefined,
+          'aviso'
         );
         return;
       }
       if (e?.response) {
         // El servidor respondió: no es un problema de conexión (credenciales, bloqueo, etc.).
         const msg = e.response.data?.message || 'No pudimos iniciar sesión. Intenta de nuevo.';
-        Alert.alert(e.response.status === 429 ? 'Demasiados intentos' : 'No pudimos iniciar sesión', msg);
+        avisar(e.response.status === 429 ? 'Demasiados intentos' : 'No pudimos iniciar sesión', msg, undefined, 'error');
       } else {
-        Alert.alert('Sin conexión', 'No pudimos conectarnos. Revisa tu internet e intenta de nuevo.');
+        avisar('Sin conexión', 'No pudimos conectarnos. Revisa tu internet e intenta de nuevo.', undefined, 'error');
       }
     } finally {
       setLoading(false);

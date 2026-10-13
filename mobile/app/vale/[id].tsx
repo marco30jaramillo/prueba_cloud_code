@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  Alert, ActivityIndicator, TextInput, RefreshControl,
+  ActivityIndicator, TextInput, RefreshControl,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
@@ -9,6 +9,7 @@ import { valesAPI, pick } from '@/lib/api';
 import { useAuthStore, usePermiso, formatCOP } from '@/lib/store';
 import { ETIQUETA_ESTADO, esCobrable, estadoVisible } from '@/lib/estado-vale';
 import { colorEstado } from '@/lib/tema';
+import { avisar } from '@/lib/aviso';
 
 interface Abono {
   id: string;
@@ -68,7 +69,7 @@ export default function ValeDetailScreen() {
       setAbonos(a);
       navigation.setOptions({ title: v.clienteNombre ?? v.clienteName ?? 'Vale' });
     } catch {
-      Alert.alert('Error', 'No se pudo cargar el vale.');
+      avisar('Error', 'No se pudo cargar el vale.', undefined, 'error');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -78,7 +79,7 @@ export default function ValeDetailScreen() {
   useEffect(() => { load(); }, [load]);
 
   const handleAnular = () => {
-    Alert.alert(
+    avisar(
       'Anular vale',
       '¿Estás seguro de que deseas anular este vale? Esta acción no se puede deshacer.',
       [
@@ -91,7 +92,7 @@ export default function ValeDetailScreen() {
               await valesAPI.anular(id!);
               await load();
             } catch (e: any) {
-              Alert.alert('Error', e?.response?.data?.message ?? 'No se pudo anular.');
+              avisar('Error', e?.response?.data?.message ?? 'No se pudo anular.', undefined, 'error');
             }
           },
         },
@@ -101,7 +102,7 @@ export default function ValeDetailScreen() {
 
   const handleRegistrarAbono = async () => {
     const monto = parseFloat(abonoMonto.replace(/[^0-9.]/g, ''));
-    if (!monto || monto <= 0) return Alert.alert('Error', 'Ingresa un monto válido.');
+    if (!monto || monto <= 0) return avisar('Monto', 'Ingresa un monto válido.', undefined, 'aviso');
     setSavingAbono(true);
     try {
       const res = await valesAPI.registrarAbono(id!, monto, abonoNotas.trim() || undefined);
@@ -110,19 +111,19 @@ export default function ValeDetailScreen() {
         setAbonoMonto('');
         setAbonoNotas('');
         await load();
-        Alert.alert('Abono registrado', `Abono de ${formatCOP(monto)} registrado correctamente.`);
+        avisar('Abono registrado', `Abono de ${formatCOP(monto)} registrado correctamente.`, undefined, 'exito');
       } else {
-        Alert.alert('Error', res?.message ?? 'No se pudo registrar el abono.');
+        avisar('Error', res?.message ?? 'No se pudo registrar el abono.', undefined, 'error');
       }
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message ?? 'Error al registrar abono.');
+      avisar('Error', e?.response?.data?.message ?? 'Error al registrar abono.', undefined, 'error');
     } finally {
       setSavingAbono(false);
     }
   };
 
   const handleAnularAbono = (abono: Abono) => {
-    Alert.alert('Anular abono', `¿Anular este abono de ${formatCOP(abono.monto)}?`, [
+    avisar('Anular abono', `¿Anular este abono de ${formatCOP(abono.monto)}?`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Anular',
@@ -132,7 +133,7 @@ export default function ValeDetailScreen() {
             await valesAPI.anularAbono(id!, abono.id);
             await load();
           } catch {
-            Alert.alert('Error', 'No se pudo anular el abono.');
+            avisar('Error', 'No se pudo anular el abono.', undefined, 'error');
           }
         },
       },
