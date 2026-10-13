@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { setApiToken, modulesAPI, pick } from './api';
-import { accesosDeModulos, accesosPorRol, type Accesos } from './modulos';
+import { accesosDeModulos, accesosPorRol, type Accesos, type ModuloRol } from './modulos';
 
 export interface User {
   id: string;
@@ -19,8 +19,8 @@ interface AuthStore {
   clearAuth: () => Promise<void>;
   setUser: (user: User) => void;
   init: () => Promise<void>;
-  /** Rutas de los módulos del rol (GET /modules); null mientras no se han cargado. */
-  modulos: string[] | null;
+  /** Módulos del rol con su nivel (GET /modules); null mientras no se han cargado. */
+  modulos: ModuloRol[] | null;
   cargarModulos: () => Promise<void>;
 }
 
@@ -49,7 +49,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
   cargarModulos: async () => {
     try {
       const modulos: any[] = pick(await modulesAPI.getMios(), 'modules');
-      set({ modulos: modulos.map((m) => m.href).filter(Boolean) });
+      set({ modulos: modulos.filter((m) => m?.href).map((m) => ({ href: m.href, level: m.level })) });
     } catch {
       // Sin conexión o sesión vencida: se conserva lo último cargado.
     }

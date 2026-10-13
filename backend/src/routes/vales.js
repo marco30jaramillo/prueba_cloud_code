@@ -4,7 +4,7 @@ const Abono = require('../models/Abono');
 const Tienda = require('../models/Tienda');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { authMiddleware } = require('../middleware/auth');
-const { requirePermission } = require('../middleware/roleMiddleware');
+const { requirePermission, requireModuleLevel } = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
@@ -56,8 +56,11 @@ router.post('/', authMiddleware, requirePermission('vale:crear'), async (req, re
   } catch { return ResponseFormatter.internalError(res, 'Error al registrar el vale'); }
 });
 
-// POST /vales/pago-integral — distribuye un pago entre varios vales (más viejo primero)
-router.post('/pago-integral', authMiddleware, requirePermission('abono:crear'), async (req, res) => {
+// POST /vales/pago-integral — distribuye un pago entre varios vales (más viejo primero).
+// Es la acción de cobro de Cartera: además de abono:crear exige Cartera en escritura, así
+// Cartera en solo lectura no cobra aunque el rol tenga abono:crear por otro módulo.
+router.post('/pago-integral', authMiddleware, requirePermission('abono:crear'),
+  requireModuleLevel('/dashboard/cartera', 'write', 'registrar pagos'), async (req, res) => {
   const { clienteId, monto, valeIds } = req.body;
   const montoNum = parseFloat(monto);
   if (!clienteId || !montoNum || montoNum <= 0 || !Array.isArray(valeIds) || valeIds.length === 0)

@@ -142,7 +142,7 @@ router.get('/modules', (req, res) => {
     prefix: '/modules',
     description: 'Módulos del dashboard accesibles según el rol del usuario',
     endpoints: [
-      endpoint('GET', '/modules', 'Módulos accesibles al usuario autenticado', 'auth',
+      endpoint('GET', '/modules', 'Módulos accesibles al usuario autenticado, con su nivel (read, write o full)', 'auth',
         null, { modules: '[{ id, name, description, buttonLabel, href, icon }]' }),
       endpoint('GET', '/modules/all', 'Todos los módulos con info de permisos', 'system:full-access',
         null, { modules: '[{ id, name, permRead, permWrite, permFull, roles }]' }),
@@ -217,7 +217,7 @@ router.get('/vales', (req, res) => {
     endpoints: [
       endpoint('POST', '/vales', 'Registrar nuevo vale al fiado. El cliente debe existir y haber activado su cuenta (si no, 400)', 'vale:crear',
         { tiendaId: 'string', clienteId: 'string', descripcion: 'string', montoTotal: 'number', fechaVencimiento: 'date (opcional)', notas: 'string (opcional)' }),
-      endpoint('POST', '/vales/pago-integral', 'Distribuir un pago entre varios vales (más antiguo primero)', 'abono:crear',
+      endpoint('POST', '/vales/pago-integral', 'Distribuir un pago entre varios vales (más antiguo primero); exige además Cartera en escritura', 'abono:crear',
         { clienteId: 'string', monto: 'number', valeIds: 'string[]' },
         { abonos: '[]', vales: '[]', montoAplicado: 'number', montoNoAplicado: 'number' }),
       endpoint('GET', '/vales/mis-vales', 'Vales propios del cliente autenticado', 'vale:ver-propio',

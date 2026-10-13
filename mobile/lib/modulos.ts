@@ -11,6 +11,12 @@ export const RUTA_MODULO = {
   tienda: '/dashboard/tienda',
 } as const;
 
+/** Un módulo del rol, como lo devuelve GET /modules. Sin nivel cuenta como lectura. */
+export interface ModuloRol {
+  href: string;
+  level?: 'read' | 'write' | 'full' | string;
+}
+
 export interface Accesos {
   /** Pestaña Vales. */
   vales: boolean;
@@ -20,19 +26,24 @@ export interface Accesos {
   nuevoVale: boolean;
   /** Pestaña Cartera. */
   cartera: boolean;
+  /** Cobrar desde Cartera (pagar seleccionados / pago integral): Cartera en escritura o total. */
+  cobrarEnCartera: boolean;
   /** Pestaña Equipo (módulo «Mi tienda»). */
   equipo: boolean;
 }
 
-export function accesosDeModulos(rutas: string[]): Accesos {
-  const tiene = (r: string) => rutas.includes(r);
+export function accesosDeModulos(modulos: ModuloRol[]): Accesos {
+  const nivel = (r: string) => modulos.find((m) => m.href === r)?.level ?? (modulos.some((m) => m.href === r) ? 'read' : null);
+  const tiene = (r: string) => nivel(r) !== null;
   const cartera = tiene(RUTA_MODULO.cartera);
+  const nivelCartera = nivel(RUTA_MODULO.cartera);
   const nuevoVale = tiene(RUTA_MODULO.nuevoVale);
   return {
     vales: tiene(RUTA_MODULO.misVales) || cartera || nuevoVale,
     valesDeTienda: cartera || nuevoVale,
     nuevoVale,
     cartera,
+    cobrarEnCartera: nivelCartera === 'write' || nivelCartera === 'full',
     equipo: tiene(RUTA_MODULO.tienda),
   };
 }
@@ -49,6 +60,8 @@ export function accesosPorRol(role?: string): Accesos {
     valesDeTienda: personal || vendedor,
     nuevoVale: personal || vendedor,
     cartera: personal,
+    // Cobrar depende del nivel de Cartera: no se ofrece hasta conocerlo (el servidor lo exige igual).
+    cobrarEnCartera: false,
     equipo: personal,
   };
 }

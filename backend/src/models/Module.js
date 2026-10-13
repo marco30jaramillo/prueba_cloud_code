@@ -46,6 +46,21 @@ class Module {
     return access.map(({ id }) => all.find(m => m.id === String(id))).filter(Boolean);
   }
 
+  /**
+   * Nivel ('read' | 'write' | 'full') con que el rol tiene el módulo de esa ruta, o null si no lo
+   * tiene. El acceso total del sistema (superusuario) cuenta como 'full'.
+   */
+  static async getLevelForRole(roleName, href) {
+    const Role = require('./Role');
+    const role = await Role.getByName(roleName);
+    if (!role) return null;
+    if (role.permissions.includes('system:full-access')) return 'full';
+    const mod = (await Module.getAll()).find(m => m.href === href);
+    if (!mod) return null;
+    const acceso = role.moduleAccess.find(a => String(a.id) === mod.id);
+    return acceso ? acceso.level : null;
+  }
+
   static async getPermissionsForAccess(moduleAccess) {
     const all = await Module.getAll();
     const perms = new Set();

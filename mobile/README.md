@@ -106,7 +106,7 @@ volver a abrirla. La correspondencia está en `lib/modulos.ts`:
 |---|---|
 | Mis vales | Pestaña Vales con los vales propios |
 | Nueva venta | Botón «Nuevo vale» y pestaña Vales con los de la tienda |
-| Cartera | Pestaña Cartera |
+| Cartera | Pestaña Cartera; en lectura solo consulta, en escritura o total también cobra |
 | Mi tienda | Pestaña Equipo |
 
 ## Formato de respuesta API

@@ -6,7 +6,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { valesAPI, tiendasAPI, pick } from '@/lib/api';
-import { useAuthStore, formatCOP, verTodasLasTiendas } from '@/lib/store';
+import { useAuthStore, useAccesos, formatCOP, verTodasLasTiendas } from '@/lib/store';
 import { esCobrable, estaEnMora } from '@/lib/estado-vale';
 import { valesCobrables, distribuirPago, validarPago, totalSaldos } from '@/lib/pago-integral';
 import { colores, fuentes } from '@/lib/tema';
@@ -48,6 +48,8 @@ const soloDigitos = (t: string) => t.replace(/[^0-9]/g, '');
 export default function CarteraScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
+  // Cartera en solo lectura: se consulta, pero no se cobra (el servidor también lo exige).
+  const { cobrarEnCartera } = useAccesos();
   const [tiendas, setTiendas] = useState<Tienda[]>([]);
   const [tiendaId, setTiendaIdState] = useState<string | null>(null);
   // La tienda elegida también en una ref: `load` la lee sin volver a crearse al cambiarla.
@@ -223,7 +225,7 @@ export default function CarteraScreen() {
 
         <View style={styles.listaHeader}>
           <Text style={styles.sectionTitle}>Vales por cobrar</Text>
-          {valesCliente.length > 1 && (
+          {cobrarEnCartera && valesCliente.length > 1 && (
             <TouchableOpacity onPress={alternarTodos} hitSlop={8}>
               <Text style={styles.link}>{todosMarcados ? 'Quitar selección' : 'Seleccionar todos'}</Text>
             </TouchableOpacity>
@@ -239,12 +241,14 @@ export default function CarteraScreen() {
             <TouchableOpacity
               key={v.id}
               style={[styles.valeCard, marcado && styles.valeCardMarcado]}
-              onPress={() => alternar(v.id)}
+              onPress={() => (cobrarEnCartera ? alternar(v.id) : router.push(`/vale/${v.id}`))}
               activeOpacity={0.8}
             >
-              <View style={[styles.check, marcado && styles.checkMarcado]}>
-                {marcado && <Icon name="check" size={14} color={colores.superficie} />}
-              </View>
+              {cobrarEnCartera && (
+                <View style={[styles.check, marcado && styles.checkMarcado]}>
+                  {marcado && <Icon name="check" size={14} color={colores.superficie} />}
+                </View>
+              )}
               <View style={{ flex: 1 }}>
                 <Text style={styles.valeDesc} numberOfLines={1}>{v.descripcion}</Text>
                 <Text style={[styles.valeMeta, mora && { color: colores.rojo }]}>
@@ -260,7 +264,11 @@ export default function CarteraScreen() {
           );
         })}
 
-        {valesCliente.length > 0 && (
+        {!cobrarEnCartera && valesCliente.length > 0 && (
+          <Text style={styles.soloLectura}>Tu acceso a la cartera es de solo consulta: no puedes registrar pagos aquí.</Text>
+        )}
+
+        {cobrarEnCartera && valesCliente.length > 0 && (
           <View style={styles.botonesPago}>
             <TouchableOpacity
               style={[styles.btnSecundario, marcados.length === 0 && styles.btnDeshabilitado, modoPago === 'seleccion' && styles.btnActivo]}
@@ -284,7 +292,7 @@ export default function CarteraScreen() {
           </View>
         )}
 
-        {modoPago && (
+        {cobrarEnCartera && modoPago && (
           <View style={styles.pagoCard}>
             <Text style={styles.pagoTitulo}>
               {modoPago === 'integral' ? 'Pago integral' : 'Pagar vales seleccionados'}
@@ -475,6 +483,7 @@ const styles = StyleSheet.create({
   valeSaldo: { fontSize: 15, fontFamily: fuentes.extrabold, color: colores.texto },
 
   botonesPago: { gap: 10, marginTop: 10 },
+  soloLectura: { fontSize: 13, color: colores.textoMinimo, marginTop: 10, textAlign: 'center' },
   btnPrimario: { backgroundColor: colores.azul, borderRadius: 12, padding: 15, alignItems: 'center' },
   btnPrimarioText: { color: colores.superficie, fontFamily: fuentes.extrabold, fontSize: 15 },
   btnSecundario: {

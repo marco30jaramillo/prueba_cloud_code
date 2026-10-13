@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Table, Badge, Button, Alert, Spinner, Modal, Form } from 'react-bootstrap';
 import { useAuthStore } from '@/lib/auth-store';
-import { tiendasAPI, valesAPI, usersAPI } from '@/lib/api';
+import { tiendasAPI, valesAPI, usersAPI, modulesAPI } from '@/lib/api';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import PagoModal, { ValeActivo } from '@/components/PagoModal';
 import MontoInput from '@/components/MontoInput';
@@ -88,6 +88,18 @@ function CarteraContent() {
   const [pagoClienteId, setPagoClienteId] = useState('');
   const [pagoClienteNombre, setPagoClienteNombre] = useState('');
   const [pagoVales, setPagoVales] = useState<ValeActivo[]>([]);
+
+  // Cobrar (pagos y abonos) exige Cartera en escritura o total; en solo lectura se consulta.
+  // El servidor también lo exige para el pago integral.
+  const [puedeCobrar, setPuedeCobrar] = useState(false);
+  useEffect(() => {
+    modulesAPI.getAll()
+      .then(res => {
+        const cartera = (res.modules || []).find((m: { href: string }) => m.href === '/dashboard/cartera');
+        setPuedeCobrar(cartera?.level === 'write' || cartera?.level === 'full');
+      })
+      .catch(() => setPuedeCobrar(false));
+  }, []);
 
   useEffect(() => { loadTiendas(); }, []);
   useEffect(() => { if (tiendaId && !modoCliente) loadCartera(); }, [tiendaId, filtroEstado]);
@@ -403,7 +415,7 @@ function CarteraContent() {
                           </Form.Select>
                         );
                       })()}
-                      {todosValesCliente.some(v => ['pendiente', 'parcial'].includes(v.estado)) && (
+                      {puedeCobrar && todosValesCliente.some(v => ['pendiente', 'parcial'].includes(v.estado)) && (
                         <Button
                           size="sm"
                           variant="primary"
@@ -502,7 +514,7 @@ function CarteraContent() {
                             <Button size="sm" variant="outline-primary" onClick={() => openDetalle(v)}>
                               Gestionar
                             </Button>
-                            {['pendiente', 'parcial'].includes(v.estado) && v.clienteId && (
+                            {puedeCobrar && ['pendiente', 'parcial'].includes(v.estado) && v.clienteId && (
                               <Button
                                 size="sm"
                                 variant="outline-primary"
@@ -561,7 +573,7 @@ function CarteraContent() {
                 <Col md={6} className="mt-2"><strong>Vence:</strong> {fmtDate(selectedVale.fechaVencimiento)}</Col>
               </Row>
 
-              {valeActivo && (
+              {puedeCobrar && valeActivo && (
                 <>
                   <hr />
                   <h6>Registrar abono</h6>
