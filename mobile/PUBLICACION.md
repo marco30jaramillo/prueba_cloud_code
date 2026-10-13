@@ -6,7 +6,7 @@ Un solo código genera **dos apps independientes**. La variante la elige el perf
 |---|---|---|
 | Nombre en el teléfono | Mi Valecito QA | Mi Valecito |
 | Identificador (Android / iOS) | `com.mivalecito.app.qa` | `com.mivalecito.app` |
-| Backend | `API_URL` / `WEB_URL` del perfil `qa` | URLs fijas en `app.config.js` |
+| Backend | `API_URL` / `WEB_URL` del perfil `qa` en `eas.json` | `API_URL` / `WEB_URL` del perfil `production` en `eas.json` |
 | Color de fondo del splash e ícono | Ámbar | Azul de marca |
 | Se instala desde | APK directo o pista interna de Play / TestFlight | Google Play / App Store |
 
@@ -30,7 +30,8 @@ Perfiles de `eas.json`:
 
 ## 0. Preparación (una sola vez)
 
-1. **Completar las URLs de QA** en `eas.json`, perfil `qa`, en `env.API_URL` y `env.WEB_URL`, con `https://`.
+1. **Revisar las URLs de cada ambiente** en `eas.json`: perfil `qa` y perfil `production`, en `env.API_URL` y
+   `env.WEB_URL`, con `https://`. `qa-tiendas` hereda las de `qa`.
    Si quedan vacías, la build de QA falla a propósito para no apuntar a producción por error.
 2. **Ícono:** `app.config.js` usa los de `assets/marca/` (1024×1024; `icon.png` sin transparencia, como
    exige App Store). Si los cambias, mantén esos requisitos.

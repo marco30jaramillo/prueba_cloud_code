@@ -3,6 +3,10 @@
 //  - 'expo-secure-store' (módulo nativo) -> sustituto en memoria
 //  - 'expo-constants' (módulo nativo) -> sustituto vacío
 import { registerHooks } from 'node:module';
+
+// URLs de ejemplo para lib/config.ts (en una build las pone el perfil de eas.json).
+process.env.API_URL ||= 'https://api.prueba.example';
+process.env.WEB_URL ||= 'https://web.prueba.example/dashboard';
 import { existsSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 

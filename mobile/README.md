@@ -21,7 +21,7 @@ Escanea el QR con **Expo Go** (SDK 57) en tu dispositivo.
 |---|---|---|
 | Desarrollo (`npx expo start`) | `http://<IP de tu máquina>:3001` | `http://<IP de tu máquina>:3000/dashboard` |
 | Build `qa` / `qa-tiendas` (EAS) | `API_URL` del perfil en `eas.json` | `WEB_URL` del perfil |
-| Build `production` (EAS) | Azure producción (`app.config.js`) | Azure producción |
+| Build `production` (EAS) | `API_URL` del perfil `production` en `eas.json` | `WEB_URL` del perfil |
 | Con `EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_WEB_URL` (ver `.env.example`) | el valor definido | el valor definido |
 
 En desarrollo la IP sale de la dirección con la que Expo sirve la app. Para que el celular llegue
@@ -55,8 +55,8 @@ El paso a paso completo (Google Play, App Store, credenciales) está en [PUBLICA
 
 ```
 mobile/
-├── app.config.js              # Variantes QA / producción (nombre, identificador, URLs)
-├── eas.json                   # Perfiles de build: qa, qa-tiendas, production
+├── app.config.js              # Variantes QA / producción (nombre, identificador)
+├── eas.json                   # Perfiles de build y URLs de cada ambiente: qa, qa-tiendas, production
 ├── app/
 │   ├── _layout.tsx            # Root: init auth, redirección login/tabs
 │   ├── login.tsx              # Pantalla de login

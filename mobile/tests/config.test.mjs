@@ -22,18 +22,36 @@ const falla = (env, patron) => {
 
 const QA = { APP_VARIANT: 'qa', API_URL: 'https://api-qa.example.com', WEB_URL: 'https://web-qa.example.com' };
 
-test('sin APP_VARIANT se construye producción', () => {
+const PROD = { APP_VARIANT: 'production', API_URL: 'https://api.example.com', WEB_URL: 'https://web.example.com' };
+
+test('sin APP_VARIANT (expo start) es producción y no exige URLs: usa la IP de la máquina', () => {
   const c = cargar({});
   assert.equal(c.name, 'Mi Valecito');
   assert.equal(c.android.package, 'com.mivalecito.app');
   assert.equal(c.ios.bundleIdentifier, 'com.mivalecito.app');
   assert.equal(c.extra.appVariant, 'production');
-  assert.match(c.extra.apiUrl, /^https:\/\/app-backend-mivalencito/);
+  assert.equal(c.extra.apiUrl, undefined);
 });
 
-test('producción ignora API_URL del entorno', () => {
-  const c = cargar({ APP_VARIANT: 'production', API_URL: 'https://otro.example.com' });
-  assert.match(c.extra.apiUrl, /^https:\/\/app-backend-mivalencito/);
+test('producción toma sus URLs del perfil de eas.json', () => {
+  const c = cargar(PROD);
+  assert.equal(c.extra.apiUrl, PROD.API_URL);
+  assert.equal(c.extra.webUrl, PROD.WEB_URL);
+});
+
+test('una build de producción sin URLs falla (también en los servidores de EAS)', () => {
+  falla({ APP_VARIANT: 'production' }, /API_URL/);
+  falla({ EAS_BUILD: 'true' }, /API_URL/);
+});
+
+test('eas.json define URLs https distintas para producción y QA', async () => {
+  const { readFileSync } = await import('node:fs');
+  const eas = JSON.parse(readFileSync(new URL('../eas.json', import.meta.url), 'utf8'));
+  const prod = eas.build.production.env;
+  assert.match(prod.API_URL, /^https:\/\//);
+  assert.match(prod.WEB_URL, /^https:\/\//);
+  const qa = eas.build.qa.env;
+  if (qa.API_URL) assert.notEqual(qa.API_URL, prod.API_URL, 'QA no debe apuntar al backend de producción');
 });
 
 test('QA es otra app: nombre e identificador propios', () => {

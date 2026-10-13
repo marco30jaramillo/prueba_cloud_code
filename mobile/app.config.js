@@ -3,35 +3,39 @@
 //   APP_VARIANT=qa                       -> "Mi Valecito QA", com.mivalecito.app.qa
 // Al tener distinto identificador, ambas se instalan lado a lado y Google Play / App Store
 // las tratan como apps distintas: la build de QA nunca llega a los usuarios finales.
-// La variante la fija el perfil de eas.json. Las URLs de aquí son las de las builds; con
-// `expo start` la app apunta a tu máquina (ver lib/config.ts).
+// La variante y sus URLs (API_URL, WEB_URL) las fija el perfil de eas.json: cada ambiente
+// tiene las suyas ahí. Con `expo start` la app apunta a tu máquina (ver lib/config.ts).
 
 const VARIANTES = {
   production: {
     nombre: 'Mi Valecito',
     identificador: 'com.mivalecito.app',
     color: '#2563EB',
-    apiUrl: 'https://app-backend-mivalencito-b3hycrgxaef2bjhn.brazilsouth-01.azurewebsites.net',
-    webUrl: 'https://app-frontend-mivalencito-gkf5bncwcpbkascb.brazilsouth-01.azurewebsites.net/dashboard',
   },
   qa: {
     nombre: 'Mi Valecito QA',
     identificador: 'com.mivalecito.app.qa',
     color: '#D97706',
-    // Sin valor por defecto a propósito: una build de QA sin URL debe fallar, no apuntar a producción.
-    apiUrl: process.env.API_URL,
-    webUrl: process.env.WEB_URL,
   },
 };
+
+// Sin valores por defecto a propósito: una build sin sus URLs falla en vez de apuntar al
+// ambiente equivocado.
+const apiUrl = process.env.API_URL || undefined;
+const webUrl = process.env.WEB_URL || undefined;
 
 const variante = process.env.APP_VARIANT || 'production';
 const v = VARIANTES[variante];
 if (!v) {
   throw new Error(`APP_VARIANT="${variante}" no es válida. Use: ${Object.keys(VARIANTES).join(', ')}.`);
 }
-for (const [clave, nombre] of [['apiUrl', 'API_URL'], ['webUrl', 'WEB_URL']]) {
-  if (!v[clave] || !/^https:\/\//.test(v[clave])) {
-    throw new Error(`La variante "${variante}" necesita ${nombre} con https:// (defínala en el perfil de eas.json).`);
+// Se exigen al compilar (el perfil de eas.json fija APP_VARIANT; EAS_BUILD en sus servidores).
+// Con `expo start` no hacen falta: la app usa la IP de tu máquina.
+if (process.env.APP_VARIANT || process.env.EAS_BUILD === 'true') {
+  for (const [valor, nombre] of [[apiUrl, 'API_URL'], [webUrl, 'WEB_URL']]) {
+    if (!valor || !/^https:\/\//.test(valor)) {
+      throw new Error(`La variante "${variante}" necesita ${nombre} con https:// (defínala en el perfil de eas.json).`);
+    }
   }
 }
 
@@ -71,8 +75,8 @@ module.exports = {
     extra: {
       router: { origin: false },
       appVariant: variante,
-      apiUrl: v.apiUrl,
-      webUrl: v.webUrl,
+      apiUrl,
+      webUrl,
     },
   },
 };

@@ -27,7 +27,9 @@
       "distribution": "store",
       "autoIncrement": true,
       "env": {
-        "APP_VARIANT": "production"
+        "APP_VARIANT": "production",
+        "API_URL": "https://app-backend-mivalencito-b3hycrgxaef2bjhn.brazilsouth-01.azurewebsites.net",
+        "WEB_URL": "https://app-frontend-mivalencito-gkf5bncwcpbkascb.brazilsouth-01.azurewebsites.net/dashboard"
       },
       "android": {
         "buildType": "app-bundle"
