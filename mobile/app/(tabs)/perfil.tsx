@@ -31,11 +31,8 @@ export default function PerfilScreen() {
     : null;
 
   const handleCambiarFoto = async () => {
-    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permiso.granted) {
-      Alert.alert('Permiso necesario', 'Permite el acceso a tus fotos para elegir una imagen.');
-      return;
-    }
+    // Selector de fotos del sistema (Android 13+, iOS 14+): la app solo recibe la foto elegida,
+    // así que no pide permiso de acceso a la galería.
     const sel = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,

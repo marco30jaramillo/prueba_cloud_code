@@ -68,11 +68,18 @@ module.exports = {
         backgroundColor: v.color,
       },
       package: v.identificador,
+      // «Mostrar sobre otras apps»: Expo lo usa solo para su menú de desarrollo; la app no.
+      blockedPermissions: ['android.permission.SYSTEM_ALERT_WINDOW'],
     },
     plugins: [
       'expo-router',
       'expo-secure-store',
-      ['expo-image-picker', { photosPermission: 'Mi Valecito necesita acceder a tus fotos para que elijas tu foto de perfil.' }],
+      // La app no usa cámara ni micrófono: se quitan esos permisos que la librería agrega por defecto.
+      ['expo-image-picker', {
+        photosPermission: 'Mi Valecito necesita acceder a tus fotos para que elijas tu foto de perfil.',
+        cameraPermission: false,
+        microphonePermission: false,
+      }],
     ],
     // Mismo scheme en ambas variantes: el enlace del correo (frontend/app/reset-password) abre
     // mivalecito://. Si las dos están instaladas, Android pregunta con cuál abrirlo.
