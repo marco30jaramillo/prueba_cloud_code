@@ -13,29 +13,39 @@ npx expo start --lan   # usar --lan para dispositivos físicos en red local
 
 Escanea el QR con **Expo Go** (SDK 57) en tu dispositivo.
 
-## Configuración
+## Configuración y variantes (QA / producción)
 
-```ts
-// mobile/lib/config.ts
-export const API_URL = 'https://app-backend-mivalencito-b3hycrgxaef2bjhn.brazilsouth-01.azurewebsites.net';
-export const WEB_URL = 'https://app-frontend-mivalencito-gkf5bncwcpbkascb.brazilsouth-01.azurewebsites.net/dashboard';
-```
+La app tiene dos variantes que salen del mismo código (`app.config.js`):
 
-## Generar APK (Android)
+| Variante | Nombre | Identificador | Backend |
+|---|---|---|---|
+| `production` (por defecto) | Mi Valecito | `com.mivalecito.app` | URLs fijas en `app.config.js` |
+| `qa` | Mi Valecito QA | `com.mivalecito.app.qa` | `API_URL` / `WEB_URL` del perfil `qa` en `eas.json` |
+
+`lib/config.ts` lee `API_URL` y `WEB_URL` de la variante vía `expo-constants`; no se editan a mano.
 
 ```bash
-# Requiere cuenta Expo + EAS CLI
-npm install -g eas-cli
-eas login
-eas build -p android --profile preview
+npx expo start                                                              # producción
+APP_VARIANT=qa API_URL=https://... WEB_URL=https://... npx expo start --lan # QA
 ```
 
-El perfil `preview` en `eas.json` genera un APK instalable directamente.
+## Generar builds y publicar
+
+```bash
+npm install -g eas-cli && eas login
+eas build -p android --profile qa           # APK de QA para instalar directo
+eas build -p android --profile production   # AAB para Google Play
+eas build -p ios --profile production       # IPA para App Store / TestFlight
+```
+
+El paso a paso completo (Google Play, App Store, credenciales) está en [PUBLICACION.md](PUBLICACION.md).
 
 ## Estructura
 
 ```
 mobile/
+├── app.config.js              # Variantes QA / producción (nombre, identificador, URLs)
+├── eas.json                   # Perfiles de build: qa, qa-tiendas, production
 ├── app/
 │   ├── _layout.tsx            # Root: init auth, redirección login/tabs
 │   ├── login.tsx              # Pantalla de login
@@ -52,7 +62,7 @@ mobile/
 └── lib/
     ├── api.ts                 # Axios + interceptor Bearer token
     ├── store.ts               # Zustand — token + user en SecureStore
-    └── config.ts              # API_URL, WEB_URL
+    └── config.ts              # API_URL, WEB_URL, APP_VARIANT (desde app.config.js)
 ```
 
 ## Autenticación

@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuthStore, ROLE_LABEL } from '@/lib/store';
 import { authAPI } from '@/lib/api';
-import { WEB_URL } from '@/lib/config';
+import { APP_VARIANT, WEB_URL } from '@/lib/config';
 
 export default function PerfilScreen() {
   const { user, clearAuth, setUser } = useAuthStore();
@@ -168,6 +168,8 @@ export default function PerfilScreen() {
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
         <Text style={styles.logoutText}>Cerrar sesión</Text>
       </TouchableOpacity>
+
+      {APP_VARIANT === 'qa' && <Text style={styles.envNote}>Ambiente de pruebas (QA)</Text>}
     </ScrollView>
   );
 }
@@ -285,4 +287,5 @@ const styles = StyleSheet.create({
     borderColor: '#fecaca',
   },
   logoutText: { color: '#ef4444', fontWeight: '700', fontSize: 15 },
+  envNote: { textAlign: 'center', color: '#b45309', fontSize: 12, fontWeight: '600', marginTop: 12 },
 });

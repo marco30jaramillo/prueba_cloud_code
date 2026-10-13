@@ -1,2 +1,8 @@
-export const API_URL = 'https://app-backend-mivalencito-b3hycrgxaef2bjhn.brazilsouth-01.azurewebsites.net';
-export const WEB_URL = 'https://app-frontend-mivalencito-gkf5bncwcpbkascb.brazilsouth-01.azurewebsites.net/dashboard';
+import Constants from 'expo-constants';
+
+// Los valores vienen de app.config.js según APP_VARIANT (production | qa).
+const extra = Constants.expoConfig?.extra ?? {};
+
+export const APP_VARIANT: string = extra.appVariant ?? 'production';
+export const API_URL: string = extra.apiUrl;
+export const WEB_URL: string = extra.webUrl;
