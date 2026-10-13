@@ -6,6 +6,7 @@ import { rolesConfigAPI } from '@/lib/api';
 import styles from './page.module.scss';
 
 import { Icon } from '@/components/Icon';
+import { useConfirm } from '@/components/ConfirmDialog';
 import { iconoDeModulo } from '@/lib/icono-modulo';
 // ──────────────────────────────────────────────────────────
 // Types + helpers
@@ -190,6 +191,7 @@ function CreateRoleModal({ modules, onClose, onCreated }: CreateModalProps) {
 
 // ── Main content ──────────────────────────────────────────
 function RolesContent() {
+  const confirmar = useConfirm();
   const [config, setConfig] = useState<ConfigData | null>(null);
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -224,8 +226,13 @@ function RolesContent() {
 
   useEffect(() => { load(); }, []);
 
-  const selectRole = (role: RoleData) => {
-    if (dirty && !confirm('¿Descartar cambios no guardados?')) return;
+  const selectRole = async (role: RoleData) => {
+    if (dirty && !(await confirmar({
+      titulo: 'Cambios sin guardar',
+      mensaje: 'Si cambias de rol perderás los cambios que no has guardado.',
+      confirmar: 'Descartar cambios',
+      cancelar: 'Seguir editando'
+    }))) return;
     setSelectedRoleId(role.id);
     setPendingAccess(role.moduleAccess);
     setPendingDirect(role.directPermissions);

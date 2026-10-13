@@ -12,6 +12,7 @@ import { getImageUrl } from '@/lib/image-url';
 import styles from './Navbar.module.scss';
 
 import { Icon } from './Icon';
+import { useConfirm } from './ConfirmDialog';
 import { Logo } from './Logo';
 import { iconoDeModulo } from '@/lib/icono-modulo';
 interface NavModule {
@@ -23,6 +24,7 @@ interface NavModule {
 }
 
 export const Navbar: React.FC = () => {
+  const confirmar = useConfirm();
   const { isAuthenticated, user } = useAuthStore();
   const mustChangePassword = !!user?.mustChangePassword;
   const { handleLogout, handleLogoutAll } = useAuth();
@@ -86,7 +88,12 @@ export const Navbar: React.FC = () => {
   };
 
   const handleLogoutAllClick = async () => {
-    if (!confirm('Esto cerrará tu sesión en TODOS tus dispositivos. ¿Continuar?')) return;
+    if (!(await confirmar({
+      titulo: 'Cerrar sesión en todos lados',
+      mensaje: 'Se cerrará tu sesión en todos tus dispositivos, incluido este.',
+      confirmar: 'Cerrar todas',
+      icono: 'cerrar-sesion-todos'
+    }))) return;
     setIsLoggingOut(true);
     try {
       await handleLogoutAll();

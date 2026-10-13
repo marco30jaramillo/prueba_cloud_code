@@ -11,6 +11,7 @@ import { getImageUrl } from '@/lib/image-url';
 import styles from './page.module.scss';
 
 import { Icon } from '@/components/Icon';
+import { useConfirm } from '@/components/ConfirmDialog';
 interface User {
   id: string;
   email: string;
@@ -22,6 +23,7 @@ interface User {
 }
 
 function UsersPageContent() {
+  const confirmar = useConfirm();
   const { user } = useAuthStore();
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
@@ -116,7 +118,12 @@ function UsersPageContent() {
     !!user && u.id !== user.id && u.role !== user.role && !(user.role === 'administrador' && u.role === 'superuser');
 
   const handleCerrarSesiones = async (u: User) => {
-    if (!confirm(`¿Cerrar todas las sesiones de ${u.name}? Tendrá que iniciar sesión de nuevo.`)) return;
+    if (!(await confirmar({
+      titulo: 'Cerrar sesiones',
+      mensaje: <>Se cerrarán todas las sesiones de <strong>{u.name}</strong>. Tendrá que iniciar sesión de nuevo.</>,
+      confirmar: 'Cerrar sesiones',
+      icono: 'cerrar-sesion-todos'
+    }))) return;
     try {
       const response = await usersAPI.revokeSessions(u.id);
       setMessage({ type: 'primary', text: response.message || 'Sesiones cerradas' });
