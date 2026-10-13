@@ -87,9 +87,21 @@ class User {
     return user;
   }
 
+  /**
+   * Cuenta con ese correo. Un correo puede repetirse solo entre cuentas deshabilitadas y a lo sumo
+   * una activa: si hay una activa se devuelve esa; si no, la deshabilitada más reciente (sirve para
+   * decir «cuenta deshabilitada»). Para comprobar disponibilidad usa `findActiveByEmail`.
+   */
   static async findByEmail(email) {
     const result = await (await request()).input('email', sql.NVarChar(320), email)
-      .query('SELECT TOP 1 * FROM dbo.users WHERE email = @email');
+      .query('SELECT TOP 1 * FROM dbo.users WHERE email = @email ORDER BY isActive DESC, createdAt DESC');
+    return fromSql(result.recordset[0]);
+  }
+
+  /** Solo la cuenta activa con ese correo (como mucho una: índice único filtrado). */
+  static async findActiveByEmail(email) {
+    const result = await (await request()).input('email', sql.NVarChar(320), email)
+      .query('SELECT TOP 1 * FROM dbo.users WHERE email = @email AND isActive = 1');
     return fromSql(result.recordset[0]);
   }
 

@@ -159,7 +159,7 @@ router.post('/:id/equipo/nuevo', authMiddleware, requirePermission('tienda:ver')
   if (!ROLES_EQUIPO.includes(rol)) return ResponseFormatter.badRequest(res, 'El rol debe ser vendedor o encargado');
   try {
     if (!await puedeGestionarEquipo(req, res, req.params.id)) return;
-    if (await User.findByEmail(email))
+    if (await User.findActiveByEmail(email))
       return ResponseFormatter.conflict(res, 'Ese correo ya está registrado. Si es vendedor o encargado, agrégalo con su correo.');
 
     const user = await User.create(email, crypto.randomBytes(32).toString('base64url'), name, rol, null,

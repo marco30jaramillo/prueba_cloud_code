@@ -86,10 +86,18 @@ BEGIN
         activationTokenHash NVARCHAR(128)   NULL,   -- hash del token del enlace de activacion
         activationExpiresAt DATETIME2(3)    NULL,   -- vencimiento de la cuenta pendiente
 
-        CONSTRAINT PK_users PRIMARY KEY (id),
-        CONSTRAINT UQ_users_email UNIQUE (email)
+        CONSTRAINT PK_users PRIMARY KEY (id)
     );
 END;
+GO
+
+-- El correo es único solo entre cuentas activas (alters/006): una cuenta deshabilitada libera su correo.
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'UX_users_email_activo' AND object_id = OBJECT_ID(N'dbo.users'))
+    CREATE UNIQUE INDEX UX_users_email_activo ON dbo.users (email) WHERE isActive = 1;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_users_email' AND object_id = OBJECT_ID(N'dbo.users'))
+    CREATE INDEX IX_users_email ON dbo.users (email);
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_users_role' AND object_id = OBJECT_ID(N'dbo.users'))

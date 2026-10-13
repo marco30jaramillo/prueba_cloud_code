@@ -82,6 +82,7 @@ Tienda.addUsuario = async (tiendaId, userId, esPropietario, assignedBy) => {
   return { tiendaId, userId, esPropietario, assignedBy };
 };
 User.findByEmail = async (email) => usuarios.get(email) ?? null;
+User.findActiveByEmail = async (email) => { const u = usuarios.get(email); return u && u.isActive ? u : null; };
 User.create = async (email, password, name, role, photo, options) => {
   const u = { id: `u-nuevo-${creados.length}`, email, name, role, isActive: true, activationToken: 'tok', password, options };
   creados.push(u);

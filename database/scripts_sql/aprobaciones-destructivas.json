@@ -24,5 +24,13 @@
       "dbo.roles",
       "dbo.permissions"
     ]
+  },
+  {
+    "script": "alters/006_correo_unico_entre_usuarios_activos.sql",
+    "hash": "adbd9475feac1407d7572da835a1c0a6fa50f2195afe1146c0284210a8ef893e",
+    "claveJira": "KAN-75",
+    "tablasModificadas": [
+      "dbo.users"
+    ]
   }
 ]

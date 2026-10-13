@@ -35,3 +35,26 @@ test('solo se cuentan superusuarios activos y con la cuenta activada', async () 
   assert.match(consultas[0], /activatedAt IS NOT NULL/);
   assert.match(consultas[0], /role = @role/);
 });
+
+test('el correo solo se comprueba contra cuentas activas', async () => {
+  consultas.length = 0;
+  await User.findActiveByEmail('persona@correo.com');
+  assert.match(consultas[0], /email = @email AND isActive = 1/);
+});
+
+test('al buscar por correo se prefiere la cuenta activa sobre las deshabilitadas', async () => {
+  consultas.length = 0;
+  await User.findByEmail('persona@correo.com');
+  assert.match(consultas[0], /ORDER BY isActive DESC, createdAt DESC/);
+});
+
+test('la base permite repetir correo solo entre cuentas deshabilitadas', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const alter = fs.readFileSync(path.resolve(__dirname, '../../database/scripts_sql/alters/006_correo_unico_entre_usuarios_activos.sql'), 'utf8');
+  assert.match(alter, /DROP CONSTRAINT UQ_users_email/);
+  assert.match(alter, /CREATE UNIQUE INDEX UX_users_email_activo ON dbo\.users \(email\) WHERE isActive = 1/);
+  const esquema = fs.readFileSync(path.resolve(__dirname, '../../database/scripts_sql/esquemas/01_esquema_inicial.sql'), 'utf8');
+  assert.ok(!/UQ_users_email/.test(esquema));
+  assert.match(esquema, /UX_users_email_activo/);
+});

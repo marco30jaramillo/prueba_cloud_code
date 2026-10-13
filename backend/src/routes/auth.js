@@ -94,9 +94,10 @@ router.post('/register', mailRequestLimiter.middleware, async (req, res) => {
   }
 
   const normalizedEmail = DataNormalizer.normalizeEmail(email);
-  const existingUser = await User.findByEmail(normalizedEmail);
+  // Un correo de una cuenta deshabilitada se puede volver a registrar: solo cuenta la activa.
+  const existingUser = await User.findActiveByEmail(normalizedEmail);
   if (existingUser) {
-    // Respuesta idéntica para cuenta activa, pendiente o deshabilitada. Si está pendiente,
+    // Respuesta idéntica para cuenta activa o pendiente. Si está pendiente,
     // se le reenvía la activación a su dueño sin avisar (trabajo diferido, sujeto a límites).
     if (existingUser.isActive && !existingUser.activatedAt) {
       const context = requestContext(req);
@@ -367,7 +368,7 @@ router.post('/bootstrap-superuser', async (req, res) => {
     });
   }
 
-  const existingUser = await User.findByEmail(email);
+  const existingUser = await User.findActiveByEmail(email);
   if (existingUser) {
     return ResponseFormatter.conflict(res, `El correo ${email} ya está registrado`);
   }
@@ -430,7 +431,7 @@ router.post('/create-user', authMiddleware, async (req, res) => {
     });
   }
 
-  const existingUser = await User.findByEmail(email);
+  const existingUser = await User.findActiveByEmail(email);
   if (existingUser) {
     return ResponseFormatter.conflict(res, `El correo ${email} ya está registrado`);
   }
