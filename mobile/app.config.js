@@ -45,6 +45,9 @@ module.exports = {
   expo: {
     name: v.nombre,
     slug: 'mi-valecito',
+    // Cuenta y proyecto de EAS (expo.dev). eas init no puede escribirlos en una configuración
+    // dinámica: se ponen a mano. Ambas variantes son el mismo proyecto con builds distintas.
+    owner: 'mivalecito',
     version: '1.0.0',
     orientation: 'portrait',
     userInterfaceStyle: 'light',
@@ -76,6 +79,7 @@ module.exports = {
     scheme: 'mivalecito',
     extra: {
       router: { origin: false },
+      eas: { projectId: 'b0362a87-72bc-4912-9352-72090782e3b9' },
       appVariant: variante,
       apiUrl,
       webUrl,
