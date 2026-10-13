@@ -60,6 +60,30 @@ el comando. No hace falta pasar por Google Play.
 La primera vez, EAS pregunta si genera la llave de firma (keystore): responde **sí**. EAS la guarda en tu
 cuenta. No la borres ni la pierdas: es la que identifica tu app.
 
+## 1a. Actualizaciones automáticas de QA (EAS Update)
+
+El pipeline del release (`.github/workflows/desplegar-release.yml`, job `movil`) decide solo qué hace
+falta en cada `release/vX.Y.Z`:
+
+- **Solo cambió JavaScript** (pantallas, estilos, textos, lógica): publica un **EAS Update** en el canal
+  `qa`. Las apps de QA instaladas lo descargan al abrirse y lo aplican al reabrirse. No hay que reinstalar.
+- **Cambió la parte nativa** (una dependencia nativa, un plugin, el ícono, `app.config.js`, `eas.json`...):
+  lanza `eas build --profile qa` y hay que instalar ese APK. Desde ahí, los cambios de JavaScript
+  vuelven a llegar por EAS Update.
+
+Lo decide comparando la **huella nativa** (`runtimeVersion: { policy: 'fingerprint' }` en `app.config.js`)
+con las builds de QA ya hechas. El resumen de la ejecución en GitHub dice cuál de las dos hizo.
+
+Requisitos (una sola vez):
+
+1. Crear un token en expo.dev (*Account settings → Access tokens*) y guardarlo como secreto
+   `EXPO_TOKEN` en el ambiente `qa` de GitHub.
+2. Las APK de QA instaladas **antes** de este cambio no traen `expo-updates`: el primer release hará una
+   build nueva sola (la huella cambió) y hay que instalarla una vez.
+
+Para publicar una actualización a mano: `eas update --channel qa --platform android --environment preview`
+(con las variables `APP_VARIANT`, `API_URL` y `WEB_URL` del perfil `qa` exportadas).
+
 ## 1b. Producción sin Google Play (APK para un grupo de usuarios)
 
 Mientras no se publique en Play, la app de producción también se reparte como APK:

@@ -1,7 +1,7 @@
 name: Desplegar release
 
 # Orquestador del despliegue a QA: validar -> base-de-datos -> backend -> frontend
-# -> pruebas-release -> release-pr.
+# -> pruebas-release -> release-pr y movil (en paralelo).
 # Estructura: los pasos de pruebas del release (tarea 9) y de apertura del PR hacia main
 # (tarea 10) son los jobs pruebas-release y release-pr de ESTE archivo, no workflows
 # separados, para que el orden y las dependencias vivan en un solo orquestador.
@@ -375,6 +375,126 @@ jobs:
 
           echo "Pruebas del release: aprobadas" >> "$GITHUB_STEP_SUMMARY"
           echo "resultado=aprobadas" >> "$GITHUB_OUTPUT"
+
+  # App movil de QA: publica con EAS Update si ya existe una build compatible y, si cambio la
+  # parte nativa, lanza una build nueva. La "version de runtime" es la huella (fingerprint) de
+  # la parte nativa (runtimeVersion: fingerprint en mobile/app.config.js):
+  #   - Solo cambio JavaScript/estilos -> misma huella -> ya hay build -> eas update (las apps
+  #     instaladas la descargan al abrirse; sin reinstalar).
+  #   - Cambio una dependencia nativa, un plugin, el icono, eas.json... -> huella nueva -> no hay
+  #     build con esa huella -> eas build (sin esperar). Hay que instalar el APK nuevo; las
+  #     siguientes actualizaciones de JavaScript ya le llegan por EAS Update.
+  # Exige el secreto EXPO_TOKEN en el ambiente qa (expo.dev -> Account settings -> Access tokens).
+  movil:
+    name: movil
+    needs: [validar, pruebas-release]
+    if: ${{ needs.validar.outputs.modo == 'aplicar' && needs.pruebas-release.result == 'success' }}
+    runs-on: ubuntu-latest
+    environment: qa
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EAS_CLI: eas-cli@24.13.0
+      PERFIL: qa
+      PLATAFORMA: android
+      # Ambiente de variables de servidor de EAS; las builds internas usan "preview" por defecto.
+      AMBIENTE_EAS: preview
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Verificar secretos del ambiente
+        shell: bash
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::El secreto EXPO_TOKEN llego vacio al job movil (ambiente qa)."
+            exit 1
+          fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        shell: bash
+        run: npm ci
+
+      - name: Pruebas de la app movil
+        shell: bash
+        run: npm test
+
+      # eas update arma la configuracion aqui (no en los servidores de EAS): necesita las mismas
+      # variables que el perfil de build, o la huella y las URLs no coincidirian con la build.
+      - name: Variables del perfil de eas.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          for nombre in APP_VARIANT API_URL WEB_URL; do
+            valor="$(jq -r --arg p "$PERFIL" --arg n "$nombre" '.build[$p].env[$n] // empty' eas.json)"
+            if [ -z "$valor" ] || [[ "$valor" == *$'\n'* ]]; then
+              echo "::error::El perfil $PERFIL de eas.json no define $nombre."
+              exit 1
+            fi
+            echo "$nombre=$valor" >> "$GITHUB_ENV"
+          done
+
+      - name: Decidir entre EAS Update y build nueva
+        id: decidir
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime="$(npx expo-updates runtimeversion:resolve --platform "$PLATAFORMA" | jq -r '.runtimeVersion')"
+          if ! [[ "$runtime" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "::error::No se pudo calcular la version de runtime (huella)."
+            exit 1
+          fi
+          # Cuenta como compatible una build terminada o en curso con la misma huella.
+          builds="$(npx --yes "$EAS_CLI" build:list --platform "$PLATAFORMA" --build-profile "$PERFIL" \
+            --runtime-version "$runtime" --limit 50 --json --non-interactive)"
+          compatibles="$(echo "$builds" | jq '[.[] | select(.status | ascii_upcase | IN("FINISHED","IN_PROGRESS","IN_QUEUE","NEW"))] | length')"
+          if [ "$compatibles" -gt 0 ]; then accion=update; else accion=build; fi
+          echo "runtime=$runtime" >> "$GITHUB_OUTPUT"
+          echo "accion=$accion" >> "$GITHUB_OUTPUT"
+          echo "Huella $runtime: $compatibles build(s) compatibles -> $accion"
+
+      - name: Publicar EAS Update
+        if: ${{ steps.decidir.outputs.accion == 'update' }}
+        shell: bash
+        env:
+          VERSION: ${{ needs.validar.outputs.version }}
+        run: |
+          set -euo pipefail
+          npx --yes "$EAS_CLI" update --channel "$PERFIL" --platform "$PLATAFORMA" \
+            --environment "$AMBIENTE_EAS" --message "release $VERSION (${GITHUB_SHA::7})" --non-interactive
+
+      - name: Lanzar build nueva
+        if: ${{ steps.decidir.outputs.accion == 'build' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes "$EAS_CLI" build --profile "$PERFIL" --platform "$PLATAFORMA" --non-interactive --no-wait
+
+      - name: Resumen
+        shell: bash
+        env:
+          ACCION: ${{ steps.decidir.outputs.accion }}
+          RUNTIME: ${{ steps.decidir.outputs.runtime }}
+        run: |
+          {
+            echo "### App movil ($PERFIL, $PLATAFORMA)"
+            echo ""
+            echo "- Version de runtime (huella nativa): \`$RUNTIME\`"
+            if [ "$ACCION" = "update" ]; then
+              echo "- **EAS Update publicado** en el canal \`$PERFIL\`: las apps instaladas lo reciben al reabrirse."
+            else
+              echo "- **Build nueva lanzada** (cambio la parte nativa). Instalar el APK desde expo.dev cuando termine."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
   release-pr:
     name: release-pr
