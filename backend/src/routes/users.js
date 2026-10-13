@@ -6,6 +6,11 @@ const { authMiddleware, tokenManager } = require('../middleware/auth');
 const roleMiddleware = require('../middleware/roleMiddleware');
 const auditMiddleware = require('../middleware/auditMiddleware');
 const accountMail = require('../mail/accountMail');
+const Tienda = require('../models/Tienda');
+const { ROLES_EQUIPO } = require('../config/permisos');
+
+/** Roles que trabajan en una tienda (dueño, encargado, vendedor). */
+const ROLES_DE_TIENDA = ['tendero', ...ROLES_EQUIPO];
 
 const router = express.Router();
 
@@ -110,15 +115,31 @@ router.patch('/:userId', authMiddleware, roleMiddleware.requirePermission('auth:
   const ipAddress = auditMiddleware.getIpAddress(req);
   const userAgent = auditMiddleware.getUserAgent(req);
 
-  // Handle role change
+  // Cambio de rol. El rol viaja en el token de sesión: se cierran las sesiones de la persona
+  // para que entre de nuevo con el rol nuevo (si no, conservaría el anterior hasta que venza).
+  let rolCambiado = false;
   if (role && role !== targetUser.role) {
+    if (typeof role !== 'string' || !await Role.getByName(role)) {
+      return ResponseFormatter.badRequest(res, `El rol "${role}" no existe`);
+    }
     if (requester.role !== 'superuser') {
       const canManage = await Role.getManageableRoles(requester.role);
       if (!canManage.includes(role)) {
         return ResponseFormatter.forbidden(res, `No tienes permiso para asignar el rol "${role}"`);
       }
     }
-    await User.update(userId, { role });
+    const tiendas = await Tienda.getTiendasByUsuario(userId);
+    // Una tienda no se queda sin dueño por un cambio de rol: primero se asigna otro.
+    if (role !== 'tendero' && tiendas.some(t => t.esPropietario)) {
+      return ResponseFormatter.conflict(res, 'Esta persona es dueña de una tienda. Asigna otro dueño antes de cambiarle el rol.');
+    }
+    await User.updateRole(userId, role);
+    // Quien deja de ser personal de tienda deja de estar en sus tiendas.
+    if (!ROLES_DE_TIENDA.includes(role)) {
+      for (const t of tiendas) await Tienda.removeUsuario(t.id, userId);
+    }
+    await tokenManager.revokeAllUserTokens(userId, targetUser.email);
+    rolCambiado = true;
     auditMiddleware.logUserRoleChanged(requesterId, userId, targetUser.role, role, ipAddress, userAgent).catch(() => {});
   }
 
@@ -133,7 +154,9 @@ router.patch('/:userId', authMiddleware, roleMiddleware.requirePermission('auth:
   }
 
   return ResponseFormatter.success(res, {
-    message: 'Persona actualizada',
+    message: rolCambiado
+      ? `Persona actualizada. Ahora es ${updatedUser.role}; cerramos sus sesiones para que entre con el rol nuevo.`
+      : 'Persona actualizada',
     user: {
       id: updatedUser.id,
       email: updatedUser.email,

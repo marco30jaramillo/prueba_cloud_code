@@ -131,6 +131,15 @@ class User {
     return fromSql(result.recordset[0]);
   }
 
+  /** Cambia el rol. Aparte de `update` para que un cambio de rol nunca viaje por otro camino. */
+  static async updateRole(userId, role) {
+    if (!isGuid(userId)) return null;
+    const result = await (await request()).input('id', sql.UniqueIdentifier, userId)
+      .input('role', sql.NVarChar(100), role)
+      .query('UPDATE dbo.users SET [role] = @role OUTPUT inserted.* WHERE id = @id');
+    return fromSql(result.recordset[0]);
+  }
+
   /** Guarda solo el hash del token de recuperación; vence en una hora. */
   static async setResetToken(userId, resetToken) {
     return User.update(userId, { resetToken: hashToken(resetToken), resetTokenExpiry: new Date(Date.now() + 3600000) });
