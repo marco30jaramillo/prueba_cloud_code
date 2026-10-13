@@ -87,9 +87,21 @@ class User {
     return user;
   }
 
+  /**
+   * Cuenta con ese correo. Un correo puede repetirse solo entre cuentas deshabilitadas y a lo sumo
+   * una activa: si hay una activa se devuelve esa; si no, la deshabilitada más reciente (sirve para
+   * decir «cuenta deshabilitada»). Para comprobar disponibilidad usa `findActiveByEmail`.
+   */
   static async findByEmail(email) {
     const result = await (await request()).input('email', sql.NVarChar(320), email)
-      .query('SELECT TOP 1 * FROM dbo.users WHERE email = @email');
+      .query('SELECT TOP 1 * FROM dbo.users WHERE email = @email ORDER BY isActive DESC, createdAt DESC');
+    return fromSql(result.recordset[0]);
+  }
+
+  /** Solo la cuenta activa con ese correo (como mucho una: índice único filtrado). */
+  static async findActiveByEmail(email) {
+    const result = await (await request()).input('email', sql.NVarChar(320), email)
+      .query('SELECT TOP 1 * FROM dbo.users WHERE email = @email AND isActive = 1');
     return fromSql(result.recordset[0]);
   }
 
@@ -235,7 +247,17 @@ class User {
     const result = await (await request()).input('role', sql.NVarChar(100), role).query('SELECT COUNT(*) AS total FROM dbo.users WHERE role = @role');
     return result.recordset[0].total;
   }
-  static async isSuperuserExists() { return (await User.countByRole('superuser')) > 0; }
+  /**
+   * Superusuarios que pueden operar: activos y con la cuenta activada. Una cuenta deshabilitada o
+   * pendiente de activación no cuenta, de modo que el bootstrap siga disponible mientras no haya
+   * ningún superusuario activo.
+   */
+  static async countActiveByRole(role) {
+    const result = await (await request()).input('role', sql.NVarChar(100), role)
+      .query('SELECT COUNT(*) AS total FROM dbo.users WHERE role = @role AND isActive = 1 AND activatedAt IS NOT NULL');
+    return result.recordset[0].total;
+  }
+  static async isSuperuserExists() { return (await User.countActiveByRole('superuser')) > 0; }
   static async getAll() {
     const result = await (await request()).query('SELECT * FROM dbo.users ORDER BY createdAt');
     return result.recordset.map(fromSql);
