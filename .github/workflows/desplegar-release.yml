@@ -1,7 +1,15 @@
 name: Desplegar release
 
-# Orquestador del despliegue a QA: validar -> base-de-datos -> backend -> frontend
+# Orquestador del despliegue a QA: validar -> cambios -> base-de-datos -> backend -> frontend
 # -> pruebas-release -> release-pr y movil (en paralelo).
+#
+# Solo se despliega lo que cambio: el job cambios busca, para backend, frontend y movil, el
+# ultimo commit con el que ese job termino bien en una ejecucion anterior de este workflow (QA es
+# uno solo, venga de la rama release que venga) y lo compara con el actual. Si la carpeta del
+# componente (backend/, frontend/, mobile/) no cambio, su job pasa en verde sin desplegar, asi la
+# cadena sigue y pruebas-release igual corre. Se despliega todo si cambio algo en .github/, si no
+# hay despliegue anterior registrado o con el disparo manual 'forzar-despliegue'. La base de
+# datos y las pruebas corren siempre (el ejecutor de base ya aplica solo lo pendiente).
 # Estructura: los pasos de pruebas del release (tarea 9) y de apertura del PR hacia main
 # (tarea 10) son los jobs pruebas-release y release-pr de ESTE archivo, no workflows
 # separados, para que el orden y las dependencias vivan en un solo orquestador.
@@ -49,6 +57,10 @@ on:
         type: string
         required: false
         default: ''
+      forzar-despliegue:
+        description: "Desplegar backend, frontend y movil aunque no hayan cambiado"
+        type: boolean
+        default: false
 
 # Grupo fijo: un solo despliegue a QA a la vez aunque haya varias ramas release/**.
 # Un despliegue en curso nunca se cancela; los demas esperan.
@@ -90,6 +102,76 @@ jobs:
             exit 1
           fi
           echo "modo=$modo" >> "$GITHUB_OUTPUT"
+
+  cambios:
+    name: cambios
+    needs: validar
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      backend: ${{ steps.comparar.outputs.backend }}
+      frontend: ${{ steps.comparar.outputs.frontend }}
+      movil: ${{ steps.comparar.outputs.movil }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Comparar con el ultimo despliegue de cada componente
+        id: comparar
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORZAR: ${{ inputs.forzar-despliegue || false }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Carpeta de cada componente (el nombre es el del job). Un cambio en .github/ despliega todo.
+          declare -A CARPETA=([backend]=backend [frontend]=frontend [movil]=mobile)
+          declare -A ULTIMO=()
+
+          # Ejecuciones terminadas de este workflow, de la mas reciente a la mas antigua.
+          ejecuciones="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/desplegar-release.yml/runs?status=completed&per_page=50" \
+            --jq '.workflow_runs[] | "\(.id) \(.head_sha)"')"
+          while read -r id sha; do
+            [ -n "$id" ] || continue
+            exitosos=" $(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/jobs?per_page=100" \
+              --jq '[.jobs[] | select(.conclusion == "success") | .name] | join(" ")') "
+            faltan=0
+            for c in "${!CARPETA[@]}"; do
+              if [ -z "${ULTIMO[$c]:-}" ]; then
+                if [[ "$exitosos" == *" $c "* ]]; then ULTIMO[$c]="$sha"; else faltan=1; fi
+              fi
+            done
+            if [ "$faltan" -eq 0 ]; then break; fi
+          done <<< "$ejecuciones"
+
+          {
+            echo "### Componentes a desplegar"
+            echo ""
+            echo "| Componente | Ultimo despliegue | Despliega | Motivo |"
+            echo "|---|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          for c in backend frontend movil; do
+            base="${ULTIMO[$c]:-}"
+            if [ "$FORZAR" = "true" ]; then
+              despliega=true; motivo="disparo manual con forzar-despliegue"
+            elif [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+              despliega=true; motivo="sin despliegue anterior registrado"
+            elif ! git diff --quiet "$base" HEAD -- .github/; then
+              despliega=true; motivo="cambio la configuracion del pipeline (.github/)"
+            elif ! git diff --quiet "$base" HEAD -- "${CARPETA[$c]}/"; then
+              despliega=true; motivo="cambio ${CARPETA[$c]}/"
+            else
+              despliega=false; motivo="sin cambios en ${CARPETA[$c]}/"
+            fi
+            echo "$c=$despliega" >> "$GITHUB_OUTPUT"
+            echo "| $c | ${base:0:7} | $despliega | $motivo |" >> "$GITHUB_STEP_SUMMARY"
+            echo "$c: $despliega ($motivo)"
+          done
 
   base-de-datos:
     name: base-de-datos
@@ -211,7 +293,7 @@ jobs:
 
   backend:
     name: backend
-    needs: [validar, base-de-datos]
+    needs: [validar, cambios, base-de-datos]
     if: ${{ needs.validar.outputs.modo == 'aplicar' }}
     runs-on: ubuntu-latest
     environment: qa
@@ -241,7 +323,13 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Sin cambios en backend
+        if: ${{ needs.cambios.outputs.backend != 'true' }}
+        shell: bash
+        run: echo "backend/ no cambio desde su ultimo despliegue en QA; no se despliega." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Install dependencies
+        if: ${{ needs.cambios.outputs.backend == 'true' }}
         shell: bash
         working-directory: backend
         run: |
@@ -254,6 +342,7 @@ jobs:
           fi
 
       - name: Deploy to Azure App Service
+        if: ${{ needs.cambios.outputs.backend == 'true' }}
         uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3
         with:
           app-name: ${{ secrets.AZURE_BACKEND_APP_NAME }}
@@ -262,7 +351,7 @@ jobs:
 
   frontend:
     name: frontend
-    needs: [validar, backend]
+    needs: [validar, cambios, backend]
     if: ${{ needs.validar.outputs.modo == 'aplicar' && needs.backend.result == 'success' }}
     runs-on: ubuntu-latest
     environment: qa
@@ -293,7 +382,13 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Sin cambios en frontend
+        if: ${{ needs.cambios.outputs.frontend != 'true' }}
+        shell: bash
+        run: echo "frontend/ no cambio desde su ultimo despliegue en QA; no se despliega." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Install dependencies
+        if: ${{ needs.cambios.outputs.frontend == 'true' }}
         shell: bash
         working-directory: frontend
         run: |
@@ -306,17 +401,26 @@ jobs:
           fi
 
       - name: Build
+        if: ${{ needs.cambios.outputs.frontend == 'true' }}
         run: npm run build
         working-directory: frontend
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
 
+      # Se sube solo la build autocontenida (server.js + dependencias usadas + estaticos), no la
+      # carpeta frontend con node_modules completo y la cache de la build.
+      - name: Empaquetar frontend
+        if: ${{ needs.cambios.outputs.frontend == 'true' }}
+        run: node scripts/empaquetar-standalone.mjs "$RUNNER_TEMP/frontend-paquete"
+        working-directory: frontend
+
       - name: Deploy to Azure App Service
+        if: ${{ needs.cambios.outputs.frontend == 'true' }}
         uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3
         with:
           app-name: ${{ secrets.AZURE_FRONTEND_APP_NAME }}
           publish-profile: ${{ secrets.AZURE_FRONTEND_PUBLISH_PROFILE }}
-          package: frontend
+          package: ${{ runner.temp }}/frontend-paquete
 
   # El nombre de este job es el check requerido en el ruleset de main.
   pruebas-release:
@@ -381,7 +485,7 @@ jobs:
   # Exige el secreto EXPO_TOKEN en el ambiente qa.
   movil:
     name: movil
-    needs: [validar, pruebas-release]
+    needs: [validar, cambios, pruebas-release]
     if: ${{ needs.validar.outputs.modo == 'aplicar' && needs.pruebas-release.result == 'success' }}
     runs-on: ubuntu-latest
     environment: qa
@@ -396,7 +500,13 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Sin cambios en mobile
+        if: ${{ needs.cambios.outputs.movil != 'true' }}
+        shell: bash
+        run: echo "mobile/ no cambio desde su ultimo despliegue en QA; no se publica update ni build." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Desplegar app movil de QA
+        if: ${{ needs.cambios.outputs.movil == 'true' }}
         uses: ./.github/actions/eas-desplegar
         with:
           perfil: qa
