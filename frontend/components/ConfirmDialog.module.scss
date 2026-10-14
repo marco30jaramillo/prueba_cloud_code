@@ -1,0 +1,64 @@
+// Cuadro de confirmación: va por encima de cualquier otro modal abierto (p. ej. el detalle del vale).
+.modal {
+  z-index: 1075;
+}
+
+.backdrop {
+  z-index: 1070;
+}
+
+.cuerpo {
+  padding: 1.75rem 1.5rem 1rem;
+  text-align: center;
+}
+
+.icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 1rem;
+  border-radius: 50%;
+}
+
+.peligro {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.aviso {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.info {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.titulo {
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #1f2937;
+}
+
+.mensaje {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #4b5563;
+}
+
+.pie {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0 1.5rem 1.5rem;
+  border-top: none;
+  background: transparent;
+
+  > :global(.btn) {
+    margin: 0;
+  }
+}

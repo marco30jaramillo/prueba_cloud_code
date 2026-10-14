@@ -1,8 +1,7 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
-  RefreshControl, ActivityIndicator, Alert,
-} from 'react-native';
+  RefreshControl, ActivityIndicator, } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { valesAPI, tiendasAPI, pick } from '@/lib/api';
@@ -12,6 +11,7 @@ import { valesCobrables, distribuirPago, validarPago, totalSaldos } from '@/lib/
 import { colores, fuentes } from '@/lib/tema';
 
 import { Icon } from '@/components/Icon';
+import { avisar } from '@/lib/aviso';
 
 interface Vale {
   id: string;
@@ -174,9 +174,9 @@ export default function CarteraScreen() {
     if (!cliente || !tiendaId) return;
     const v = validarPago(montoNum, aPagar);
     if (!v.ok) {
-      if (v.motivo === 'monto-invalido') return Alert.alert('Monto', 'Escribe un monto mayor a cero.');
-      if (v.motivo === 'sin-seleccion') return Alert.alert('Vales', 'Selecciona al menos un vale.');
-      return Alert.alert('Monto', `El monto supera lo que se debe en esos vales (${formatCOP(v.total)}).`);
+      if (v.motivo === 'monto-invalido') return avisar('Monto', 'Escribe un monto mayor a cero.', undefined, 'aviso');
+      if (v.motivo === 'sin-seleccion') return avisar('Vales', 'Selecciona al menos un vale.', undefined, 'aviso');
+      return avisar('Monto', `El monto supera lo que se debe en esos vales (${formatCOP(v.total)}).`, undefined, 'aviso');
     }
     setPagando(true);
     try {
@@ -185,9 +185,9 @@ export default function CarteraScreen() {
       setSeleccion(new Set());
       setModoPago(null);
       setMonto('');
-      Alert.alert('Pago registrado', res?.message || `Pago de ${formatCOP(montoNum)} registrado.`);
+      avisar('Pago registrado', res?.message || `Pago de ${formatCOP(montoNum)} registrado.`, undefined, 'exito');
     } catch (e: any) {
-      Alert.alert('No se registró el pago', e?.response?.data?.message || 'Intenta de nuevo.');
+      avisar('No se registró el pago', e?.response?.data?.message || 'Intenta de nuevo.', undefined, 'error');
     } finally {
       setPagando(false);
     }

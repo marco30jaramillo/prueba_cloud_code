@@ -7,6 +7,7 @@ import { authAPI } from '@/lib/api';
 import styles from './ForceChangePasswordModal.module.scss';
 
 import { Icon } from './Icon';
+import { useConfirm } from './ConfirmDialog';
 interface ForceChangePasswordModalProps {
   show: boolean;
   onPasswordChanged: () => void;
@@ -18,6 +19,7 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
   onPasswordChanged,
   onCancel
 }) => {
+  const confirmar = useConfirm();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -62,7 +64,13 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
   };
 
   const handleCancel = async () => {
-    if (confirm('Si cancelas, tu sesión se cerrará. ¿Continuar?')) {
+    if (await confirmar({
+      titulo: '¿Salir sin cambiar la contraseña?',
+      mensaje: 'Si cancelas, tu sesión se cerrará.',
+      confirmar: 'Cerrar sesión',
+      cancelar: 'Volver',
+      icono: 'cerrar-sesion'
+    })) {
       onCancel();
     }
   };

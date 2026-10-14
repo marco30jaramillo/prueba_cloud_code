@@ -4,6 +4,7 @@ import { useFonts } from 'expo-font';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { useAuthStore } from '@/lib/store';
 import { archivosFuentes, colores } from '@/lib/tema';
+import { AvisoHost } from '@/components/AvisoHost';
 
 export default function RootLayout() {
   const { user, isLoaded, init } = useAuthStore();
@@ -54,6 +55,7 @@ export default function RootLayout() {
           }}
         />
       </Stack>
+      <AvisoHost />
     </KeyboardProvider>
   );
 }

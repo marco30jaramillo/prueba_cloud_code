@@ -10,6 +10,7 @@ import MontoInput from '@/components/MontoInput';
 import styles from './page.module.scss';
 
 import { Icon } from '@/components/Icon';
+import { useConfirm } from '@/components/ConfirmDialog';
 interface Tienda { id: string; nombre: string; }
 interface Vale {
   id: string;
@@ -51,6 +52,7 @@ function fmtDate(s?: string) {
 }
 
 function CarteraContent() {
+  const confirmar = useConfirm();
   const { user } = useAuthStore();
   const [tiendas, setTiendas] = useState<Tienda[]>([]);
   const [tiendaId, setTiendaId] = useState('');
@@ -228,7 +230,13 @@ function CarteraContent() {
   }
 
   async function handleAnularVale(vale: Vale) {
-    if (!confirm(`¿Anular el vale de ${vale.clienteNombre}? Esta acción no se puede deshacer.`)) return;
+    if (!(await confirmar({
+      titulo: 'Anular vale',
+      mensaje: <>¿Anular el vale de <strong>{vale.clienteNombre}</strong>? Esta acción no se puede deshacer.</>,
+      confirmar: 'Anular vale',
+      tono: 'peligro',
+      icono: 'anular'
+    }))) return;
     try {
       const res = await valesAPI.anular(vale.id);
       setVales(prev => prev.map(v => v.id === vale.id ? { ...v, ...res.vale } : v));
@@ -285,7 +293,13 @@ function CarteraContent() {
 
   async function handleAnularAbono(abonoId: string) {
     if (!selectedVale) return;
-    if (!confirm('¿Anular este abono? Se recalculará el saldo del vale.')) return;
+    if (!(await confirmar({
+      titulo: 'Anular abono',
+      mensaje: '¿Anular este abono? Se recalculará el saldo del vale.',
+      confirmar: 'Anular abono',
+      tono: 'peligro',
+      icono: 'anular'
+    }))) return;
     try {
       const res = await valesAPI.anularAbono(selectedVale.id, abonoId);
       setAbonos(prev => prev.map(a => a.id === abonoId ? { ...a, anulado: true } : a));

@@ -6,6 +6,8 @@
   "build": {
     "qa": {
       "distribution": "internal",
+      "channel": "qa",
+      "environment": "preview",
       "env": {
         "APP_VARIANT": "qa",
         "API_URL": "https://app-backend-mivalencito-b3hycrgxaef2bjhn.brazilsouth-01.azurewebsites.net",
@@ -26,6 +28,8 @@
     "production": {
       "distribution": "store",
       "autoIncrement": true,
+      "channel": "production",
+      "environment": "production",
       "env": {
         "APP_VARIANT": "production",
         "API_URL": "https://backend-mi-valecito-prod-a0cefyetcwfsabbk.brazilsouth-01.azurewebsites.net",

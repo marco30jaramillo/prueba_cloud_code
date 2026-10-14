@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Alert, ActivityIndicator,
+  ActivityIndicator,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useRouter } from 'expo-router';
 import { authAPI } from '@/lib/api';
 import { colores, fuentes } from '@/lib/tema';
+import { avisar } from '@/lib/aviso';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -19,7 +20,7 @@ export default function ForgotPasswordScreen() {
   const enviar = async () => {
     const correo = email.trim().toLowerCase();
     if (!EMAIL_REGEX.test(correo)) {
-      Alert.alert('Correo no válido', 'Escribe tu correo completo, por ejemplo nombre@correo.com.');
+      avisar('Correo no válido', 'Escribe tu correo completo, por ejemplo nombre@correo.com.', undefined, 'aviso');
       return;
     }
     setLoading(true);
@@ -28,10 +29,10 @@ export default function ForgotPasswordScreen() {
       setEnviado(true);
     } catch (e: any) {
       if (e?.response) {
-        Alert.alert(e.response.status === 429 ? 'Demasiadas solicitudes' : 'No pudimos enviar el correo',
-          e.response.data?.message || 'Intenta de nuevo en unos minutos.');
+        avisar(e.response.status === 429 ? 'Demasiadas solicitudes' : 'No pudimos enviar el correo',
+          e.response.data?.message || 'Intenta de nuevo en unos minutos.', undefined, 'error');
       } else {
-        Alert.alert('Sin conexión', 'No pudimos conectarnos. Revisa tu internet e intenta de nuevo.');
+        avisar('Sin conexión', 'No pudimos conectarnos. Revisa tu internet e intenta de nuevo.', undefined, 'error');
       }
     } finally {
       setLoading(false);

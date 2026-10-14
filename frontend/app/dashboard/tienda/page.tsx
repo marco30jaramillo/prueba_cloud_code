@@ -8,6 +8,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import styles from './page.module.scss';
 
 import { Icon } from '@/components/Icon';
+import { useConfirm } from '@/components/ConfirmDialog';
 interface Tienda {
   id: string;
   nombre: string;
@@ -36,6 +37,7 @@ interface TiendaUsuario {
 interface UserResult { id: string; name: string; email: string; role: string; }
 
 function TiendaContent() {
+  const confirmar = useConfirm();
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'superuser' || user?.role === 'administrador';
 
@@ -199,7 +201,14 @@ function TiendaContent() {
   }
 
   async function handleRemoveUser(userId: string) {
-    if (!confirm('¿Quitar a esta persona de la tienda?') || !vistaDetalle) return;
+    if (!vistaDetalle) return;
+    if (!(await confirmar({
+      titulo: 'Quitar del equipo',
+      mensaje: '¿Quitar a esta persona del equipo de la tienda?',
+      confirmar: 'Quitar',
+      tono: 'peligro',
+      icono: 'equipo'
+    }))) return;
     try {
       await tiendasAPI.removeUsuario(vistaDetalle, userId);
       setUsuarios(prev => prev.filter(u => u.userId !== userId));

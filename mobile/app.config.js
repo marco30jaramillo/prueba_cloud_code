@@ -49,6 +49,12 @@ module.exports = {
     // dinámica: se ponen a mano. Ambas variantes son el mismo proyecto con builds distintas.
     owner: 'mivalecito',
     version: '1.0.0',
+    // EAS Update: los cambios solo de JavaScript llegan a las apps instaladas sin build nueva.
+    // La versión de runtime es la huella (fingerprint) de la parte nativa: si cambia una
+    // dependencia nativa, un plugin o la configuración nativa, cambia la huella y hace falta
+    // build. El pipeline del release decide entre las dos (.github/workflows/desplegar-release.yml).
+    runtimeVersion: { policy: 'fingerprint' },
+    updates: { url: 'https://u.expo.dev/b0362a87-72bc-4912-9352-72090782e3b9' },
     orientation: 'portrait',
     userInterfaceStyle: 'light',
     icon: './assets/marca/icon.png',

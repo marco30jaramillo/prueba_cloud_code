@@ -1,13 +1,15 @@
 name: Desplegar produccion
 
-# Despliegue a PRODUCCION: validar -> desplegar (base de datos, backend y frontend en UN
-# solo job, para que haya una sola aprobacion manual del ambiente produccion).
+# Despliegue a PRODUCCION: validar -> desplegar (base de datos, backend, frontend y app movil
+# en UN solo job, para que haya una sola aprobacion manual del ambiente produccion).
+# App movil: perfil production-apk de mobile/eas.json (APK). EAS Update en el canal production
+# si solo cambio JavaScript; build nueva si cambio la parte nativa (.github/actions/eas-desplegar).
 #
 # IMPORTANTE - requisitos previos:
-#   - SOLO funciona si el ambiente 'produccion' existe en GitHub y tiene los 9 secretos:
+#   - SOLO funciona si el ambiente 'produccion' existe en GitHub y tiene los 10 secretos:
 #     DEPLOY_DB_SERVER, DEPLOY_DB_DATABASE, DEPLOY_DB_USER, DEPLOY_DB_PASSWORD,
 #     AZURE_BACKEND_APP_NAME, AZURE_BACKEND_PUBLISH_PROFILE,
-#     AZURE_FRONTEND_APP_NAME, AZURE_FRONTEND_PUBLISH_PROFILE y NEXT_PUBLIC_API_URL.
+#     AZURE_FRONTEND_APP_NAME, AZURE_FRONTEND_PUBLISH_PROFILE, NEXT_PUBLIC_API_URL y EXPO_TOKEN.
 #     Si FIREWALL_MODO = 'regla-temporal' (variable del ambiente), exige ademas los cinco
 #     secretos de firewall: AZURE_SQL_RESOURCE_GROUP, AZURE_SQL_SUBSCRIPTION_ID,
 #     AZURE_FIREWALL_TENANT_ID, AZURE_FIREWALL_CLIENT_ID y AZURE_FIREWALL_CLIENT_SECRET.
@@ -108,11 +110,12 @@ jobs:
           AZURE_FRONTEND_APP_NAME: ${{ secrets.AZURE_FRONTEND_APP_NAME }}
           AZURE_FRONTEND_PUBLISH_PROFILE: ${{ secrets.AZURE_FRONTEND_PUBLISH_PROFILE }}
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         shell: bash
         run: |
           nombres="DEPLOY_DB_SERVER DEPLOY_DB_DATABASE DEPLOY_DB_USER DEPLOY_DB_PASSWORD"
           if [ "$MODO" = "aplicar" ]; then
-            nombres="$nombres AZURE_BACKEND_APP_NAME AZURE_BACKEND_PUBLISH_PROFILE AZURE_FRONTEND_APP_NAME AZURE_FRONTEND_PUBLISH_PROFILE NEXT_PUBLIC_API_URL"
+            nombres="$nombres AZURE_BACKEND_APP_NAME AZURE_BACKEND_PUBLISH_PROFILE AZURE_FRONTEND_APP_NAME AZURE_FRONTEND_PUBLISH_PROFILE NEXT_PUBLIC_API_URL EXPO_TOKEN"
           fi
           faltan=0
           for nombre in $nombres; do
@@ -305,10 +308,26 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
 
+      # Se sube solo la build autocontenida (server.js + dependencias usadas + estaticos), no la
+      # carpeta frontend con node_modules completo y la cache de la build.
+      - name: Empaquetar frontend
+        if: ${{ needs.validar.outputs.modo == 'aplicar' }}
+        run: node scripts/empaquetar-standalone.mjs "$RUNNER_TEMP/frontend-paquete"
+        working-directory: frontend
+
       - name: Deploy frontend to Azure App Service
         if: ${{ needs.validar.outputs.modo == 'aplicar' }}
         uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3
         with:
           app-name: ${{ secrets.AZURE_FRONTEND_APP_NAME }}
           publish-profile: ${{ secrets.AZURE_FRONTEND_PUBLISH_PROFILE }}
-          package: frontend
+          package: ${{ runner.temp }}/frontend-paquete
+
+      # Despues de backend y frontend: la app nueva ya encuentra el backend desplegado.
+      - name: Desplegar app movil de produccion
+        if: ${{ needs.validar.outputs.modo == 'aplicar' }}
+        uses: ./.github/actions/eas-desplegar
+        with:
+          perfil: production-apk
+          version: ${{ steps.version.outputs.version }}
+          expo-token: ${{ secrets.EXPO_TOKEN }}

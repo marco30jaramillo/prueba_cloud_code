@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  Alert, ActivityIndicator,
+  ActivityIndicator,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -9,6 +9,7 @@ import { authAPI } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
 import { CampoContrasena } from '@/components/CampoContrasena';
 import { colores, fuentes } from '@/lib/tema';
+import { avisar } from '@/lib/aviso';
 
 /** Se abre desde el enlace del correo: mivalecito://reset-password?token=... */
 export default function ResetPasswordScreen() {
@@ -21,11 +22,11 @@ export default function ResetPasswordScreen() {
 
   const guardar = async () => {
     if (!nueva || !confirmar) {
-      Alert.alert('Faltan datos', 'Escribe la contraseña nueva dos veces.');
+      avisar('Faltan datos', 'Escribe la contraseña nueva dos veces.', undefined, 'aviso');
       return;
     }
     if (nueva !== confirmar) {
-      Alert.alert('No coinciden', 'Las dos contraseñas deben ser iguales.');
+      avisar('No coinciden', 'Las dos contraseñas deben ser iguales.', undefined, 'aviso');
       return;
     }
     setLoading(true);
@@ -33,13 +34,13 @@ export default function ResetPasswordScreen() {
       await authAPI.resetPassword(String(token), nueva);
       // El servidor cierra todas las sesiones al restablecer: se limpia también esta.
       await clearAuth();
-      Alert.alert('Listo', 'Tu contraseña fue cambiada. Inicia sesión con la nueva.');
+      avisar('Listo', 'Tu contraseña fue cambiada. Inicia sesión con la nueva.', undefined, 'exito');
       router.replace('/login');
     } catch (e: any) {
       if (e?.response) {
-        Alert.alert('No pudimos cambiar la contraseña', e.response.data?.message || 'El enlace no es válido o ya venció.');
+        avisar('No pudimos cambiar la contraseña', e.response.data?.message || 'El enlace no es válido o ya venció.', undefined, 'error');
       } else {
-        Alert.alert('Sin conexión', 'No pudimos conectarnos. Revisa tu internet e intenta de nuevo.');
+        avisar('Sin conexión', 'No pudimos conectarnos. Revisa tu internet e intenta de nuevo.', undefined, 'error');
       }
     } finally {
       setLoading(false);
